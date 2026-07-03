@@ -17,6 +17,8 @@ Open `http://localhost:3000`.
 npm run lint
 npm run test
 npm run typecheck
+npm run eval:agent
+npm run build
 ```
 
 ## Local Database
@@ -30,3 +32,5 @@ The default local URL is documented in `.env.example`. The compose file uses a p
 ## Deployment Direction
 
 Vercel + Neon is the primary deployment path for V1. Auth, product accounts, payments, and subscriptions are intentionally outside the first-version scope.
+
+See `docs/development/deployment.md` for environment variables, migration steps, Vercel setup, Neon setup, and smoke checks.

@@ -22,12 +22,14 @@ tests/ - Vitest unit and integration tests for domain, persistence, agent, and e
 
 <config>
 AGENTS.md - Project constitution and documentation map for future Codex work.
+.env.example - Environment variable template for local, Vercel, AI, and retrieval settings.
 docker-compose.yml - Local Postgres with pgvector-enabled image for development.
 drizzle.config.ts - Drizzle migration configuration.
 eslint.config.mjs - Next.js ESLint configuration.
 next.config.ts - Next.js runtime configuration.
 package.json - Node package manifest and development scripts.
 postcss.config.mjs - Tailwind CSS PostCSS configuration.
+README.md - Contributor setup, verification, database, and deployment pointers.
 tsconfig.json - TypeScript compiler configuration.
 </config>
 
