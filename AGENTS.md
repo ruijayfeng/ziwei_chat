@@ -11,10 +11,18 @@ docs/prompts/ - Response protocol, persona rules, and safety boundaries.
 docs/evaluation/ - Acceptance criteria and agent quality evaluation.
 docs/development/ - Implementation plan and dependency decisions.
 docs/superpowers/ - Superpowers-compatible specs and implementation plans.
+public/ - Static assets served by Next.js.
+src/app/ - Next.js App Router entry points and application routes.
 </directory>
 
 <config>
 AGENTS.md - Project constitution and documentation map for future Codex work.
+docker-compose.yml - Local Postgres with pgvector-enabled image for development.
+eslint.config.mjs - Next.js ESLint configuration.
+next.config.ts - Next.js runtime configuration.
+package.json - Node package manifest and development scripts.
+postcss.config.mjs - Tailwind CSS PostCSS configuration.
+tsconfig.json - TypeScript compiler configuration.
 </config>
 
 ## Product Constitution

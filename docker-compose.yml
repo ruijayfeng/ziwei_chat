@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ziwei-chat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ziwei
+      POSTGRES_PASSWORD: ziwei
+      POSTGRES_DB: ziwei_chat
+    ports:
+      - "5432:5432"
+    volumes:
+      - ziwei-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  ziwei-postgres-data:
