@@ -9,5 +9,7 @@ chart/summarize-chart.ts: Deterministic chart fact extraction from raw iztro cha
 db/client.ts: Drizzle/Postgres client factory and default database instance.
 db/schema.ts: Drizzle schema for profiles, charts, conversations, messages, memory, knowledge, skills, tool events, and evals.
 domain/chart.ts: Shared chart input, output, summary, fact, and error contracts.
+knowledge/skill-loader.ts: Markdown skill loader and validator for deterministic topic workflows.
+knowledge/search.ts: Local Markdown/keyword retrieval for curated knowledge chunks.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

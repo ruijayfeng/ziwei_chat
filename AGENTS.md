@@ -11,6 +11,7 @@ docs/prompts/ - Response protocol, persona rules, and safety boundaries.
 docs/evaluation/ - Acceptance criteria and agent quality evaluation.
 docs/development/ - Implementation plan and dependency decisions.
 docs/superpowers/ - Superpowers-compatible specs and implementation plans.
+content/ - Runtime skill workflows and curated local Markdown knowledge.
 drizzle/ - Generated Drizzle SQL migrations and migration metadata.
 public/ - Static assets served by Next.js.
 src/app/ - Next.js App Router entry points and application routes.
