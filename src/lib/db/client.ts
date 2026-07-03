@@ -10,6 +10,10 @@ import postgres from "postgres";
 
 import { schema } from "./schema";
 
+export type DatabaseClient = ReturnType<typeof createDatabaseClient>;
+
+let cachedDb: DatabaseClient | null = null;
+
 export function createDatabaseClient(databaseUrl = process.env.DATABASE_URL) {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required to create the database client.");
@@ -20,4 +24,7 @@ export function createDatabaseClient(databaseUrl = process.env.DATABASE_URL) {
   return drizzle(queryClient, { schema });
 }
 
-export const db = createDatabaseClient();
+export function getDatabaseClient() {
+  cachedDb ??= createDatabaseClient();
+  return cachedDb;
+}

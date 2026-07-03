@@ -64,5 +64,10 @@ describe("POST /api/chat", () => {
         "searchKnowledge",
         "runResponseCritic",
     ]);
+    expect(snapshot.persistedToolEvents.map((event) => event.conversationId)).toEqual([
+      "conversation-1",
+      "conversation-1",
+      "conversation-1",
+    ]);
   });
 });

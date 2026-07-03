@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   const stores = getChatRuntimeStores();
   const tools = createAgentTools({ stores });
 
-  persistChatMessage({
+  await persistChatMessage({
     conversationId,
     profileId,
     role: "user",
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   if (route.requiresChart) {
     const currentChart = await tools.getCurrentChart({ profileId, conversationId });
     if (!currentChart.ok) {
-      return streamAndPersist({
+      return await streamAndPersist({
         profileId,
         conversationId,
         content:
@@ -86,9 +86,10 @@ export async function POST(request: Request) {
         intent: route.intent,
         chartId: currentChart.data.chartId,
         plan,
+        conversationId,
       });
 
-      return streamAndPersist({
+      return await streamAndPersist({
         profileId,
         conversationId,
         content: answer,
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
       ? "Ziwei Chat 首版只处理紫微斗数相关问题，暂不做八字、塔罗、风水或其他体系。你可以问我事业、感情、财富、性格或近期运势。"
       : "我可以陪你聊，但如果要做紫微斗数分析，需要先有命盘和具体问题。你现在想先看事业、感情、财富、性格，还是近期运势？";
 
-  return streamAndPersist({
+  return await streamAndPersist({
     profileId,
     conversationId,
     content: fallback,
@@ -115,11 +116,13 @@ async function answerWithChartContext({
   intent,
   chartId,
   plan,
+  conversationId,
 }: {
   tools: ReturnType<typeof createAgentTools>;
   intent: Intent;
   chartId: string;
   plan: ReturnType<typeof buildAnalysisPlan>;
+  conversationId: string;
 }) {
   const topic = toChartTopic(intent);
   const summary = await tools.summarizeChartFacts({
@@ -130,13 +133,15 @@ async function answerWithChartContext({
   const firstFact = chartFacts[0];
   const skill = await loadRouteSkill(plan.requiredSkills[0]);
   const knowledge = await searchRouteKnowledge(plan.knowledgeQueries[0] ?? topic, topic, firstFact);
-  recordRouteToolEvent(
+  await recordRouteToolEvent(
+    conversationId,
     "loadSkill",
     { skillId: plan.requiredSkills[0] },
     skill,
     skill !== null,
   );
-  recordRouteToolEvent(
+  await recordRouteToolEvent(
+    conversationId,
     "searchKnowledge",
     { query: plan.knowledgeQueries[0], topic },
     knowledge,
@@ -162,7 +167,13 @@ async function answerWithChartContext({
     knowledgeSources: knowledge,
     safetyLevel: plan.safetyLevel,
   });
-  recordRouteToolEvent("runResponseCritic", { intent, draft }, critique, critique.passed);
+  await recordRouteToolEvent(
+    conversationId,
+    "runResponseCritic",
+    { intent, draft },
+    critique,
+    critique.passed,
+  );
 
   if (!critique.passed) {
     return composeResponse({
@@ -198,7 +209,7 @@ async function searchRouteKnowledge(
   return sources;
 }
 
-function streamAndPersist({
+async function streamAndPersist({
   profileId,
   conversationId,
   content,
@@ -209,7 +220,7 @@ function streamAndPersist({
   content: string;
   metadata: Record<string, unknown>;
 }) {
-  persistChatMessage({
+  await persistChatMessage({
     conversationId,
     profileId,
     role: "assistant",

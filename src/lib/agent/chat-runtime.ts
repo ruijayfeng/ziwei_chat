@@ -5,52 +5,57 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
+import {
+  createInMemoryChatPersistence,
+  type PersistedChatMessage,
+  type PersistedToolEvent,
+} from "./chat-persistence";
 import { createInMemoryToolStores, type InMemoryToolStores } from "./tools";
 
-export type PersistedChatMessage = {
-  conversationId: string;
-  profileId: string;
-  role: "user" | "assistant" | "system" | "tool";
-  content: string;
-  metadata?: Record<string, unknown>;
-};
-
 let stores = createInMemoryToolStores();
-let messages: PersistedChatMessage[] = [];
+let persistence = createInMemoryChatPersistence();
 
 export function getChatRuntimeStores() {
   return stores;
 }
 
-export function persistChatMessage(message: PersistedChatMessage) {
-  messages.push(message);
+export async function persistChatMessage(message: PersistedChatMessage) {
+  await persistence.saveMessage(message);
 }
 
-export function recordRouteToolEvent(
+export async function recordRouteToolEvent(
+  conversationId: string,
   toolName: string,
   input: unknown,
   output: unknown,
   success: boolean,
 ) {
-  stores.toolEvents.push({
+  const event: PersistedToolEvent = {
+    conversationId,
     toolName,
     input,
     output,
     success,
     latencyMs: 0,
-  });
+  };
+
+  stores.toolEvents.push(event);
+  await persistence.saveToolEvent(event);
 }
 
 export function getChatRuntimeSnapshot() {
+  const persisted = persistence.snapshot?.() ?? { messages: [], toolEvents: [] };
+
   return {
-    messages: [...messages],
+    messages: persisted.messages,
     toolEvents: [...stores.toolEvents],
+    persistedToolEvents: persisted.toolEvents,
   };
 }
 
 export function resetChatRuntime() {
   stores = createInMemoryToolStores();
-  messages = [];
+  persistence = createInMemoryChatPersistence();
 }
 
 export function replaceChatRuntimeStores(nextStores: InMemoryToolStores) {
