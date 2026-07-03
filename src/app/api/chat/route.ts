@@ -130,6 +130,18 @@ async function answerWithChartContext({
   const firstFact = chartFacts[0];
   const skill = await loadRouteSkill(plan.requiredSkills[0]);
   const knowledge = await searchRouteKnowledge(plan.knowledgeQueries[0] ?? topic, topic, firstFact);
+  recordRouteToolEvent(
+    "loadSkill",
+    { skillId: plan.requiredSkills[0] },
+    skill,
+    skill !== null,
+  );
+  recordRouteToolEvent(
+    "searchKnowledge",
+    { query: plan.knowledgeQueries[0], topic },
+    knowledge,
+    knowledge.length > 0,
+  );
 
   const draft = composeResponse({
     conclusion: buildConclusion(topic),
@@ -162,19 +174,6 @@ async function answerWithChartContext({
     });
   }
 
-  recordRouteToolEvent(
-    "loadSkill",
-    { skillId: plan.requiredSkills[0] },
-    skill,
-    skill !== null,
-  );
-  recordRouteToolEvent(
-    "searchKnowledge",
-    { query: plan.knowledgeQueries[0], topic },
-    knowledge,
-    knowledge.length > 0,
-  );
-
   return draft;
 }
 
@@ -191,7 +190,7 @@ async function searchRouteKnowledge(
   const sources = await searchKnowledge({
     query,
     topic,
-    chartTerms: fact?.stars ?? [],
+    chartTerms: fact ? [fact.palace, ...fact.stars] : [],
     limit: 3,
     retrievalMode: "local",
   });

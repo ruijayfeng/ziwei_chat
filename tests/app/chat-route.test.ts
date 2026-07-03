@@ -56,15 +56,13 @@ describe("POST /api/chat", () => {
       "user",
       "assistant",
     ]);
-    expect(snapshot.toolEvents.map((event) => event.toolName)).toEqual(
-      expect.arrayContaining([
+    expect(snapshot.toolEvents.map((event) => event.toolName)).toEqual([
         "createChart",
         "getCurrentChart",
         "summarizeChartFacts",
         "loadSkill",
         "searchKnowledge",
         "runResponseCritic",
-      ]),
-    );
+    ]);
   });
 });
