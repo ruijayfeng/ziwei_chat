@@ -5,6 +5,7 @@ Member List
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, in-memory MVP storage adapters, and tool event recording.
 agent/critic.ts: Deterministic response critic for grounding, overclaiming, safety, and follow-up count.
+agent/chat-runtime.ts: Temporary in-memory chat persistence and tool-event state for the MVP API route.
 agent/intent-router.ts: Rule-based MVP intent router for Ziwei topics, management intents, and safety-sensitive prompts.
 agent/planner.ts: Explicit analysis planner mapping intents to tools, skills, facts, retrieval queries, and response shape.
 agent/response-composer.ts: Response protocol composer for conclusion, chart basis, explanation, suggestion, and follow-up.
