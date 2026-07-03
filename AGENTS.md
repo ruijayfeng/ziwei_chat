@@ -11,13 +11,17 @@ docs/prompts/ - Response protocol, persona rules, and safety boundaries.
 docs/evaluation/ - Acceptance criteria and agent quality evaluation.
 docs/development/ - Implementation plan and dependency decisions.
 docs/superpowers/ - Superpowers-compatible specs and implementation plans.
+drizzle/ - Generated Drizzle SQL migrations and migration metadata.
 public/ - Static assets served by Next.js.
 src/app/ - Next.js App Router entry points and application routes.
+src/lib/ - Domain services, database contracts, chart engine adapters, and agent internals.
+tests/ - Vitest unit and integration tests for domain, persistence, agent, and evaluation behavior.
 </directory>
 
 <config>
 AGENTS.md - Project constitution and documentation map for future Codex work.
 docker-compose.yml - Local Postgres with pgvector-enabled image for development.
+drizzle.config.ts - Drizzle migration configuration.
 eslint.config.mjs - Next.js ESLint configuration.
 next.config.ts - Next.js runtime configuration.
 package.json - Node package manifest and development scripts.
