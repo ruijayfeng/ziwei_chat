@@ -11,9 +11,11 @@ import {
   type PersistedToolEvent,
 } from "./chat-persistence";
 import { createInMemoryToolStores, type InMemoryToolStores } from "./tools";
+import { createPostgresChatPersistence } from "../db/chat-persistence";
+import { getDatabaseClient } from "../db/client";
 
 let stores = createInMemoryToolStores();
-let persistence = createInMemoryChatPersistence();
+let persistence = createRuntimePersistence();
 
 export function getChatRuntimeStores() {
   return stores;
@@ -55,9 +57,17 @@ export function getChatRuntimeSnapshot() {
 
 export function resetChatRuntime() {
   stores = createInMemoryToolStores();
-  persistence = createInMemoryChatPersistence();
+  persistence = createRuntimePersistence();
 }
 
 export function replaceChatRuntimeStores(nextStores: InMemoryToolStores) {
   stores = nextStores;
+}
+
+function createRuntimePersistence() {
+  if (process.env.DATABASE_URL) {
+    return createPostgresChatPersistence(getDatabaseClient());
+  }
+
+  return createInMemoryChatPersistence();
 }
