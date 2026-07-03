@@ -33,7 +33,7 @@ const keywordRules: Array<{
   },
   {
     intent: "relationship",
-    keywords: ["感情", "关系", "恋爱", "结婚", "伴侣", "复合"],
+    keywords: ["感情", "关系", "恋爱", "结婚", "伴侣", "复合", "对方", "继续发展"],
     requiresChart: true,
     safetyLevel: "caution",
   },

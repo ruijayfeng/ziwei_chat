@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval:agent": "tsx src/lib/evaluation/run-evals.ts"
   },
   "dependencies": {
     "ai": "^7.0.14",
