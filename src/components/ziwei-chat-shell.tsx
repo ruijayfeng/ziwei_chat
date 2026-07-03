@@ -42,6 +42,7 @@ export function ZiweiChatShell() {
   const [draft, setDraft] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [evidence, setEvidence] = useState<EvidenceState>(initialEvidence);
+  const [chartSynced, setChartSynced] = useState(false);
 
   const chartStatus = useMemo(
     () => (chartInput ? `${chartInput.name} · ${chartInput.birthDate}` : "尚未创建"),
@@ -63,7 +64,7 @@ export function ZiweiChatShell() {
       body: JSON.stringify({
         profileId,
         conversationId: "local-conversation",
-        chartInput,
+        chartInput: chartSynced ? undefined : chartInput,
         messages: nextMessages,
       }),
     });
@@ -102,7 +103,21 @@ export function ZiweiChatShell() {
       knowledgeSources: chartInput ? ["curated-internal · local"] : [],
       critic: chartInput ? "passed" : "not_run",
     });
+    if (chartInput) {
+      setChartSynced(true);
+    }
     setIsStreaming(false);
+  }
+
+  async function deleteLocalData() {
+    await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, {
+      method: "DELETE",
+    });
+    setChartInput(null);
+    setChartSynced(false);
+    setMessages([]);
+    setDraft("");
+    setEvidence(initialEvidence);
   }
 
   return (
@@ -124,9 +139,19 @@ export function ZiweiChatShell() {
 
           <ChartOnboarding
             chartInput={chartInput}
-            onChartReady={setChartInput}
+            onChartReady={(nextChart) => {
+              setChartInput(nextChart);
+              setChartSynced(false);
+            }}
             profileId={profileId}
           />
+          <button
+            className="h-10 rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-800 transition hover:border-red-700 hover:text-red-700"
+            onClick={deleteLocalData}
+            type="button"
+          >
+            删除命盘和会话数据
+          </button>
           <TopicEntry onSelect={setDraft} />
         </div>
 

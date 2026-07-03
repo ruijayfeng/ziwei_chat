@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from "vitest";
 
-import { POST } from "../../src/app/api/chat/route";
+import { DELETE, POST } from "../../src/app/api/chat/route";
 import {
   getChatRuntimeSnapshot,
   resetChatRuntime,
@@ -69,5 +69,47 @@ describe("POST /api/chat", () => {
       "conversation-1",
       "conversation-1",
     ]);
+  });
+
+  test("deletes profile chart and conversation runtime data", async () => {
+    await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: "profile-1",
+          conversationId: "conversation-1",
+          chartInput: {
+            profileId: "profile-1",
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: "我最近想换工作，适合动吗？" }],
+        }),
+      }),
+    );
+
+    const deleted = await DELETE(
+      new Request("http://localhost/api/chat?profileId=profile-1", {
+        method: "DELETE",
+      }),
+    );
+    expect(deleted.status).toBe(204);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: "profile-1",
+          conversationId: "conversation-1",
+          messages: [{ role: "user", content: "我最近想换工作，适合动吗？" }],
+        }),
+      }),
+    );
+
+    await expect(response.text()).resolves.toContain("请先创建一张命盘");
   });
 });

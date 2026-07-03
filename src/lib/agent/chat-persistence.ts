@@ -26,6 +26,7 @@ export type PersistedToolEvent = {
 export type ChatPersistence = {
   saveMessage(message: PersistedChatMessage): Promise<void>;
   saveToolEvent(event: PersistedToolEvent): Promise<void>;
+  deleteProfileData?(profileId: string): Promise<void>;
   snapshot?: () => {
     messages: PersistedChatMessage[];
     toolEvents: PersistedToolEvent[];
@@ -42,6 +43,13 @@ export function createInMemoryChatPersistence(): ChatPersistence {
     },
     async saveToolEvent(event) {
       toolEvents.push(event);
+    },
+    async deleteProfileData(profileId) {
+      for (let index = messages.length - 1; index >= 0; index -= 1) {
+        if (messages[index]?.profileId === profileId) {
+          messages.splice(index, 1);
+        }
+      }
     },
     snapshot() {
       return {

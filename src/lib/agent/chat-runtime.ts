@@ -55,6 +55,17 @@ export function getChatRuntimeSnapshot() {
   };
 }
 
+export async function deleteProfileRuntimeData(profileId: string) {
+  for (const [chartId, chart] of stores.charts.entries()) {
+    if (chart.profileId === profileId) {
+      stores.charts.delete(chartId);
+    }
+  }
+
+  stores.primaryChartByProfileId.delete(profileId);
+  await persistence.deleteProfileData?.(profileId);
+}
+
 export function resetChatRuntime() {
   stores = createInMemoryToolStores();
   persistence = createRuntimePersistence();

@@ -11,6 +11,7 @@ import { createTextStreamResponse } from "ai";
 
 import { runResponseCritic } from "../../../lib/agent/critic";
 import {
+  deleteProfileRuntimeData,
   getChatRuntimeStores,
   persistChatMessage,
   recordRouteToolEvent,
@@ -109,6 +110,19 @@ export async function POST(request: Request) {
     content: fallback,
     metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
   });
+}
+
+export async function DELETE(request: Request) {
+  const url = new URL(request.url);
+  const profileId = url.searchParams.get("profileId");
+
+  if (!profileId) {
+    return new Response("profileId is required", { status: 400 });
+  }
+
+  await deleteProfileRuntimeData(profileId);
+
+  return new Response(null, { status: 204 });
 }
 
 async function answerWithChartContext({
