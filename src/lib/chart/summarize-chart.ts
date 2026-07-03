@@ -5,7 +5,7 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import type { ChartFact, ChartSummary, ChartTopic } from "@/lib/domain/chart";
+import type { ChartFact, ChartSummary, ChartTopic } from "../domain/chart";
 
 type StarLike = {
   name?: unknown;

@@ -13,7 +13,7 @@ import type {
   ChartServiceResult,
   CreateChartInput,
   CreateChartOutput,
-} from "@/lib/domain/chart";
+} from "../domain/chart";
 import { summarizeChart } from "./summarize-chart";
 
 const earthlyBranchTimeIndex: Record<string, number> = {
