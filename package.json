@@ -1,0 +1,38 @@
+{
+  "name": "ziwei-chat",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "eval:agent": "tsx src/lib/evaluation/run-evals.ts"
+  },
+  "dependencies": {
+    "ai": "^7.0.14",
+    "drizzle-orm": "^0.45.2",
+    "gray-matter": "^4.0.3",
+    "iztro": "^2.5.8",
+    "next": "16.2.10",
+    "postgres": "^3.4.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.5",
+    "typescript": "^5",
+    "vitest": "^4.1.9"
+  }
+}
