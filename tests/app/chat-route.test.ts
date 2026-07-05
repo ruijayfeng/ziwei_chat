@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "vitest";
+import { describe, expect, test, beforeEach, vi } from "vitest";
 
 import { DELETE, POST } from "../../src/app/api/chat/route";
 import {
@@ -6,6 +6,7 @@ import {
   getChatRuntimeSnapshot,
   resetChatRuntime,
 } from "../../src/lib/agent/chat-runtime";
+import { resetRateLimitStore } from "../../src/lib/http/rate-limit";
 
 const careerQuestion = "我最近想换工作，适合动吗？";
 const profileId = "00000000-0000-4000-8000-000000000001";
@@ -15,7 +16,10 @@ const otherConversationId = "00000000-0000-4000-8000-000000000004";
 
 describe("POST /api/chat", () => {
   beforeEach(() => {
+    vi.stubEnv("CHAT_RATE_LIMIT_MAX", "");
+    vi.stubEnv("CHAT_RATE_LIMIT_WINDOW_MS", "");
     resetChatRuntime();
+    resetRateLimitStore();
   });
 
   test("asks for chart creation when a serious chart question has no active chart", async () => {
@@ -30,6 +34,69 @@ describe("POST /api/chat", () => {
     );
 
     await expect(response.text()).resolves.toContain("请先创建一张命盘");
+  });
+
+  test("rate limits repeated chat requests from the same client", async () => {
+    vi.stubEnv("CHAT_RATE_LIMIT_MAX", "2");
+    vi.stubEnv("CHAT_RATE_LIMIT_WINDOW_MS", "60000");
+
+    const requestBody = {
+      profileId,
+      conversationId,
+      messages: [{ role: "user", content: "hello" }],
+    };
+    const headers = { "x-forwarded-for": "203.0.113.10" };
+
+    await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      }),
+    );
+    await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      }),
+    );
+
+    const limited = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      }),
+    );
+
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBe("60");
+    await expect(limited.text()).resolves.toBe("rate limit exceeded");
+  });
+
+  test("rate limits repeated profile deletion requests from the same client", async () => {
+    vi.stubEnv("CHAT_RATE_LIMIT_MAX", "1");
+    vi.stubEnv("CHAT_RATE_LIMIT_WINDOW_MS", "60000");
+    const headers = { "x-forwarded-for": "203.0.113.11" };
+
+    await DELETE(
+      new Request(`http://localhost/api/chat?profileId=${profileId}`, {
+        method: "DELETE",
+        headers,
+      }),
+    );
+
+    const limited = await DELETE(
+      new Request(`http://localhost/api/chat?profileId=${profileId}`, {
+        method: "DELETE",
+        headers,
+      }),
+    );
+
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBe("60");
+    await expect(limited.text()).resolves.toBe("rate limit exceeded");
   });
 
   test("streams a grounded answer and persists messages plus tool events", async () => {

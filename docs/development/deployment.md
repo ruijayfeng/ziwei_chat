@@ -13,6 +13,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 AI_PROVIDER=deterministic-local
 AI_MODEL=
 OPENAI_API_KEY=
+CHAT_RATE_LIMIT_MAX=30
+CHAT_RATE_LIMIT_WINDOW_MS=60000
 EMBEDDING_PROVIDER_API_KEY=
 EMBEDDING_MODEL=
 ```
@@ -25,11 +27,46 @@ NEXT_PUBLIC_APP_URL=https://<your-vercel-domain>
 AI_PROVIDER=deterministic-local
 AI_MODEL=
 OPENAI_API_KEY=
+CHAT_RATE_LIMIT_MAX=30
+CHAT_RATE_LIMIT_WINDOW_MS=60000
 EMBEDDING_PROVIDER_API_KEY=
 EMBEDDING_MODEL=
 ```
 
 The current MVP can run with `AI_PROVIDER=deterministic-local` because the agent chain is deterministic while provider-backed model streaming is a later switch-in. Local Markdown/keyword retrieval does not require `EMBEDDING_PROVIDER_API_KEY`.
+
+## CI Gate
+
+GitHub Actions runs on pull requests and pushes to `master`. The gate mirrors
+the local verification suite:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run eval:agent
+npm run build
+```
+
+Do not merge changes that fail this gate unless the failure is confirmed to be
+external infrastructure and the same commands pass locally.
+
+## Runtime Hardening
+
+`/api/chat` uses a small in-memory fixed-window limiter before parsing request
+bodies. It is intended as MVP abuse protection for single-instance local runs
+and low-traffic Vercel deployments.
+
+```text
+CHAT_RATE_LIMIT_MAX=30
+CHAT_RATE_LIMIT_WINDOW_MS=60000
+```
+
+Set `CHAT_RATE_LIMIT_MAX=0` to disable the limiter in a trusted development
+environment. For higher traffic or multi-region production, replace this with a
+shared store-backed limiter such as Vercel KV, Upstash Redis, or an edge rate
+limit provider.
 
 ## Neon Setup
 
@@ -106,6 +143,17 @@ npm run test
 npm run eval:agent
 npm run build
 ```
+
+For production API smoke after deployment, send a UTF-8 JSON request to
+`/api/chat` and confirm a `200` response for normal chat traffic. If repeated
+requests return `429`, verify `CHAT_RATE_LIMIT_MAX` and
+`CHAT_RATE_LIMIT_WINDOW_MS` in the deployment environment.
+
+## Monitoring Baseline
+
+For the MVP, use Vercel deployment status, function logs, and GitHub Actions as
+the baseline operational loop. External error tracking and persistent rate-limit
+stores are recommended follow-ups once real user traffic starts.
 
 ## Current Verification Note
 
