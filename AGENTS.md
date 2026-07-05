@@ -22,6 +22,7 @@ tests/ - Vitest unit and integration tests for domain, persistence, agent, and e
 
 <config>
 AGENTS.md - Project constitution and documentation map for future Codex work.
+components.json - shadcn/ui registry configuration for project-owned UI primitives.
 .env.example - Environment variable template for local, Vercel, AI, and retrieval settings.
 docker-compose.yml - Local Postgres with pgvector-enabled image for development.
 drizzle.config.ts - Drizzle migration configuration.

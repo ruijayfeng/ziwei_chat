@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * [INPUT]: Depends on selected topic callback from the app shell
+ * [INPUT]: Depends on selected topic callback from the app shell and shadcn Button
  * [OUTPUT]: Provides five MVP topic entry buttons
  * [POS]: Topic shortcut component for starting grounded Ziwei chat flows
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
+import { Button } from "@/components/ui/button";
 import {
   BriefcaseBusiness,
   Coins,
@@ -54,12 +55,12 @@ type TopicEntryProps = {
 
 export function TopicEntry({ onSelect }: TopicEntryProps) {
   return (
-    <section className="rounded-lg border border-border bg-surface p-4">
+    <section className="grid gap-3">
       <div>
-        <p className="text-xs font-medium text-muted">Quick topics</p>
+        <p className="text-xs font-medium text-muted-foreground">Quick topics</p>
         <h2 className="mt-1 text-sm font-semibold text-foreground">主题入口</h2>
       </div>
-      <div className="mt-3 grid gap-2">
+      <div className="grid gap-2">
         {topics.map((topic) => (
           <TopicButton key={topic.id} topic={topic} onSelect={onSelect} />
         ))}
@@ -78,13 +79,14 @@ function TopicButton({
   const Icon = topic.icon;
 
   return (
-    <button
-      className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition hover:border-primary hover:text-primary active:translate-y-px"
+    <Button
+      className="justify-start"
       onClick={() => onSelect(topic.prompt)}
       type="button"
+      variant="outline"
     >
-      <Icon size={16} strokeWidth={1.8} />
+      <Icon data-icon="inline-start" />
       {topic.label}
-    </button>
+    </Button>
   );
 }

@@ -1,15 +1,14 @@
 "use client";
 
 /**
- * [INPUT]: Depends on chart onboarding, topic entry, chat panel, evidence drawer, Radix Dialog, and /api/chat
+ * [INPUT]: Depends on chart onboarding, topic entry, chat panel, evidence drawer, shadcn Sheet/AlertDialog, and /api/chat
  * [OUTPUT]: Provides the coordinated MVP Ziwei Chat application shell
  * [POS]: Client state boundary for anonymous profile, primary chart draft, chat streaming, error handling, and evidence display
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { ShieldCheck, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { Menu, ShieldCheck, Trash2 } from "lucide-react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
 import {
@@ -19,6 +18,28 @@ import {
   isEmptyAssistantResponse,
   type ChatErrorState,
 } from "@/lib/ui/chat-errors";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { ChartOnboarding } from "./chart-onboarding";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { EvidenceDrawer, type EvidenceState } from "./evidence-drawer";
@@ -55,8 +76,22 @@ export function ZiweiChatShell() {
   const [error, setError] = useState<ChatErrorState | null>(null);
   const [evidence, setEvidence] = useState<EvidenceState>(initialEvidence);
   const [chartSynced, setChartSynced] = useState(false);
-  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
-  const [isEvidenceDialogOpen, setIsEvidenceDialogOpen] = useState(false);
+
+  const workspace = (
+    <WorkspacePanel
+      chartInput={chartInput}
+      chartSynced={chartSynced}
+      onChartReady={(nextChart) => {
+        setChartInput(nextChart);
+        setChartSynced(false);
+        setError(null);
+      }}
+      onClear={deleteLocalData}
+      onResetChart={resetChartDraft}
+      onTopicSelect={setDraft}
+      profileId={profileId}
+    />
+  );
 
   async function sendMessage(contentOverride?: string) {
     const content = (contentOverride ?? draft).trim();
@@ -172,141 +207,151 @@ export function ZiweiChatShell() {
     setLastFailedContent(null);
     setError(null);
     setEvidence(initialEvidence);
-    setIsClearDialogOpen(false);
   }
 
   return (
-    <main className="min-h-[100dvh] bg-background text-foreground">
-      <section className="mx-auto grid min-h-[100dvh] w-full max-w-[1500px] gap-4 px-4 py-4 lg:grid-cols-[340px_minmax(0,1fr)_320px] lg:gap-5 lg:px-6 lg:py-6">
-        <div className="order-2 grid content-start gap-4 lg:order-1">
-          <header className="rounded-lg border border-border bg-surface p-4 shadow-[0_1px_0_rgba(24,24,22,0.04)]">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success-muted text-primary">
-                <ShieldCheck size={18} strokeWidth={1.8} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-primary">Ziwei Chat</p>
-                <h1 className="mt-1 text-xl font-semibold leading-tight text-foreground">
-                  命盘分析工作台
-                </h1>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  匿名 profile、确定性排盘、本地知识检索和回答检查先跑通。
-                </p>
-              </div>
+    <main className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
+            <ShieldCheck size={17} strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-sm font-semibold sm:text-base">Ziwei Chat</h1>
+              <Badge className="hidden bg-accent text-primary sm:inline-flex" variant="secondary">
+                Evidence Companion
+              </Badge>
             </div>
-          </header>
-
-          <ChartOnboarding
-            chartInput={chartInput}
-            chartSynced={chartSynced}
-            onChartReady={(nextChart) => {
-              setChartInput(nextChart);
-              setChartSynced(false);
-              setError(null);
-            }}
-            onResetChart={resetChartDraft}
-            profileId={profileId}
-          />
-
-          <TopicEntry onSelect={setDraft} />
-
-          <ClearDataDialog
-            onConfirm={deleteLocalData}
-            onOpenChange={setIsClearDialogOpen}
-            open={isClearDialogOpen}
-          />
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              可信命盘分析工作台
+            </p>
+          </div>
         </div>
 
-        <div className="order-1 min-w-0 lg:order-2">
+        <div className="flex items-center gap-2">
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button className="lg:hidden" size="sm" type="button" variant="outline" />
+              }
+            >
+              <Menu data-icon="inline-start" />
+              资料
+            </SheetTrigger>
+            <SheetContent className="w-[340px] max-w-[calc(100vw-24px)] p-0" side="left">
+              <SheetHeader className="border-b border-border">
+                <SheetTitle>命盘资料</SheetTitle>
+                <SheetDescription>当前匿名 profile 的命盘与主题入口。</SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 overflow-y-auto p-3">{workspace}</div>
+            </SheetContent>
+          </Sheet>
+
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button className="xl:hidden" size="sm" type="button" variant="outline" />
+              }
+            >
+              依据
+            </SheetTrigger>
+            <SheetContent className="w-[360px] max-w-[calc(100vw-24px)] p-0" side="right">
+              <SheetHeader className="border-b border-border">
+                <SheetTitle>本次回答依据</SheetTitle>
+                <SheetDescription>工具、命盘事实、知识来源和 critic 检查。</SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 overflow-y-auto p-3">
+                <EvidenceDrawer compact evidence={evidence} />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+
+      <section className="grid min-h-0 flex-1 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+        <aside className="hidden min-h-0 border-r border-border bg-card lg:flex lg:flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">{workspace}</div>
+        </aside>
+
+        <div className="min-h-0">
           <ChatPanel
             draft={draft}
             error={error}
             isStreaming={isStreaming}
             messages={messages}
             onDraftChange={setDraft}
-            onOpenEvidence={() => setIsEvidenceDialogOpen(true)}
             onRetry={retryLastMessage}
             onSubmit={() => void sendMessage()}
           />
         </div>
 
-        <div className="order-3 hidden lg:block">
+        <aside className="hidden min-h-0 border-l border-border bg-card xl:flex xl:flex-col">
           <EvidenceDrawer evidence={evidence} />
-        </div>
+        </aside>
       </section>
-
-      <Dialog.Root open={isEvidenceDialogOpen} onOpenChange={setIsEvidenceDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/35" />
-          <Dialog.Content className="fixed inset-x-3 bottom-3 z-50 max-h-[82dvh] overflow-y-auto rounded-xl border border-border bg-surface p-4 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <Dialog.Title className="text-base font-semibold text-foreground">
-                本次回答依据
-              </Dialog.Title>
-              <Dialog.Close className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted transition hover:text-foreground">
-                <X size={16} strokeWidth={1.8} />
-              </Dialog.Close>
-            </div>
-            <EvidenceDrawer compact evidence={evidence} />
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
     </main>
   );
 }
 
-function ClearDataDialog({
-  open,
-  onOpenChange,
-  onConfirm,
+function WorkspacePanel({
+  profileId,
+  chartInput,
+  chartSynced,
+  onChartReady,
+  onResetChart,
+  onTopicSelect,
+  onClear,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  profileId: string;
+  chartInput: CreateChartInput | null;
+  chartSynced: boolean;
+  onChartReady: (chart: CreateChartInput) => void;
+  onResetChart: () => void;
+  onTopicSelect: (prompt: string) => void;
+  onClear: () => void;
 }) {
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Trigger asChild>
-        <button
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-muted transition hover:border-warning hover:text-warning active:translate-y-px"
-          type="button"
-        >
-          <Trash2 size={16} strokeWidth={1.8} />
-          清除匿名资料数据
-        </button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/35" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-32px)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-5 shadow-2xl">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <Dialog.Title className="text-lg font-semibold text-foreground">
-                清除匿名资料数据？
-              </Dialog.Title>
-              <Dialog.Description className="mt-2 text-sm leading-6 text-muted">
-                这会清除当前浏览器里的匿名 profile 状态、当前命盘、对话消息和已显示的依据。
-                MVP 没有产品账号，所以这不是账号删除。
-              </Dialog.Description>
-            </div>
-            <Dialog.Close className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:text-foreground">
-              <X size={16} strokeWidth={1.8} />
-            </Dialog.Close>
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <Dialog.Close className="h-10 rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-foreground transition hover:border-primary">
-              取消
-            </Dialog.Close>
-            <button
-              className="h-10 rounded-lg bg-warning px-4 text-sm font-semibold text-white transition hover:bg-[#8e2f23] active:translate-y-px"
-              onClick={onConfirm}
-              type="button"
-            >
-              确认清除
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <div className="grid gap-4">
+      <ChartOnboarding
+        chartInput={chartInput}
+        chartSynced={chartSynced}
+        onChartReady={onChartReady}
+        onResetChart={onResetChart}
+        profileId={profileId}
+      />
+      <TopicEntry onSelect={onTopicSelect} />
+      <ClearDataDialog onConfirm={onClear} />
+    </div>
+  );
+}
+
+function ClearDataDialog({ onConfirm }: { onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger render={<Button type="button" variant="outline" />}>
+        <Trash2 data-icon="inline-start" />
+        清除匿名资料数据
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-warning-muted text-warning">
+            <Trash2 />
+          </AlertDialogMedia>
+          <AlertDialogTitle>清除匿名资料数据？</AlertDialogTitle>
+          <AlertDialogDescription>
+            这会清除当前浏览器里的匿名 profile 状态、当前命盘、对话消息和已显示的依据。
+            MVP 没有产品账号，所以这不是账号删除。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction className="bg-warning text-white hover:bg-[#8e2f23]" onClick={onConfirm}>
+            确认清除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
