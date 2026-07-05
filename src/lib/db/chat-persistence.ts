@@ -75,10 +75,13 @@ async function insertIgnoringConflict(
   table: unknown,
   value: InsertValues,
 ) {
-  const result = await database.insert(table).values(value);
+  const result = database.insert(table).values(value);
   if (hasOnConflictDoNothing(result)) {
     await result.onConflictDoNothing();
+    return;
   }
+
+  await result;
 }
 
 function hasOnConflictDoNothing(value: unknown): value is Required<InsertResult> {

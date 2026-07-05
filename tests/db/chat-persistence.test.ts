@@ -16,7 +16,7 @@ describe("createPostgresChatPersistence", () => {
     const database = {
       insert(table: unknown) {
         return {
-          async values(value: Record<string, unknown>) {
+          values(value: Record<string, unknown>) {
             writes.push({ table, value });
             return {
               async onConflictDoNothing() {
