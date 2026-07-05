@@ -104,6 +104,10 @@ Recommended reuse candidates, to verify during planning/implementation:
   separator, and textarea, then restyle them to Ziwei Chat's system.
 - `motion` can be considered for purposeful state transitions, but MVP should
   prefer native CSS transitions unless motion materially improves clarity.
+- `gsap` can be considered for information-dense animation that needs a real
+  timeline, especially future luck-cycle timelines, annual report pages,
+  evidence-chain reveals, or scroll-linked explanatory graphics. Do not use
+  GSAP for ordinary button hovers, panel fades, or decoration in the MVP shell.
 
 No large design system should be installed for this slice. The app is too small
 for Carbon, Fluent, Material, or Atlassian-style dependencies.
@@ -293,6 +297,7 @@ Out of scope:
 - persistent conversation browser
 - report pages
 - full animated star chart
+- timeline-heavy luck-cycle or annual-report animation
 - large third-party design systems
 - database/Neon changes
 
@@ -307,6 +312,9 @@ Use references as design input, not cloning targets:
 - Stripe: trust, hierarchy, and quiet confidence.
 - Co-Star and The Pattern: only to understand modernized mystical product tone;
   Ziwei Chat should remain more evidence-oriented.
+- GSAP official resources: study timeline, ScrollTrigger, React cleanup, and
+  performance patterns only if an implementation slice genuinely needs
+  timeline-based information graphics or scroll-linked explanatory motion.
 
 The `clone-website` tool may be used for targeted extraction from reference
 pages when a specific layout or interaction needs study. Do not clone entire
