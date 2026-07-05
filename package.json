@@ -12,10 +12,12 @@
     "eval:agent": "tsx src/lib/evaluation/run-evals.ts"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.18",
     "ai": "^7.0.14",
     "drizzle-orm": "^0.45.2",
     "gray-matter": "^4.0.3",
     "iztro": "^2.5.8",
+    "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "postgres": "^3.4.9",
     "react": "19.2.4",

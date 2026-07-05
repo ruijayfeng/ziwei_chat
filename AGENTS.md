@@ -29,6 +29,7 @@ eslint.config.mjs - Next.js ESLint configuration.
 next.config.ts - Next.js runtime configuration.
 package.json - Node package manifest and development scripts.
 postcss.config.mjs - Tailwind CSS PostCSS configuration.
+PRODUCT.md - Product register, audience, brand personality, anti-references, and design principles for UI work.
 README.md - Contributor setup, verification, database, and deployment pointers.
 tsconfig.json - TypeScript compiler configuration.
 </config>
