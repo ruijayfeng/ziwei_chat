@@ -1,12 +1,14 @@
 # Product Experience UI Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> Status update 2026-07-05: Implemented and merged through PR #2. Final code uses shadcn/Base UI project-owned primitives instead of Radix Dialog, and CI/Vercel passed before merge.
 
 **Goal:** Upgrade Ziwei Chat's MVP shell into the Evidence Companion product UI with readable Chinese copy, chart/profile management, chat error states, evidence hierarchy, and responsive product polish.
 
 **Architecture:** Keep the existing Next.js App Router and client shell. Add a tiny UI utility layer for testable labels/error mapping, install only focused primitives for icons and accessible dialogs, and refine existing components rather than introducing a large design system. Preserve anonymous profile behavior and the current `/api/chat` contract.
 
-**Tech Stack:** Next.js 16, React 19, TypeScript, Tailwind CSS v4, Vitest, `lucide-react`, `@radix-ui/react-dialog`, existing Vercel AI SDK route.
+**Tech Stack:** Next.js 16, React 19, TypeScript, Tailwind CSS v4, Vitest, `lucide-react`, shadcn/Base UI primitives, existing Vercel AI SDK route.
 
 ## Global Constraints
 
@@ -22,7 +24,7 @@
 
 ## File Structure
 
-- Modify `package.json` and `package-lock.json`: add `lucide-react` and `@radix-ui/react-dialog`.
+- Modify `package.json` and `package-lock.json`: add `lucide-react` and shadcn/Base UI primitive dependencies.
 - Modify `src/app/globals.css`: add design tokens, product theme utilities, focus styles, and responsive base styling.
 - Modify `src/app/layout.tsx`: load `Noto_Sans_SC` through `next/font/google` alongside existing Geist fonts.
 - Create `src/lib/ui/chat-errors.ts`: map fetch/network/rate-limit/empty-response failures to user-facing Chinese messages.
@@ -48,7 +50,7 @@
 
 **Interfaces:**
 - Produces: root `PRODUCT.md` with `## Register` set to `product`.
-- Produces dependencies importable as `@radix-ui/react-dialog` and `lucide-react`.
+- Produces dependencies importable as `lucide-react` and project-owned shadcn/Base UI primitives.
 
 - [ ] **Step 1: Verify current git state**
 
@@ -61,7 +63,7 @@ Create `PRODUCT.md` with product register, users, purpose, brand personality, an
 
 - [ ] **Step 3: Install focused UI dependencies**
 
-Run: `npm install lucide-react @radix-ui/react-dialog`
+Run: `npm install lucide-react @base-ui/react class-variance-authority clsx tailwind-merge tw-animate-css`
 Expected: dependencies added to `package.json` and `package-lock.json`.
 
 - [ ] **Step 4: Verify dependency install**
@@ -191,7 +193,7 @@ Expected: PASS.
 
 **Interfaces:**
 - Consumes `chatErrorFromResponse`, `classifyChatError`, and `isEmptyAssistantResponse`.
-- Consumes Radix Dialog for clear-data confirmation and mobile evidence.
+- Consumes shadcn/Base UI Sheet and AlertDialog for clear-data confirmation and mobile evidence.
 - Preserves `POST /api/chat` and `DELETE /api/chat?profileId=...` contracts.
 
 - [ ] **Step 1: Add chat error state and retry flow**
@@ -204,7 +206,7 @@ Wrap destructive clear action in Radix Dialog. The confirm copy must state that 
 
 - [ ] **Step 3: Add mobile evidence dialog**
 
-Use Radix Dialog with `EvidenceDrawer compact` for mobile access. Keep desktop evidence as a right rail.
+Use shadcn/Base UI Sheet with `EvidenceDrawer compact` for mobile access. Keep desktop evidence as a right rail.
 
 - [ ] **Step 4: Apply responsive layout**
 

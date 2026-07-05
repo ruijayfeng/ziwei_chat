@@ -11,6 +11,13 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## Current Status
+
+The current `master` branch contains the merged open-source MVP foundation and
+product UI refinement from PR #2. See
+`docs/development/project-status.md` for the handoff snapshot, implemented
+surface, known gaps, and recommended next work.
+
 ## Verification
 
 ```bash
@@ -49,6 +56,10 @@ The default local URL is documented in `.env.example`. The compose file uses a p
 
 ## Deployment Direction
 
-Vercel + Neon is the primary deployment path for V1. Auth, product accounts, payments, and subscriptions are intentionally outside the first-version scope.
+Vercel is the primary deployment path for V1. Neon/Postgres is supported through
+`DATABASE_URL`, but the current project can still run in deterministic-local /
+database-optional mode while hosted database setup is intentionally
+deprioritized. Auth, product accounts, payments, and subscriptions are
+intentionally outside the first-version scope.
 
 See `docs/development/deployment.md` for environment variables, migration steps, Vercel setup, Neon setup, and smoke checks.

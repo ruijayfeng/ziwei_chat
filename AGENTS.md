@@ -9,7 +9,7 @@ docs/architecture/ - Agent architecture, tool contracts, and data model.
 docs/knowledge/ - Skills, RAG, source policy, and knowledge quality rules.
 docs/prompts/ - Response protocol, persona rules, and safety boundaries.
 docs/evaluation/ - Acceptance criteria and agent quality evaluation.
-docs/development/ - Implementation plan and dependency decisions.
+docs/development/ - Implementation plan, deployment notes, dependency decisions, and current project status.
 docs/superpowers/ - Superpowers-compatible specs and implementation plans.
 content/ - Runtime skill workflows and curated local Markdown knowledge.
 drizzle/ - Generated Drizzle SQL migrations and migration metadata.
@@ -92,3 +92,4 @@ Before implementation begins, review:
 - `docs/prompts/response-protocol.md`
 - `docs/evaluation/acceptance-criteria.md`
 - `docs/development/implementation-plan.md`
+- `docs/development/project-status.md`

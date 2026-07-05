@@ -1,7 +1,14 @@
 # Deployment
 
-> Version: 2026-07-03
+> Version: 2026-07-05
 > Scope: Vercel-first open-source MVP deployment notes
+
+## Current Deployment Status
+
+PR #2 merged into `master` with GitHub Actions `Verify` and Vercel Preview
+passing. The app is currently safe to run in deterministic-local mode without a
+database for product/UI review. Configure `DATABASE_URL` when Postgres-backed
+persistence is required.
 
 ## Required Environment Variables
 
@@ -19,7 +26,7 @@ EMBEDDING_PROVIDER_API_KEY=
 EMBEDDING_MODEL=
 ```
 
-Production on Vercel + Neon:
+Production on Vercel + optional Neon/Postgres:
 
 ```text
 DATABASE_URL=<Neon pooled or direct Postgres URL>
@@ -157,4 +164,8 @@ stores are recommended follow-ups once real user traffic starts.
 
 ## Current Verification Note
 
-In this workspace, Docker Desktop could not start, so the live local Postgres migration apply remains pending. The generated migration, schema metadata tests, unit tests, evals, lint, typecheck, build, and local HTTP UI smoke have been verified.
+In this workspace, Docker Desktop could not start, and the user deprioritized
+Neon because the current product data is not critical. Live local/Neon Postgres
+migration apply remains pending. The generated migration, schema metadata tests,
+unit tests, evals, lint, typecheck, build, GitHub Actions CI, Vercel preview,
+and local browser UI smoke have been verified.

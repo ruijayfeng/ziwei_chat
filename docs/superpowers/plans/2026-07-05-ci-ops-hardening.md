@@ -29,7 +29,7 @@
 
 - [x] **Step 1: Create CI workflow**
 
-Add a workflow that runs on `pull_request` and pushes to `master`, uses Node 20, installs via `npm ci`, and runs:
+Add a workflow that runs on `pull_request` and pushes to `master`, uses Node 22, installs via `npm ci`, and runs:
 
 ```bash
 npm run lint

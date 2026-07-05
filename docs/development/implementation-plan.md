@@ -1,16 +1,34 @@
 # Development Implementation Plan
 
-> Version: 2026-07-03
+> Version: 2026-07-05
+
+## Current Status
+
+The open-source MVP foundation is implemented and merged to `master` through PR
+#1 and PR #2. The current app includes anonymous profile flow, primary chart
+input, deterministic-local agent runtime, topic entries, tool/skill/knowledge/
+critic boundaries, chat API, optional persistence boundary, clear-data flow, CI,
+runtime rate limiting, Vercel deployment notes, and the Evidence Companion
+product UI shell.
+
+For a current handoff snapshot, see `docs/development/project-status.md`.
+
+Remaining V1 risk is mostly operational and product-depth work: live Postgres or
+Neon migration smoke, provider-backed model streaming, persisted conversation
+reload/list UI, and a further flagship UI polish pass if desired.
 
 ## Goal
 
-Build a narrow but real Ziwei Dou Shu vertical agent that can create a chart, analyze five consumer topics, call tools, use curated knowledge, critique answers, and persist conversations.
+Build a narrow but real Ziwei Dou Shu vertical agent that can create a chart,
+analyze five consumer topics, call tools, use curated knowledge, critique
+answers, and persist conversations when Postgres is configured.
 
 ## V1 Completion Boundary
 
-Stop V1 after Phase 8 when:
+V1 completion remains accepted when:
 
-- Vercel + Neon deployment boots successfully.
+- Vercel deployment boots successfully in deterministic-local mode.
+- Postgres/Neon-backed persistence can be enabled with `DATABASE_URL` and has a documented migration/smoke path.
 - Anonymous profile/workspace works without registration or login.
 - One primary chart can be created, saved, loaded, and deleted.
 - Recent fortune, career/work, relationships, wealth, and personality topic flows work.
