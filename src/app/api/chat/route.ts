@@ -49,8 +49,8 @@ const chartTopics = new Set<Intent>([
 
 export async function POST(request: Request) {
   const body = (await request.json()) as ChatRequestBody;
-  const profileId = body.profileId ?? `anonymous-${randomUUID()}`;
-  const conversationId = body.conversationId ?? randomUUID();
+  const profileId = toUuid(body.profileId) ?? randomUUID();
+  const conversationId = toUuid(body.conversationId) ?? randomUUID();
   const userContent = readLatestUserContent(body);
   const stores = getChatRuntimeStores();
   const toolEventStartIndex = stores.toolEvents.length;
@@ -117,10 +117,10 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const url = new URL(request.url);
-  const profileId = url.searchParams.get("profileId");
+  const profileId = toUuid(url.searchParams.get("profileId") ?? undefined);
 
   if (!profileId) {
-    return new Response("profileId is required", { status: 400 });
+    return new Response("valid profileId is required", { status: 400 });
   }
 
   await deleteProfileRuntimeData(profileId);
@@ -285,6 +285,15 @@ function readLatestUserContent(body: ChatRequestBody) {
     .find((message) => message.role === "user");
 
   return body.message ?? latestUserMessage?.content ?? "";
+}
+
+function toUuid(value: string | undefined) {
+  if (!value) return undefined;
+  const match = value.match(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i,
+  );
+
+  return match?.[0];
 }
 
 function toChartTopic(intent: Intent): ChartTopic {

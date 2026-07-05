@@ -33,10 +33,11 @@ export function ZiweiChatShell() {
       return stored;
     }
 
-    const nextProfileId = `anonymous-${crypto.randomUUID()}`;
+    const nextProfileId = createClientUuid();
     window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
     return nextProfileId;
   });
+  const [conversationId] = useState(createClientUuid);
   const [chartInput, setChartInput] = useState<CreateChartInput | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -63,7 +64,7 @@ export function ZiweiChatShell() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         profileId,
-        conversationId: "local-conversation",
+        conversationId,
         chartInput: chartSynced ? undefined : chartInput,
         messages: nextMessages,
       }),
@@ -166,5 +167,18 @@ export function ZiweiChatShell() {
         <EvidenceDrawer evidence={evidence} />
       </section>
     </main>
+  );
+}
+
+function createClientUuid() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (digit) =>
+    (
+      Number(digit) ^
+      (Math.random() * 16) >> (Number(digit) / 4)
+    ).toString(16),
   );
 }

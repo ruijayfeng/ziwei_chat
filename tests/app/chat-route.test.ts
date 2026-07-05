@@ -8,6 +8,10 @@ import {
 } from "../../src/lib/agent/chat-runtime";
 
 const careerQuestion = "我最近想换工作，适合动吗？";
+const profileId = "00000000-0000-4000-8000-000000000001";
+const conversationId = "00000000-0000-4000-8000-000000000002";
+const otherProfileId = "00000000-0000-4000-8000-000000000003";
+const otherConversationId = "00000000-0000-4000-8000-000000000004";
 
 describe("POST /api/chat", () => {
   beforeEach(() => {
@@ -33,10 +37,10 @@ describe("POST /api/chat", () => {
       new Request("http://localhost/api/chat", {
         method: "POST",
         body: JSON.stringify({
-          profileId: "profile-1",
-          conversationId: "conversation-1",
+          profileId,
+          conversationId,
           chartInput: {
-            profileId: "profile-1",
+            profileId,
             name: "Primary chart",
             gender: "male",
             birthDate: "1990-05-17",
@@ -68,9 +72,9 @@ describe("POST /api/chat", () => {
       "runResponseCritic",
     ]);
     expect(snapshot.persistedToolEvents.map((event) => event.conversationId)).toEqual([
-      "conversation-1",
-      "conversation-1",
-      "conversation-1",
+      conversationId,
+      conversationId,
+      conversationId,
     ]);
   });
 
@@ -79,10 +83,10 @@ describe("POST /api/chat", () => {
       new Request("http://localhost/api/chat", {
         method: "POST",
         body: JSON.stringify({
-          profileId: "profile-1",
-          conversationId: "conversation-1",
+          profileId,
+          conversationId,
           chartInput: {
-            profileId: "profile-1",
+            profileId,
             name: "Primary chart",
             gender: "male",
             birthDate: "1990-05-17",
@@ -97,16 +101,16 @@ describe("POST /api/chat", () => {
     const stores = getChatRuntimeStores();
     stores.conversationSummaries.push(
       {
-        profileId: "profile-1",
-        conversationId: "conversation-1",
+        profileId,
+        conversationId,
         chartId: "chart-1",
         summary: "career question",
         topics: ["career"],
         summaryId: "summary-1",
       },
       {
-        profileId: "profile-2",
-        conversationId: "conversation-2",
+        profileId: otherProfileId,
+        conversationId: otherConversationId,
         chartId: "chart-2",
         summary: "other profile",
         topics: ["wealth"],
@@ -115,25 +119,25 @@ describe("POST /api/chat", () => {
     );
     stores.memories.push(
       {
-        profileId: "profile-1",
+        profileId,
         kind: "preference",
         value: "plain language",
-        sourceConversationId: "conversation-1",
+        sourceConversationId: conversationId,
         userVisible: true,
         memoryId: "memory-1",
       },
       {
-        profileId: "profile-2",
+        profileId: otherProfileId,
         kind: "preference",
         value: "keep this",
-        sourceConversationId: "conversation-2",
+        sourceConversationId: otherConversationId,
         userVisible: true,
         memoryId: "memory-2",
       },
     );
 
     const deleted = await DELETE(
-      new Request("http://localhost/api/chat?profileId=profile-1", {
+      new Request(`http://localhost/api/chat?profileId=${profileId}`, {
         method: "DELETE",
       }),
     );
@@ -144,18 +148,18 @@ describe("POST /api/chat", () => {
       persistedToolEvents: [],
     });
     expect(stores.conversationSummaries).toEqual([
-      expect.objectContaining({ profileId: "profile-2" }),
+      expect.objectContaining({ profileId: otherProfileId }),
     ]);
     expect(stores.memories).toEqual([
-      expect.objectContaining({ profileId: "profile-2" }),
+      expect.objectContaining({ profileId: otherProfileId }),
     ]);
 
     const response = await POST(
       new Request("http://localhost/api/chat", {
         method: "POST",
         body: JSON.stringify({
-          profileId: "profile-1",
-          conversationId: "conversation-1",
+          profileId,
+          conversationId,
           messages: [{ role: "user", content: careerQuestion }],
         }),
       }),

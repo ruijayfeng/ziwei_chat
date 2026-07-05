@@ -12,11 +12,17 @@ import { createPostgresChatPersistence } from "../../src/lib/db/chat-persistence
 describe("createPostgresChatPersistence", () => {
   test("maps chat persistence writes to messages and tool_events tables", async () => {
     const writes: Array<{ table: unknown; value: Record<string, unknown> }> = [];
+    const ignoredConflicts: unknown[] = [];
     const database = {
       insert(table: unknown) {
         return {
           async values(value: Record<string, unknown>) {
             writes.push({ table, value });
+            return {
+              async onConflictDoNothing() {
+                ignoredConflicts.push(table);
+              },
+            };
           },
         };
       },
@@ -46,6 +52,19 @@ describe("createPostgresChatPersistence", () => {
 
     expect(writes).toEqual([
       {
+        table: expect.anything(),
+        value: {
+          id: "00000000-0000-4000-8000-000000000002",
+        },
+      },
+      {
+        table: conversations,
+        value: {
+          id: "00000000-0000-4000-8000-000000000001",
+          profileId: "00000000-0000-4000-8000-000000000002",
+        },
+      },
+      {
         table: messages,
         value: {
           conversationId: "00000000-0000-4000-8000-000000000001",
@@ -67,6 +86,7 @@ describe("createPostgresChatPersistence", () => {
         },
       },
     ]);
+    expect(ignoredConflicts).toHaveLength(2);
   });
 
   test("deletes profile-owned memories, charts, and conversations through the database adapter", async () => {
