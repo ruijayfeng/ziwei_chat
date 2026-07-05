@@ -14,6 +14,7 @@ export type PersistedChatMessage = {
 };
 
 export type PersistedToolEvent = {
+  profileId?: string;
   conversationId: string;
   messageId?: string;
   toolName: string;
@@ -48,6 +49,11 @@ export function createInMemoryChatPersistence(): ChatPersistence {
       for (let index = messages.length - 1; index >= 0; index -= 1) {
         if (messages[index]?.profileId === profileId) {
           messages.splice(index, 1);
+        }
+      }
+      for (let index = toolEvents.length - 1; index >= 0; index -= 1) {
+        if (toolEvents[index]?.profileId === profileId) {
+          toolEvents.splice(index, 1);
         }
       }
     },

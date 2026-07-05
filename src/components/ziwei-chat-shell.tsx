@@ -150,7 +150,7 @@ export function ZiweiChatShell() {
             onClick={deleteLocalData}
             type="button"
           >
-            删除命盘和会话数据
+            清除当前匿名资料数据
           </button>
           <TopicEntry onSelect={setDraft} />
         </div>

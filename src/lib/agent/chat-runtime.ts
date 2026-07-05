@@ -26,6 +26,7 @@ export async function persistChatMessage(message: PersistedChatMessage) {
 }
 
 export async function recordRouteToolEvent(
+  profileId: string,
   conversationId: string,
   toolName: string,
   input: unknown,
@@ -33,6 +34,7 @@ export async function recordRouteToolEvent(
   success: boolean,
 ) {
   const event: PersistedToolEvent = {
+    profileId,
     conversationId,
     toolName,
     input,
@@ -56,13 +58,26 @@ export function getChatRuntimeSnapshot() {
 }
 
 export async function deleteProfileRuntimeData(profileId: string) {
+  const ownedChartIds = new Set<string>();
   for (const [chartId, chart] of stores.charts.entries()) {
     if (chart.profileId === profileId) {
+      ownedChartIds.add(chartId);
       stores.charts.delete(chartId);
     }
   }
 
   stores.primaryChartByProfileId.delete(profileId);
+  removeProfileOwnedItems(stores.conversationSummaries, profileId);
+  removeProfileOwnedItems(stores.memories, profileId);
+  for (let index = stores.toolEvents.length - 1; index >= 0; index -= 1) {
+    const event = stores.toolEvents[index];
+    if (
+      event?.profileId === profileId ||
+      (event?.chartId !== undefined && ownedChartIds.has(event.chartId))
+    ) {
+      stores.toolEvents.splice(index, 1);
+    }
+  }
   await persistence.deleteProfileData?.(profileId);
 }
 
@@ -81,4 +96,15 @@ function createRuntimePersistence() {
   }
 
   return createInMemoryChatPersistence();
+}
+
+function removeProfileOwnedItems<TItem extends { profileId: string }>(
+  items: TItem[],
+  profileId: string,
+) {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    if (items[index]?.profileId === profileId) {
+      items.splice(index, 1);
+    }
+  }
 }

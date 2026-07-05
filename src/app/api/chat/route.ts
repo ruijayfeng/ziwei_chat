@@ -53,6 +53,7 @@ export async function POST(request: Request) {
   const conversationId = body.conversationId ?? randomUUID();
   const userContent = readLatestUserContent(body);
   const stores = getChatRuntimeStores();
+  const toolEventStartIndex = stores.toolEvents.length;
   const tools = createAgentTools({ stores });
 
   await persistChatMessage({
@@ -84,10 +85,12 @@ export async function POST(request: Request) {
     if (chartTopics.has(route.intent)) {
       const answer = await answerWithChartContext({
         tools,
+        profileId,
         intent: route.intent,
         chartId: currentChart.data.chartId,
         plan,
         conversationId,
+        toolEventStartIndex,
       });
 
       return await streamAndPersist({
@@ -127,16 +130,20 @@ export async function DELETE(request: Request) {
 
 async function answerWithChartContext({
   tools,
+  profileId,
   intent,
   chartId,
   plan,
   conversationId,
+  toolEventStartIndex,
 }: {
   tools: ReturnType<typeof createAgentTools>;
+  profileId: string;
   intent: Intent;
   chartId: string;
   plan: ReturnType<typeof buildAnalysisPlan>;
   conversationId: string;
+  toolEventStartIndex: number;
 }) {
   const topic = toChartTopic(intent);
   const summary = await tools.summarizeChartFacts({
@@ -148,6 +155,7 @@ async function answerWithChartContext({
   const skill = await loadRouteSkill(plan.requiredSkills[0]);
   const knowledge = await searchRouteKnowledge(plan.knowledgeQueries[0] ?? topic, topic, firstFact);
   await recordRouteToolEvent(
+    profileId,
     conversationId,
     "loadSkill",
     { skillId: plan.requiredSkills[0] },
@@ -155,6 +163,7 @@ async function answerWithChartContext({
     skill !== null,
   );
   await recordRouteToolEvent(
+    profileId,
     conversationId,
     "searchKnowledge",
     { query: plan.knowledgeQueries[0], topic },
@@ -172,7 +181,9 @@ async function answerWithChartContext({
     suggestion: buildSuggestion(topic),
     followUp: buildFollowUp(topic),
   });
-  const toolsUsed = getChatRuntimeStores().toolEvents.map((event) => event.toolName);
+  const toolsUsed = getChatRuntimeStores()
+    .toolEvents.slice(toolEventStartIndex)
+    .map((event) => event.toolName);
   const critique = runResponseCritic({
     intent,
     draft,
@@ -182,6 +193,7 @@ async function answerWithChartContext({
     safetyLevel: plan.safetyLevel,
   });
   await recordRouteToolEvent(
+    profileId,
     conversationId,
     "runResponseCritic",
     { intent, draft },

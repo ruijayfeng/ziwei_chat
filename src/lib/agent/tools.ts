@@ -103,6 +103,9 @@ type SaveUserMemoryInput = {
 
 type ToolEvent = {
   toolName: string;
+  profileId?: string;
+  conversationId?: string;
+  chartId?: string;
   input: unknown;
   output: unknown;
   success: boolean;
@@ -381,6 +384,7 @@ function withToolEvent<TInput, TOutput>(
     const output = await handler(input);
     stores.toolEvents.push({
       toolName,
+      ...readToolEventOwnership(input),
       input,
       output,
       success: output.ok,
@@ -389,6 +393,23 @@ function withToolEvent<TInput, TOutput>(
 
     return output;
   };
+}
+
+function readToolEventOwnership(input: unknown) {
+  if (!isRecord(input)) {
+    return {};
+  }
+
+  return {
+    profileId: typeof input.profileId === "string" ? input.profileId : undefined,
+    conversationId:
+      typeof input.conversationId === "string" ? input.conversationId : undefined,
+    chartId: typeof input.chartId === "string" ? input.chartId : undefined,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function summarizeStoredChart(

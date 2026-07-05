@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import { messages, toolEvents } from "../../src/lib/db/schema";
+import {
+  charts,
+  conversations,
+  memories,
+  messages,
+  toolEvents,
+} from "../../src/lib/db/schema";
 import { createPostgresChatPersistence } from "../../src/lib/db/chat-persistence";
 
 describe("createPostgresChatPersistence", () => {
@@ -12,6 +18,11 @@ describe("createPostgresChatPersistence", () => {
           async values(value: Record<string, unknown>) {
             writes.push({ table, value });
           },
+        };
+      },
+      delete() {
+        return {
+          async where() {},
         };
       },
     };
@@ -56,5 +67,27 @@ describe("createPostgresChatPersistence", () => {
         },
       },
     ]);
+  });
+
+  test("deletes profile-owned memories, charts, and conversations through the database adapter", async () => {
+    const deletedTables: unknown[] = [];
+    const database = {
+      insert() {
+        return {
+          async values() {},
+        };
+      },
+      delete(table: unknown) {
+        deletedTables.push(table);
+        return {
+          async where() {},
+        };
+      },
+    };
+    const persistence = createPostgresChatPersistence(database);
+
+    await persistence.deleteProfileData?.("00000000-0000-4000-8000-000000000002");
+
+    expect(deletedTables).toEqual([memories, charts, conversations]);
   });
 });
