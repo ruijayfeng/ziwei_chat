@@ -1,18 +1,52 @@
 "use client";
 
 /**
- * [INPUT]: Depends on selected topic callback from the app shell
+ * [INPUT]: Depends on selected topic callback from the app shell and shadcn Button
  * [OUTPUT]: Provides five MVP topic entry buttons
  * [POS]: Topic shortcut component for starting grounded Ziwei chat flows
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
+import { Button } from "@/components/ui/button";
+import {
+  BriefcaseBusiness,
+  Coins,
+  HeartHandshake,
+  Sparkles,
+  UserRoundSearch,
+} from "lucide-react";
+
 const topics = [
-  { id: "recent_fortune", label: "近期运势", prompt: "我最近的重点是什么？" },
-  { id: "career", label: "事业工作", prompt: "我最近想换工作，适合动吗？" },
-  { id: "relationship", label: "感情关系", prompt: "我想看看最近的感情状态。" },
-  { id: "wealth", label: "财富节奏", prompt: "我最近的财务节奏适合注意什么？" },
-  { id: "personality", label: "性格分析", prompt: "这张盘怎么看我的性格倾向？" },
+  {
+    id: "recent_fortune",
+    label: "近期运势",
+    prompt: "我最近的重点是什么？",
+    icon: Sparkles,
+  },
+  {
+    id: "career",
+    label: "事业工作",
+    prompt: "我最近想换工作，适合动吗？",
+    icon: BriefcaseBusiness,
+  },
+  {
+    id: "relationship",
+    label: "感情关系",
+    prompt: "我想看看最近的感情状态。",
+    icon: HeartHandshake,
+  },
+  {
+    id: "wealth",
+    label: "财富节奏",
+    prompt: "我最近的财务节奏适合注意什么？",
+    icon: Coins,
+  },
+  {
+    id: "personality",
+    label: "性格分析",
+    prompt: "这张盘怎么看我的性格倾向？",
+    icon: UserRoundSearch,
+  },
 ];
 
 type TopicEntryProps = {
@@ -21,20 +55,38 @@ type TopicEntryProps = {
 
 export function TopicEntry({ onSelect }: TopicEntryProps) {
   return (
-    <div className="grid gap-2">
-      <h2 className="text-sm font-semibold text-zinc-950">主题入口</h2>
-      <div className="flex flex-wrap gap-2">
+    <section className="grid gap-3">
+      <div>
+        <p className="text-xs font-medium text-muted-foreground">Quick topics</p>
+        <h2 className="mt-1 text-sm font-semibold text-foreground">主题入口</h2>
+      </div>
+      <div className="grid gap-2">
         {topics.map((topic) => (
-          <button
-            className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 transition hover:border-teal-700 hover:text-teal-800"
-            key={topic.id}
-            onClick={() => onSelect(topic.prompt)}
-            type="button"
-          >
-            {topic.label}
-          </button>
+          <TopicButton key={topic.id} topic={topic} onSelect={onSelect} />
         ))}
       </div>
-    </div>
+    </section>
+  );
+}
+
+function TopicButton({
+  topic,
+  onSelect,
+}: {
+  topic: (typeof topics)[number];
+  onSelect: (prompt: string) => void;
+}) {
+  const Icon = topic.icon;
+
+  return (
+    <Button
+      className="justify-start"
+      onClick={() => onSelect(topic.prompt)}
+      type="button"
+      variant="outline"
+    >
+      <Icon data-icon="inline-start" />
+      {topic.label}
+    </Button>
   );
 }

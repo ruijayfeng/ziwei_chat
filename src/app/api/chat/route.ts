@@ -22,6 +22,7 @@ import { composeResponse } from "../../../lib/agent/response-composer";
 import { createAgentTools } from "../../../lib/agent/tools";
 import type { ChartFact, ChartTopic, CreateChartInput } from "../../../lib/domain/chart";
 import type { Intent } from "../../../lib/domain/analysis";
+import { checkRateLimit } from "../../../lib/http/rate-limit";
 import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
 import { searchKnowledge } from "../../../lib/knowledge/search";
 
@@ -48,6 +49,9 @@ const chartTopics = new Set<Intent>([
 ]);
 
 export async function POST(request: Request) {
+  const rateLimitResponse = enforceRateLimit(request, "POST");
+  if (rateLimitResponse) return rateLimitResponse;
+
   const body = (await request.json()) as ChatRequestBody;
   const profileId = toUuid(body.profileId) ?? randomUUID();
   const conversationId = toUuid(body.conversationId) ?? randomUUID();
@@ -116,6 +120,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const rateLimitResponse = enforceRateLimit(request, "DELETE");
+  if (rateLimitResponse) return rateLimitResponse;
+
   const url = new URL(request.url);
   const profileId = toUuid(url.searchParams.get("profileId") ?? undefined);
 
@@ -285,6 +292,23 @@ function readLatestUserContent(body: ChatRequestBody) {
     .find((message) => message.role === "user");
 
   return body.message ?? latestUserMessage?.content ?? "";
+}
+
+function enforceRateLimit(request: Request, method: "POST" | "DELETE") {
+  const decision = checkRateLimit({
+    request,
+    route: "/api/chat",
+    method,
+  });
+
+  if (decision.allowed) return null;
+
+  return new Response("rate limit exceeded", {
+    status: 429,
+    headers: {
+      "Retry-After": decision.retryAfterSeconds.toString(),
+    },
+  });
 }
 
 function toUuid(value: string | undefined) {

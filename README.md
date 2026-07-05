@@ -21,6 +21,24 @@ npm run eval:agent
 npm run build
 ```
 
+## Continuous Integration
+
+GitHub Actions runs the same verification gate on pull requests and pushes to
+`master`: install with `npm ci`, then lint, typecheck, test, evaluate the agent,
+and build.
+
+## Runtime Hardening
+
+`/api/chat` has a fixed-window request limiter. Defaults are documented in
+`.env.example`:
+
+```bash
+CHAT_RATE_LIMIT_MAX=30
+CHAT_RATE_LIMIT_WINDOW_MS=60000
+```
+
+Set `CHAT_RATE_LIMIT_MAX=0` only for trusted local development.
+
 ## Local Database
 
 ```bash

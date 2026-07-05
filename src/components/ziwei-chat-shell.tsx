@@ -1,15 +1,45 @@
 "use client";
 
 /**
- * [INPUT]: Depends on chart onboarding, topic entry, chat panel, evidence drawer, and /api/chat
+ * [INPUT]: Depends on chart onboarding, topic entry, chat panel, evidence drawer, shadcn Sheet/AlertDialog, and /api/chat
  * [OUTPUT]: Provides the coordinated MVP Ziwei Chat application shell
- * [POS]: Client state boundary for anonymous profile, primary chart draft, chat streaming, and evidence display
+ * [POS]: Client state boundary for anonymous profile, primary chart draft, chat streaming, error handling, and evidence display
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { Menu, ShieldCheck, Trash2 } from "lucide-react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
+import {
+  chatErrorFromResponse,
+  classifyChatError,
+  emptyAssistantResponseError,
+  isEmptyAssistantResponse,
+  type ChatErrorState,
+} from "@/lib/ui/chat-errors";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { ChartOnboarding } from "./chart-onboarding";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { EvidenceDrawer, type EvidenceState } from "./evidence-drawer";
@@ -41,132 +71,287 @@ export function ZiweiChatShell() {
   const [chartInput, setChartInput] = useState<CreateChartInput | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [lastFailedContent, setLastFailedContent] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<ChatErrorState | null>(null);
   const [evidence, setEvidence] = useState<EvidenceState>(initialEvidence);
   const [chartSynced, setChartSynced] = useState(false);
 
-  const chartStatus = useMemo(
-    () => (chartInput ? `${chartInput.name} · ${chartInput.birthDate}` : "尚未创建"),
-    [chartInput],
+  const workspace = (
+    <WorkspacePanel
+      chartInput={chartInput}
+      chartSynced={chartSynced}
+      onChartReady={(nextChart) => {
+        setChartInput(nextChart);
+        setChartSynced(false);
+        setError(null);
+      }}
+      onClear={deleteLocalData}
+      onResetChart={resetChartDraft}
+      onTopicSelect={setDraft}
+      profileId={profileId}
+    />
   );
 
-  async function sendMessage() {
-    const content = draft.trim();
+  async function sendMessage(contentOverride?: string) {
+    const content = (contentOverride ?? draft).trim();
     if (!content || isStreaming) return;
 
-    const nextMessages = [...messages, { role: "user" as const, content }];
+    const shouldAppendUserMessage =
+      messages[messages.length - 1]?.role !== "user" ||
+      messages[messages.length - 1]?.content !== content;
+    const nextMessages = shouldAppendUserMessage
+      ? [...messages, { role: "user" as const, content }]
+      : messages;
+
     setMessages(nextMessages);
     setDraft("");
+    setError(null);
     setIsStreaming(true);
 
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        profileId,
-        conversationId,
-        chartInput: chartSynced ? undefined : chartInput,
-        messages: nextMessages,
-      }),
-    });
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let assistantContent = "";
-
-    setMessages((current) => [...current, { role: "assistant", content: "" }]);
-
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        assistantContent += decoder.decode(value, { stream: true });
-        setMessages((current) =>
-          current.map((message, index) =>
-            index === current.length - 1
-              ? { ...message, content: assistantContent }
-              : message,
-          ),
-        );
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: chartSynced ? undefined : chartInput,
+          messages: nextMessages,
+        }),
+      });
+      const responseError = chatErrorFromResponse(response);
+      if (responseError) {
+        setError(responseError);
+        setLastFailedContent(content);
+        return;
       }
-    }
 
-    setEvidence({
-      toolsUsed: chartInput
-        ? [
-            "getCurrentChart",
-            "summarizeChartFacts",
-            "loadSkill",
-            "searchKnowledge",
-            "runResponseCritic",
-          ]
-        : [],
-      chartFacts: chartInput ? ["官禄 / 财帛 / 命宫等主题宫位"] : [],
-      knowledgeSources: chartInput ? ["curated-internal · local"] : [],
-      critic: chartInput ? "passed" : "not_run",
-    });
-    if (chartInput) {
-      setChartSynced(true);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+
+      setMessages((current) => [...current, { role: "assistant", content: "" }]);
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          assistantContent += decoder.decode(value, { stream: true });
+          setMessages((current) =>
+            current.map((message, index) =>
+              index === current.length - 1
+                ? { ...message, content: assistantContent }
+                : message,
+            ),
+          );
+        }
+      }
+
+      if (isEmptyAssistantResponse(assistantContent)) {
+        setMessages((current) => current.slice(0, -1));
+        setError(emptyAssistantResponseError());
+        setLastFailedContent(content);
+        return;
+      }
+
+      setEvidence({
+        toolsUsed: chartInput
+          ? [
+              "getCurrentChart",
+              "summarizeChartFacts",
+              "loadSkill",
+              "searchKnowledge",
+              "runResponseCritic",
+            ]
+          : [],
+        chartFacts: chartInput ? ["事业宫 / 财帛宫 / 命宫等主题宫位"] : [],
+        knowledgeSources: chartInput ? ["curated-internal · local"] : [],
+        critic: chartInput ? "passed" : "not_run",
+      });
+      if (chartInput) {
+        setChartSynced(true);
+      }
+      setLastFailedContent(null);
+    } catch (caught) {
+      setError(classifyChatError(caught));
+      setLastFailedContent(content);
+    } finally {
+      setIsStreaming(false);
     }
-    setIsStreaming(false);
+  }
+
+  function retryLastMessage() {
+    if (lastFailedContent) {
+      void sendMessage(lastFailedContent);
+    }
+  }
+
+  function resetChartDraft() {
+    setChartInput(null);
+    setChartSynced(false);
+    setEvidence(initialEvidence);
   }
 
   async function deleteLocalData() {
     await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, {
       method: "DELETE",
     });
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("ziwei-chat-profile-id");
+    }
     setChartInput(null);
     setChartSynced(false);
     setMessages([]);
     setDraft("");
+    setLastFailedContent(null);
+    setError(null);
     setEvidence(initialEvidence);
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-950">
-      <section className="mx-auto grid min-h-screen w-full max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[360px_1fr_320px]">
-        <div className="grid content-start gap-5">
-          <header className="rounded-md border border-zinc-300 bg-white p-5">
-            <p className="text-sm font-semibold text-teal-800">Ziwei Chat</p>
-            <h1 className="mt-2 text-2xl font-semibold leading-tight text-zinc-950">
-              紫微斗数垂直 Agent
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
-              匿名 profile、确定性排盘、本地知识检索和回答自检先跑通。
+    <main className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
+            <ShieldCheck size={17} strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-sm font-semibold sm:text-base">Ziwei Chat</h1>
+              <Badge className="hidden bg-accent text-primary sm:inline-flex" variant="secondary">
+                Evidence Companion
+              </Badge>
+            </div>
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              可信命盘分析工作台
             </p>
-            <p className="mt-4 rounded bg-zinc-100 px-3 py-2 text-xs text-zinc-600">
-              当前命盘：{chartStatus}
-            </p>
-          </header>
-
-          <ChartOnboarding
-            chartInput={chartInput}
-            onChartReady={(nextChart) => {
-              setChartInput(nextChart);
-              setChartSynced(false);
-            }}
-            profileId={profileId}
-          />
-          <button
-            className="h-10 rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-800 transition hover:border-red-700 hover:text-red-700"
-            onClick={deleteLocalData}
-            type="button"
-          >
-            清除当前匿名资料数据
-          </button>
-          <TopicEntry onSelect={setDraft} />
+          </div>
         </div>
 
-        <ChatPanel
-          draft={draft}
-          isStreaming={isStreaming}
-          messages={messages}
-          onDraftChange={setDraft}
-          onSubmit={sendMessage}
-        />
+        <div className="flex items-center gap-2">
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button className="lg:hidden" size="sm" type="button" variant="outline" />
+              }
+            >
+              <Menu data-icon="inline-start" />
+              资料
+            </SheetTrigger>
+            <SheetContent className="w-[340px] max-w-[calc(100vw-24px)] p-0" side="left">
+              <SheetHeader className="border-b border-border">
+                <SheetTitle>命盘资料</SheetTitle>
+                <SheetDescription>当前匿名 profile 的命盘与主题入口。</SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 overflow-y-auto p-3">{workspace}</div>
+            </SheetContent>
+          </Sheet>
 
-        <EvidenceDrawer evidence={evidence} />
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button className="xl:hidden" size="sm" type="button" variant="outline" />
+              }
+            >
+              依据
+            </SheetTrigger>
+            <SheetContent className="w-[360px] max-w-[calc(100vw-24px)] p-0" side="right">
+              <SheetHeader className="border-b border-border">
+                <SheetTitle>本次回答依据</SheetTitle>
+                <SheetDescription>工具、命盘事实、知识来源和 critic 检查。</SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 overflow-y-auto p-3">
+                <EvidenceDrawer compact evidence={evidence} />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+
+      <section className="grid min-h-0 flex-1 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+        <aside className="hidden min-h-0 border-r border-border bg-card lg:flex lg:flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">{workspace}</div>
+        </aside>
+
+        <div className="min-h-0">
+          <ChatPanel
+            draft={draft}
+            error={error}
+            isStreaming={isStreaming}
+            messages={messages}
+            onDraftChange={setDraft}
+            onRetry={retryLastMessage}
+            onSubmit={() => void sendMessage()}
+          />
+        </div>
+
+        <aside className="hidden min-h-0 border-l border-border bg-card xl:flex xl:flex-col">
+          <EvidenceDrawer evidence={evidence} />
+        </aside>
       </section>
     </main>
+  );
+}
+
+function WorkspacePanel({
+  profileId,
+  chartInput,
+  chartSynced,
+  onChartReady,
+  onResetChart,
+  onTopicSelect,
+  onClear,
+}: {
+  profileId: string;
+  chartInput: CreateChartInput | null;
+  chartSynced: boolean;
+  onChartReady: (chart: CreateChartInput) => void;
+  onResetChart: () => void;
+  onTopicSelect: (prompt: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="grid gap-4">
+      <ChartOnboarding
+        chartInput={chartInput}
+        chartSynced={chartSynced}
+        onChartReady={onChartReady}
+        onResetChart={onResetChart}
+        profileId={profileId}
+      />
+      <TopicEntry onSelect={onTopicSelect} />
+      <ClearDataDialog onConfirm={onClear} />
+    </div>
+  );
+}
+
+function ClearDataDialog({ onConfirm }: { onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger render={<Button type="button" variant="outline" />}>
+        <Trash2 data-icon="inline-start" />
+        清除匿名资料数据
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-warning-muted text-warning">
+            <Trash2 />
+          </AlertDialogMedia>
+          <AlertDialogTitle>清除匿名资料数据？</AlertDialogTitle>
+          <AlertDialogDescription>
+            这会清除当前浏览器里的匿名 profile 状态、当前命盘、对话消息和已显示的依据。
+            MVP 没有产品账号，所以这不是账号删除。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction className="bg-warning text-white hover:bg-[#8e2f23]" onClick={onConfirm}>
+            确认清除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -178,7 +363,7 @@ function createClientUuid() {
   return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (digit) =>
     (
       Number(digit) ^
-      (Math.random() * 16) >> (Number(digit) / 4)
+      ((Math.random() * 16) >> (Number(digit) / 4))
     ).toString(16),
   );
 }
