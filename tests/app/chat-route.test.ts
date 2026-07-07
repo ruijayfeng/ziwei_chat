@@ -323,6 +323,86 @@ describe("POST /api/chat", () => {
     );
   });
 
+  test("revises a model answer once when the final critic rejects the first draft", async () => {
+    const revisedAnswer =
+      "结论：这次更适合先把选择拆成可验证的步骤。\n\n命盘依据：\n- 工具已经提供事业判断基础。\n\n现实解释：这不是直接替你做不可逆决定，而是把命盘倾向和现实条件放在一起看。\n\n建议：先列出两周内可以验证的岗位条件、学习时间和外部反馈。\n\n追问：你现在更担心方向选错，还是执行过程撑不住？";
+    let modelCallIndex = 0;
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      const callIndex = modelCallIndex;
+      modelCallIndex += 1;
+      if (callIndex === 0) {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    requiredTools: [
+                      "getCurrentChart",
+                      "summarizeChartFacts",
+                      "getPalaceAnalysis",
+                      "getLuckCycle",
+                      "loadSkill",
+                      "searchKnowledge",
+                      "runResponseCritic",
+                    ],
+                    requiredSkills: ["career"],
+                    knowledgeQueries: ["career palace"],
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      if (callIndex === 1) {
+        return new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }
+
+      return new Response(
+        [`data: {"choices":[{"delta":{"content":${JSON.stringify(revisedAnswer)}}}]}\n\n`, "data: [DONE]\n\n"].join(""),
+        { status: 200, headers: { "content-type": "text/event-stream" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: careerQuestion }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    const events = parseStreamEvents(await response.text());
+    const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
+    expect(answer).toBe(revisedAnswer);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   test("returns a response body that can be fully consumed by Web Response readers", async () => {
     const response = await POST(
       new Request("http://localhost/api/chat", {

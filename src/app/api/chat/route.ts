@@ -19,7 +19,7 @@ import {
   recordRouteToolEvent,
 } from "../../../lib/agent/chat-runtime";
 import { routeIntent } from "../../../lib/agent/intent-router";
-import { generateLlmAnalysis } from "../../../lib/agent/llm-analyst";
+import { generateLlmAnalysis, reviseLlmAnalysis } from "../../../lib/agent/llm-analyst";
 import { createLlmAnalysisPlan } from "../../../lib/agent/llm-planner";
 import {
   normalizeModelSettings,
@@ -553,27 +553,62 @@ function streamModelAndPersist({
         event: "evidence",
         data: updateEvidenceRunStep(evidence, "critic", "running", "正在检查模型回答的事实边界。"),
       });
-      const postCritique = runResponseCritic({
+      let candidateContent = modelContent;
+      let postCritique = runResponseCritic({
         intent: postCriticContext.intent,
-        draft: modelContent,
+        draft: candidateContent,
         toolsUsed: evidence.toolsUsed,
         chartFacts: postCriticContext.chartFacts,
         knowledgeSources: postCriticContext.knowledgeSources,
         safetyLevel: postCriticContext.safetyLevel,
       });
+      let revisionAttempted = false;
+
+      if (modelResult.ok && !postCritique.passed) {
+        revisionAttempted = true;
+        enqueueEvent(controller, encoder, {
+          event: "evidence",
+          data: updateEvidenceRunStep(evidence, "model", "running", "模型首版未通过检查，正在按 critic 意见修订。"),
+        });
+        const revision = await reviseLlmAnalysis({
+          settings: modelSettings,
+          ...analysisContext,
+          failedContent: candidateContent,
+          finalCriticIssues: postCritique.issues,
+        });
+
+        if (revision.ok) {
+          candidateContent = revision.content;
+          postCritique = runResponseCritic({
+            intent: postCriticContext.intent,
+            draft: candidateContent,
+            toolsUsed: evidence.toolsUsed,
+            chartFacts: postCriticContext.chartFacts,
+            knowledgeSources: postCriticContext.knowledgeSources,
+            safetyLevel: postCriticContext.safetyLevel,
+          });
+        }
+      }
       await recordRouteToolEvent(
         profileId,
         conversationId,
         "runModelResponseCritic",
-        { intent: postCriticContext.intent, draft: modelContent },
+        {
+          intent: postCriticContext.intent,
+          draft: candidateContent,
+          modelError: modelResult.ok ? null : modelResult.error,
+          revisionAttempted,
+        },
         postCritique,
         postCritique.passed,
       );
-      const content = modelResult.ok && postCritique.passed ? modelContent : deterministicContent;
+      const content = modelResult.ok && postCritique.passed ? candidateContent : deterministicContent;
       const finalEvidence = updateEvidenceAfterModelCritic({
         evidence,
         critique: postCritique,
         usedFallback: !modelResult.ok || !postCritique.passed,
+        modelError: modelResult.ok ? null : modelResult.error,
+        revisionAttempted,
       });
 
       enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
@@ -638,16 +673,26 @@ function updateEvidenceAfterModelCritic({
   evidence,
   critique,
   usedFallback,
+  modelError,
+  revisionAttempted,
 }: {
   evidence: ChatEvidence;
   critique: CritiqueResult;
   usedFallback: boolean;
+  modelError: string | null;
+  revisionAttempted: boolean;
 }): ChatEvidence {
+  const fallbackReason = modelError
+    ? `模型请求失败：${modelError}`
+    : revisionAttempted
+      ? "模型修订后仍未通过最终检查，已降级为保守回答。"
+      : "模型输出未通过最终检查，已降级为保守回答。";
+
   return {
     ...evidence,
     critic: {
       status: critique.passed ? "passed" : "needs_review",
-      issues: critique.issues,
+      issues: modelError ? [fallbackReason, ...critique.issues] : critique.issues,
     },
     runs: evidence.runs.map((run) => ({
       ...run,

@@ -49,6 +49,7 @@ export type ModelPromptInput = {
 export type GenerateModelResponseInput = {
   settings: ResolvedModelSettings;
   prompt: string;
+  systemPrompt?: string;
   fetchImplementation?: typeof fetch;
   onToken?: (token: string) => void;
 };
@@ -104,32 +105,34 @@ export function buildModelPrompt({
   criticIssues,
 }: ModelPromptInput): string {
   return [
-    "请基于以下已经由工具产生的紫微斗数上下文回答用户。",
-    "要求：只使用命盘事实、技能流程和知识来源中出现的信息；不要自行排盘；不要给绝对化结论；保持中文自然、温和、可读。",
+    "你是 Ziwei Chat 的紫微斗数分析 Agent。你要基于服务端已经完成的工具调用、命盘事实、skill 流程和 RAG 知识，给用户做综合分析。",
+    "边界：不能自行排盘，不能编造宫位、星曜、四化或格局；没有出现在命盘事实和知识来源中的内容，只能作为现实建议或追问，不能当成命盘依据。",
+    "表达：中文自然、具体、有判断，但不要绝对化。把“命盘倾向”和“现实决策建议”分开。",
     "",
     `用户问题：${userContent}`,
     "",
     "命盘事实：",
     chartFacts.length > 0 ? chartFacts.map((fact) => `- ${fact}`).join("\n") : "- 暂无",
     "",
-    "知识来源：",
+    "RAG 知识来源：",
     knowledgeSources.length > 0
       ? knowledgeSources.map((source) => `- ${source}`).join("\n")
       : "- 暂无",
     "",
-    `Critic 状态：${criticStatus}`,
-    criticIssues.length > 0 ? `Critic 问题：${criticIssues.join("；")}` : "Critic 问题：无",
+    `预检 critic 状态：${criticStatus}`,
+    criticIssues.length > 0 ? `预检 critic 问题：${criticIssues.join("；")}` : "预检 critic 问题：无",
     "",
     "本地确定性草稿：",
     deterministicDraft,
     "",
-    "请输出最终给用户看的回答，保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”的结构。",
+    "请输出最终给用户看的回答，保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”的结构。追问只保留一个问号。",
   ].join("\n");
 }
 
 export async function generateModelResponse({
   settings,
   prompt,
+  systemPrompt = "你是 Ziwei Chat 的中文紫微斗数分析 Agent。命盘事实由工具提供，你负责基于证据、skill 和 RAG 做综合分析。",
   fetchImplementation = fetch,
   onToken,
 }: GenerateModelResponseInput): Promise<GenerateModelResponseResult> {
@@ -138,29 +141,25 @@ export async function generateModelResponse({
   }
 
   try {
-    const response = await fetchImplementation(`${settings.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${settings.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: settings.model,
-        stream: true,
-        temperature: 0.4,
-        messages: [
-          {
-            role: "system",
-            content:
-              "你是 Ziwei Chat 的中文回答生成器。命盘事实由工具提供，你只负责把证据组织成自然语言。",
-          },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    const requestInit = buildChatCompletionRequest(settings, systemPrompt, prompt);
+    const attempted: string[] = [];
+    let response: Response | null = null;
+
+    for (const endpoint of chatCompletionEndpoints(settings.baseUrl)) {
+      attempted.push(endpoint);
+      response = await fetchImplementation(endpoint, requestInit);
+      if (response.ok || response.status !== 404) break;
+    }
+
+    if (!response) {
+      return { ok: false, error: "model request was not attempted" };
+    }
 
     if (!response.ok) {
-      return { ok: false, error: `model request failed with status ${response.status}` };
+      return {
+        ok: false,
+        error: `model request failed with status ${response.status} at ${redactAttemptedEndpoints(attempted)}`,
+      };
     }
 
     const content = await readOpenAiCompatibleStream(response, onToken);
@@ -174,6 +173,60 @@ export async function generateModelResponse({
       error: error instanceof Error ? error.message : "model request failed",
     };
   }
+}
+
+function buildChatCompletionRequest(
+  settings: ResolvedModelSettings,
+  systemPrompt: string,
+  prompt: string,
+): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${settings.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      stream: true,
+      temperature: 0.4,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        { role: "user", content: prompt },
+      ],
+    }),
+  };
+}
+
+function chatCompletionEndpoints(baseUrl: string) {
+  const primary = `${baseUrl}/chat/completions`;
+  if (hasVersionPath(baseUrl)) return [primary];
+
+  return [primary, `${baseUrl}/v1/chat/completions`];
+}
+
+function hasVersionPath(baseUrl: string) {
+  try {
+    return new URL(baseUrl).pathname.split("/").some((part) => /^v\d+$/i.test(part));
+  } catch {
+    return false;
+  }
+}
+
+function redactAttemptedEndpoints(endpoints: string[]) {
+  return endpoints
+    .map((endpoint) => {
+      try {
+        const url = new URL(endpoint);
+        return `${url.origin}${url.pathname}`;
+      } catch {
+        return endpoint;
+      }
+    })
+    .join(", ");
 }
 
 function readProvider(value: unknown): ModelProviderOption {

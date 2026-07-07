@@ -140,4 +140,38 @@ describe("generateModelResponse", () => {
       ],
     });
   });
+
+  test("retries /v1 chat completions for bare compatible provider base URLs", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (url) => {
+      if (String(url) === "https://integrate.api.nvidia.com/chat/completions") {
+        return new Response("not found", { status: 404 });
+      }
+
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "retried model answer" } }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    const result = await generateModelResponse({
+      settings: {
+        provider: "openai-compatible",
+        enabled: true,
+        baseUrl: "https://integrate.api.nvidia.com",
+        apiKey: "sk-test",
+        model: "test-model",
+        embedding: disabledEmbedding,
+      },
+      prompt: "hello",
+      fetchImplementation: fetchMock,
+    });
+
+    expect(result).toEqual({ ok: true, content: "retried model answer" });
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://integrate.api.nvidia.com/chat/completions",
+      "https://integrate.api.nvidia.com/v1/chat/completions",
+    ]);
+  });
 });

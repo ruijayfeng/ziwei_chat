@@ -40,6 +40,8 @@ export async function createLlmAnalysisPlan({
 
   const result = await generateModelResponse({
     settings,
+    systemPrompt:
+      "你是 Ziwei Chat 的 Agent planner。只输出 JSON 计划，不输出用户最终回答。不能自行排盘，不能编造命盘事实。",
     prompt: buildPlannerPrompt({ userContent, route, deterministicPlan, chartFacts }),
   });
   if (!result.ok) return deterministicPlan;
@@ -54,9 +56,8 @@ function buildPlannerPrompt({
   chartFacts,
 }: Omit<LlmPlannerInput, "settings">) {
   return [
-    "你是 Ziwei Chat 的 Agent planner。你只规划分析步骤，不输出给用户的最终回答。",
-    "约束：不能自行排盘，不能创造命盘事实，只能基于服务端提供的 chartFacts 和允许工具做计划。",
-    "请只输出 JSON，不要 Markdown。",
+    "请基于用户问题、已识别 intent、确定性 fallback 计划和命盘事实，选择需要执行的工具、skill 和知识检索词。",
+    "约束：只允许使用 schema 里的工具名；不要输出 Markdown；不要生成最终回答；不要新增命盘事实。",
     "",
     `用户问题：${userContent}`,
     `已识别 intent：${route.intent}`,
