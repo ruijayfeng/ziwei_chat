@@ -130,6 +130,34 @@ describe("local knowledge search", () => {
     }
   });
 
+  test("retrieves multiple curated sources for each beta topic, including selected Renhuai123 material", async () => {
+    const topics = [
+      { topic: "career", query: "career palace", terms: ["官禄", "事业"] },
+      { topic: "relationship", query: "relationship palace", terms: ["夫妻", "感情"] },
+      { topic: "wealth", query: "wealth palace", terms: ["财帛", "财富"] },
+      { topic: "personality", query: "life palace", terms: ["命宫", "主星"] },
+      { topic: "recent_fortune", query: "recent fortune timing", terms: ["运限", "四化"] },
+      { topic: "general", query: "chart explanation", terms: ["命宫", "十二宫"] },
+    ];
+
+    for (const item of topics) {
+      const results = await searchKnowledge({
+        query: item.query,
+        topic: item.topic,
+        chartTerms: item.terms,
+        limit: 5,
+        retrievalMode: "local",
+      });
+      const usableResults = results.filter((result) => result.confidence !== "low");
+
+      expect(usableResults.length, item.topic).toBeGreaterThanOrEqual(2);
+      expect(
+        usableResults.some((result) => result.source === "Renhuai123/ziwei-doushu"),
+        item.topic,
+      ).toBe(true);
+    }
+  });
+
   test("can retrieve topic-classified imported knowledge with source path and license", async () => {
     const root = await mkdtemp(join(tmpdir(), "ziwei-topic-knowledge-"));
     const importedDir = join(root, "content", "knowledge", "imported", "ziwei-doushu");

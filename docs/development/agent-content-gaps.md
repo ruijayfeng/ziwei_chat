@@ -7,9 +7,9 @@
 
 The Agent loop can already route intent, build a plan, run deterministic chart tools, load a topic skill, search local Markdown knowledge, compose an answer, run the critic, stream the answer, and expose evidence to the UI.
 
-The current `content/skills/` and `content/knowledge/` files are seed content. They are enough to verify the loop, but not enough for strong Ziwei analysis quality.
+The current `content/skills/` and `content/knowledge/` files now include beta-level curated topic knowledge plus selected high-signal extracts adapted from `Renhuai123/ziwei-doushu`. They are enough to improve common-topic retrieval and plain-language grounding, but not yet enough for deep star-by-palace doctrine or advanced timing work.
 
-`content/knowledge/imported/ziwei-doushu/` now contains a small imported seed set from `Renhuai123/ziwei-doushu`. Treat it as attributed RAG source material, not final curated product doctrine. Imported chunks should be reviewed, topic-tagged, and promoted selectively before relying on them for high-confidence answers.
+`content/knowledge/imported/ziwei-doushu/` contains imported seed chunks from `Renhuai123/ziwei-doushu`. Treat it as attributed RAG source material, not final curated product doctrine. The `content/knowledge/renhuai-*.md` files are the first promoted curated layer: short, source-attributed, product-safe summaries for topics, palace structure, major stars, sihua, and common pattern interpretation.
 
 ## Skill Content Needed
 
@@ -32,12 +32,12 @@ Minimum skill sections by topic:
 
 ## Knowledge Chunks Needed
 
-Minimum corpus before answer quality work should be considered meaningful:
+Remaining corpus needed before answer quality should be considered strong:
 
 - 12 palace basics: 命宫, 兄弟, 夫妻, 子女, 财帛, 疾厄, 迁移, 交友, 官禄, 田宅, 福德, 父母
 - 14 major star basics: 紫微, 天机, 太阳, 武曲, 天同, 廉贞, 天府, 太阴, 贪狼, 巨门, 天相, 天梁, 七杀, 破军
 - transform basics: 禄, 权, 科, 忌 with topic-specific caution
-- topic rules: career, relationship, wealth, personality, recent fortune
+- topic rules: career, relationship, wealth, personality, recent fortune; beta-level rules exist, but need more star-by-palace examples
 - common pattern notes: only after the chart tool can expose stable pattern ids
 - timing notes: current luck-cycle interpretation, with clear limits until full timing tools are implemented
 
@@ -55,4 +55,4 @@ Add explicit content rules for:
 
 ## Development Note
 
-Until these gaps are filled, the composer should keep conservative language and the evidence drawer should honestly show sparse or missing knowledge sources.
+Until these gaps are filled, the composer can use open-ended symbolic interpretation, but should keep evidence-grounded language and avoid unsupported certainty. The evidence drawer should honestly show whether a source is curated, imported, high confidence, or low confidence.
