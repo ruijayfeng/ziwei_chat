@@ -123,12 +123,15 @@ export const knowledgeChunks = pgTable(
   "knowledge_chunks",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    chunkKey: text("chunk_key").notNull(),
     title: text("title").notNull(),
     content: text("content").notNull(),
     topic: text("topic").notNull(),
     terms: text("terms").array().notNull(),
     source: text("source").notNull(),
+    sourcePath: text("source_path"),
     sourceUrl: text("source_url"),
+    license: text("license"),
     school: text("school").notNull().default("default"),
     confidence: text("confidence").notNull(),
     embedding: vector("embedding", { dimensions: 1536 }),
@@ -137,6 +140,7 @@ export const knowledgeChunks = pgTable(
   (table) => [
     index("knowledge_chunks_topic_idx").on(table.topic),
     index("knowledge_chunks_terms_idx").using("gin", table.terms),
+    uniqueIndex("knowledge_chunks_chunk_key_idx").on(table.chunkKey),
     index("knowledge_chunks_embedding_idx").using(
       "hnsw",
       table.embedding.op("vector_cosine_ops"),

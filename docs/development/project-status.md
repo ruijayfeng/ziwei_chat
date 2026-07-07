@@ -58,7 +58,7 @@ Latest verified local results for the public beta pass:
 - The Agent/frontend evidence loop is now the main active development path. Domain skill and knowledge content remains seed-level; see `docs/development/agent-content-gaps.md`.
 - Provider-backed token streaming is implemented and covered by route/model-provider tests, but should still be manually tested against at least one real OpenAI-compatible provider before public announcement.
 - Imported RAG content is broader than the MVP seed, but still needs editorial curation before it should be treated as high-confidence domain doctrine.
-- RAG is hot-swappable: local Markdown keyword search remains the no-database baseline; optional embedding settings can use a local JSON embedding index for hybrid retrieval, and a Postgres/pgvector retriever adapter is available for database-backed deployments.
+- RAG is hot-swappable: local Markdown keyword search remains the no-database baseline; optional embedding settings can use a local JSON embedding index for hybrid retrieval; when `DATABASE_URL` and embedding settings are present, runtime retrieval attempts Postgres/pgvector first and falls back locally if needed.
 - Product authentication, hosted accounts, payments, subscriptions, multi-chart management, reports, and large ingestion are intentionally out of V1 scope.
 - `npm audit` still reports moderate advisories in Next/PostCSS and drizzle-kit/esbuild chains. npm suggests force fixes that imply breaking downgrades, so they were not applied.
 - UI is a stronger MVP product shell, but not yet a final flagship design pass. Future design work should continue using `impeccable`/product UI review with browser evidence.

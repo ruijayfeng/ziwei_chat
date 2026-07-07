@@ -17,13 +17,11 @@ Local development:
 ```text
 DATABASE_URL=postgres://ziwei:ziwei@localhost:5432/ziwei_chat
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-AI_PROVIDER=deterministic-local
-AI_MODEL=
-OPENAI_API_KEY=
 CHAT_RATE_LIMIT_MAX=30
 CHAT_RATE_LIMIT_WINDOW_MS=60000
-EMBEDDING_PROVIDER_API_KEY=
-EMBEDDING_MODEL=
+EMBEDDING_BASE_URL=https://api.openai.com/v1
+EMBEDDING_API_KEY=
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
 Production on Vercel + optional Neon/Postgres:
@@ -31,16 +29,14 @@ Production on Vercel + optional Neon/Postgres:
 ```text
 DATABASE_URL=<Neon pooled or direct Postgres URL>
 NEXT_PUBLIC_APP_URL=https://<your-vercel-domain>
-AI_PROVIDER=deterministic-local
-AI_MODEL=
-OPENAI_API_KEY=
 CHAT_RATE_LIMIT_MAX=30
 CHAT_RATE_LIMIT_WINDOW_MS=60000
-EMBEDDING_PROVIDER_API_KEY=
-EMBEDDING_MODEL=
+EMBEDDING_BASE_URL=https://api.openai.com/v1
+EMBEDDING_API_KEY=
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-The current MVP can run with `AI_PROVIDER=deterministic-local` because the agent chain is deterministic while provider-backed model streaming is a later switch-in. Local Markdown/keyword retrieval does not require `EMBEDDING_PROVIDER_API_KEY`.
+Chat model and browser Embedding settings are configured in the app model settings panel. API keys entered there are stored in browser `localStorage` for beta. Local Markdown/keyword retrieval does not require embedding environment variables.
 
 ## CI Gate
 
@@ -103,6 +99,32 @@ CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
 This keeps optional pgvector columns compatible with the documented enhanced retrieval path. Local Markdown retrieval remains the baseline and works without embeddings.
+
+## Knowledge Ingestion
+
+No-database semantic RAG:
+
+```bash
+EMBEDDING_BASE_URL=https://api.openai.com/v1 \
+EMBEDDING_API_KEY=sk-... \
+EMBEDDING_MODEL=text-embedding-3-small \
+npm run build:knowledge-embeddings
+```
+
+Database-backed pgvector RAG:
+
+```bash
+npx drizzle-kit migrate
+EMBEDDING_BASE_URL=https://api.openai.com/v1 \
+EMBEDDING_API_KEY=sk-... \
+EMBEDDING_MODEL=text-embedding-3-small \
+npm run ingest:knowledge-postgres
+```
+
+Runtime retrieval is hot-swappable: with `DATABASE_URL` and browser Embedding
+settings it attempts Postgres/pgvector first; without database matches it falls
+back to `content/knowledge-index/embeddings.json`; without that file it falls
+back to Markdown keyword search.
 
 ## Vercel Setup
 

@@ -30,6 +30,8 @@ import { composeResponse } from "../../../lib/agent/response-composer";
 import { createAgentTools } from "../../../lib/agent/tools";
 import type { CritiqueResult, Intent } from "../../../lib/domain/analysis";
 import type { ChartFact, ChartTopic, CreateChartInput } from "../../../lib/domain/chart";
+import { getDatabaseClient } from "../../../lib/db/client";
+import { createPostgresKnowledgeRetriever } from "../../../lib/db/knowledge-retrieval";
 import { checkRateLimit } from "../../../lib/http/rate-limit";
 import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
 import { searchKnowledge, type KnowledgeSource } from "../../../lib/knowledge/search";
@@ -476,6 +478,10 @@ async function searchRouteKnowledge(
       limit: 3,
       retrievalMode: modelSettings.embedding.enabled ? "hybrid" : "local",
       embeddingSettings: modelSettings.embedding,
+      vectorSearch:
+        modelSettings.embedding.enabled && process.env.DATABASE_URL
+          ? createPostgresKnowledgeRetriever(getDatabaseClient()).search
+          : undefined,
     });
   } catch {
     return [];

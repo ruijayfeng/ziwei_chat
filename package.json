@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "eval:agent": "tsx src/lib/evaluation/run-evals.ts",
     "import:ziwei-doushu": "tsx scripts/import-ziwei-doushu.ts",
-    "build:knowledge-embeddings": "tsx scripts/build-knowledge-embeddings.ts"
+    "build:knowledge-embeddings": "tsx scripts/build-knowledge-embeddings.ts",
+    "ingest:knowledge-postgres": "tsx scripts/ingest-knowledge-postgres.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

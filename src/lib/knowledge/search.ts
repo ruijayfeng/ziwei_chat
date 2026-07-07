@@ -23,6 +23,12 @@ export type SearchKnowledgeInput = {
   contentRoot?: string;
   embeddingSettings?: ResolvedProviderSettings;
   fetchImplementation?: typeof fetch;
+  vectorSearch?: (input: {
+    queryEmbedding: number[];
+    topic: string;
+    chartTerms: string[];
+    limit: number;
+  }) => Promise<KnowledgeSource[]>;
 };
 
 export type KnowledgeSource = {
@@ -38,7 +44,7 @@ export type KnowledgeSource = {
   retrievalMode: "local" | "vector" | "hybrid";
 };
 
-type KnowledgeChunk = KnowledgeSource & {
+export type KnowledgeChunk = KnowledgeSource & {
   topic: string;
   terms: string[];
   content: string;
@@ -53,9 +59,10 @@ export async function searchKnowledge({
   contentRoot = process.cwd(),
   embeddingSettings,
   fetchImplementation,
+  vectorSearch,
 }: SearchKnowledgeInput): Promise<KnowledgeSource[]> {
   if (retrievalMode !== "local" && embeddingSettings?.enabled) {
-    const vectorResults = await searchEmbeddingIndex({
+    const vectorResults = await searchVectorSources({
       query,
       topic,
       chartTerms,
@@ -63,6 +70,7 @@ export async function searchKnowledge({
       contentRoot,
       embeddingSettings,
       fetchImplementation,
+      vectorSearch,
     });
 
     if (vectorResults.length > 0) {
@@ -98,7 +106,7 @@ export async function searchKnowledge({
     }));
 }
 
-async function loadKnowledgeChunks(contentRoot: string) {
+export async function loadKnowledgeChunks(contentRoot: string) {
   const dir = path.join(contentRoot, "content", "knowledge");
   const fileNames = await listMarkdownFiles(dir);
 
@@ -111,7 +119,7 @@ async function loadKnowledgeChunks(contentRoot: string) {
   );
 }
 
-async function searchEmbeddingIndex({
+async function searchVectorSources({
   query,
   topic,
   chartTerms,
@@ -119,19 +127,31 @@ async function searchEmbeddingIndex({
   contentRoot,
   embeddingSettings,
   fetchImplementation,
+  vectorSearch,
 }: Required<Pick<SearchKnowledgeInput, "query" | "topic" | "chartTerms" | "limit" | "contentRoot">> & {
   embeddingSettings: ResolvedProviderSettings;
   fetchImplementation?: typeof fetch;
+  vectorSearch?: NonNullable<SearchKnowledgeInput["vectorSearch"]>;
 }) {
-  const index = await loadKnowledgeEmbeddingIndex(contentRoot);
-  if (!index) return [];
-
   const embedding = await generateEmbedding({
     settings: embeddingSettings,
     input: [query, topic, ...chartTerms].filter(Boolean).join("\n"),
     fetchImplementation,
   });
   if (!embedding.ok) return [];
+
+  if (vectorSearch) {
+    const databaseResults = await vectorSearch({
+      queryEmbedding: embedding.embedding,
+      topic,
+      chartTerms,
+      limit,
+    });
+    if (databaseResults.length > 0) return databaseResults;
+  }
+
+  const index = await loadKnowledgeEmbeddingIndex(contentRoot);
+  if (!index) return [];
 
   return rankEmbeddingRecords({
     records: index.records,
@@ -158,7 +178,7 @@ async function listMarkdownFiles(dir: string): Promise<string[]> {
   return nested.flat();
 }
 
-function parseKnowledgeMarkdown(
+export function parseKnowledgeMarkdown(
   fileName: string,
   markdown: string,
 ): KnowledgeChunk {

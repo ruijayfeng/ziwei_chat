@@ -55,6 +55,21 @@ npm run build:knowledge-embeddings
 
 This reads `content/knowledge/**/*.md` and writes `content/knowledge-index/embeddings.json`. Without this file, retrieval automatically falls back to local Markdown keyword search.
 
+For database-backed pgvector RAG, run migrations and ingest the same Markdown
+knowledge into Postgres:
+
+```bash
+npx drizzle-kit migrate
+EMBEDDING_BASE_URL="https://api.openai.com/v1" \
+EMBEDDING_API_KEY="sk-..." \
+EMBEDDING_MODEL="text-embedding-3-small" \
+npm run ingest:knowledge-postgres
+```
+
+When `DATABASE_URL` and browser Embedding settings are both present, runtime RAG
+tries Postgres/pgvector first, then falls back to the local JSON embedding index,
+then to Markdown keyword search.
+
 ## Verification
 
 Run the full beta gate:

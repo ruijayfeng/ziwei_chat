@@ -94,4 +94,26 @@ describe("database schema", () => {
     expect(columnNames(evalCases)).toContain("expected_tools");
     expect(columnNames(evalRuns)).toContain("critic_result");
   });
+
+  test("knowledge chunks keep source attribution and vector retrieval fields", () => {
+    expect(columnNames(knowledgeChunks)).toEqual([
+      "id",
+      "chunk_key",
+      "title",
+      "content",
+      "topic",
+      "terms",
+      "source",
+      "source_path",
+      "source_url",
+      "license",
+      "school",
+      "confidence",
+      "embedding",
+      "created_at",
+      "updated_at",
+    ]);
+    expect(indexNames(knowledgeChunks)).toContain("knowledge_chunks_chunk_key_idx");
+    expect(indexNames(knowledgeChunks)).toContain("knowledge_chunks_embedding_idx");
+  });
 });
