@@ -77,6 +77,16 @@ const keywordRules: Array<{
 
 export function routeIntent(message: string): IntentRoute {
   const normalized = message.trim().toLowerCase();
+  if (matchesStudyCareerIntent(normalized)) {
+    return {
+      intent: "career",
+      confidence: 0.86,
+      requiresChart: true,
+      safetyLevel: "caution",
+      rationale: "Matched study and exam career keyword rule.",
+    };
+  }
+
   const matched = keywordRules.find((rule) =>
     rule.keywords.some((keyword) => normalized.includes(keyword.toLowerCase())),
   );
@@ -98,4 +108,10 @@ export function routeIntent(message: string): IntentRoute {
     safetyLevel: matched.safetyLevel,
     rationale: `Matched ${matched.intent} keyword rule.`,
   };
+}
+
+function matchesStudyCareerIntent(message: string) {
+  return ["考研", "读研", "升学", "考试", "备考", "学业", "读书"].some((keyword) =>
+    message.includes(keyword),
+  );
 }

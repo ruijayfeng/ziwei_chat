@@ -11,6 +11,14 @@ describe("routeIntent", () => {
     });
   });
 
+  test("routes graduate exam and study-decision fortune questions to career", () => {
+    expect(routeIntent("我不知道该不该考研，考研到底运势怎么样")).toMatchObject({
+      intent: "career",
+      confidence: expect.any(Number),
+      requiresChart: true,
+    });
+  });
+
   test("routes out-of-scope divination systems away from Ziwei analysis", () => {
     expect(routeIntent("帮我用八字看看今年运势。")).toMatchObject({
       intent: "out_of_scope",

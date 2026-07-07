@@ -14,6 +14,24 @@ const chartFact = {
 };
 
 describe("runResponseCritic", () => {
+  test("accepts a grounded model answer with a full-width Chinese follow-up question mark", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft:
+        "结论：考研这件事更适合当成一段需要稳定投入的长期选择来看。\n\n命盘依据：\n- 工具已经提供事业判断基础。\n\n现实解释：这不是直接断定一定能不能上岸，而是看学习节奏、压力承受和阶段投入是否匹配。\n\n建议：先用两周做一次真题和复习时间评估，再决定是否投入完整周期。\n\n追问：你现在更担心的是考试结果，还是备考过程能不能坚持？",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [chartFact],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result).toEqual({
+      passed: true,
+      issues: [],
+      requiredRevision: false,
+    });
+  });
+
   test("passes a grounded serious answer with exactly one follow-up question", () => {
     const result = runResponseCritic({
       intent: "career",

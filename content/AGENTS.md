@@ -9,6 +9,7 @@ skills/wealth.md: Wealth analysis workflow focused on risk awareness and behavio
 skills/personality.md: Personality analysis workflow grounded in life/body palace facts.
 skills/chart-explanation.md: Plain-language chart explanation workflow for users new to Ziwei terminology.
 knowledge/career-palace.md: Curated local knowledge chunk for career palace interpretation.
+knowledge/career-study-exam.md: Curated local knowledge chunk for career/study exam decisions such as graduate-school preparation.
 knowledge/relationship-palace.md: Curated local knowledge chunk for relationship palace interpretation.
 knowledge/wealth-palace.md: Curated local knowledge chunk for wealth palace interpretation.
 knowledge/personality-life-palace.md: Curated local knowledge chunk for life palace personality interpretation.

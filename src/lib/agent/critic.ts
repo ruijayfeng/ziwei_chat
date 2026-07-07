@@ -110,7 +110,7 @@ export function runResponseCritic({
     issues.push("Required chart tools did not run.");
   }
 
-  if (overconfidentTerms.some((term) => draft.includes(term))) {
+  if (overconfidentTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
     issues.push("Response contains overconfident language.");
   }
 
@@ -122,7 +122,7 @@ export function runResponseCritic({
     issues.push("Response contains prohibited high-stakes advice.");
   }
 
-  const followUpCount = countQuestions(draft);
+  const followUpCount = countVisibleQuestions(draft);
   if (followUpCount !== 1) {
     issues.push("Response must include exactly one useful follow-up question.");
   }
@@ -138,8 +138,29 @@ export function runResponseCritic({
   };
 }
 
-function countQuestions(draft: string) {
-  return (draft.match(/[？?]/g) ?? []).length;
+function countVisibleQuestions(draft: string) {
+  return (draft.match(/[?？]/g) ?? []).length;
+}
+
+function containsUnqualifiedTerm(draft: string, term: string) {
+  let index = draft.indexOf(term);
+
+  while (index !== -1) {
+    const prefix = draft.slice(Math.max(0, index - 12), index);
+    if (!hasNearbyQualifier(prefix)) {
+      return true;
+    }
+
+    index = draft.indexOf(term, index + term.length);
+  }
+
+  return false;
+}
+
+function hasNearbyQualifier(prefix: string) {
+  return ["不", "不能", "不是", "并非", "不要", "避免", "不宜", "未必", "难以", "无法"].some((term) =>
+    prefix.includes(term),
+  );
 }
 
 function mentionsUnknownChartFact(draft: string, chartFacts: ChartFact[]) {
