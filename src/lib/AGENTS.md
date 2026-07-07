@@ -8,6 +8,8 @@ agent/critic.ts: Deterministic response critic for grounding, fabricated chart f
 agent/chat-runtime.ts: Runtime tool stores, persistence selection, and current anonymous profile data deletion for the MVP API route.
 agent/chat-persistence.ts: Storage-agnostic chat message, tool event, and profile data deletion persistence contract with in-memory implementation.
 agent/intent-router.ts: Rule-based MVP intent router for Ziwei topics, management intents, and safety-sensitive prompts.
+agent/llm-analyst.ts: Optional model-backed analyst that consumes chart facts, skill steps, RAG sources, critic constraints, and streams final analysis.
+agent/llm-planner.ts: Optional model-backed planner that proposes constrained tool, skill, and knowledge plans while preserving service-side allowlists.
 agent/model-provider.ts: OpenAI-compatible model adapter that uses page-supplied Base URL, API key, and model after deterministic tool grounding.
 agent/planner.ts: Explicit analysis planner mapping intents to tools, skills, facts, retrieval queries, and response shape.
 agent/response-composer.ts: Response protocol composer for conclusion, chart basis, explanation, suggestion, follow-up, skill analysis steps, and knowledge source titles.
@@ -16,6 +18,7 @@ chart/summarize-chart.ts: Deterministic chart fact extraction from raw iztro cha
 db/client.ts: Drizzle/Postgres client factory and default database instance.
 db/chat-persistence.ts: Postgres-backed ChatPersistence adapter for messages, tool events, and profile-owned data deletion.
 db/schema.ts: Drizzle schema for profiles, charts, conversations, messages, memory, knowledge, skills, tool events, and evals.
+db/knowledge-retrieval.ts: Optional Postgres/pgvector knowledge retriever for database-backed semantic RAG.
 domain/analysis.ts: Shared intent, plan, analysis state, safety level, and critique contracts.
 domain/chart.ts: Shared chart input, output, summary, fact, and error contracts.
 evaluation/cases.ts: Seed MVP regression cases for topics, missing chart, invalid input, safety, and out-of-scope prompts.
@@ -27,6 +30,8 @@ ui/chart-profile.ts: Chart profile label formatting and sync-state copy for curr
 ui/model-settings.ts: Browser-local model settings parser, serializer, provider defaults, and chat request payload shaping.
 knowledge/skill-loader.ts: Markdown skill loader and validator for deterministic topic workflows.
 knowledge/search.ts: Local Markdown/keyword retrieval for curated and imported knowledge chunks, including confidence-aware scoring.
+knowledge/embedding-provider.ts: OpenAI-compatible embedding adapter for query/index vector generation.
+knowledge/embedding-index.ts: Local JSON embedding index loader and cosine ranking helpers for no-database semantic retrieval.
 knowledge/ziwei-doushu-importer.ts: Offline Renhuai123/ziwei-doushu importer with source metadata, topic inference, and Markdown chunk formatting.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

@@ -8,8 +8,9 @@ The beta does not require product login, payment, a hosted Ziwei Chat account, P
 
 - Anonymous local profile and one primary chart.
 - Deterministic chart generation through `iztro`.
-- Chat flow: user message -> intent -> plan -> deterministic tools -> skill -> knowledge -> composer -> critic -> response.
+- Chat flow: user message -> intent -> deterministic chart facts -> optional LLM planner -> tools -> skill -> local/hybrid RAG -> optional LLM analyst -> critic -> response.
 - OpenAI-compatible real model streaming from page-supplied provider, Base URL, API key, and model.
+- Optional OpenAI-compatible embedding settings for semantic RAG.
 - Deterministic-local fallback when no model is configured or a model call fails.
 - Evidence drawer for tools, chart facts, knowledge sources, and critic status.
 - Local Markdown/keyword knowledge search, including curated notes and imported `Renhuai123/ziwei-doushu` chunks with source/license metadata.
@@ -38,6 +39,21 @@ The API key is stored only in this browser's `localStorage`; it is sent to `/api
 
 If settings are incomplete, Ziwei Chat stays in deterministic-local mode.
 
+The Embedding section is optional. When it is not configured, Ziwei Chat uses local Markdown keyword RAG. When it is configured and a knowledge embedding index exists, the app can use hybrid semantic retrieval.
+
+## Optional Knowledge Embeddings
+
+Build a local no-database semantic RAG index:
+
+```bash
+EMBEDDING_BASE_URL="https://api.openai.com/v1" \
+EMBEDDING_API_KEY="sk-..." \
+EMBEDDING_MODEL="text-embedding-3-small" \
+npm run build:knowledge-embeddings
+```
+
+This reads `content/knowledge/**/*.md` and writes `content/knowledge-index/embeddings.json`. Without this file, retrieval automatically falls back to local Markdown keyword search.
+
 ## Verification
 
 Run the full beta gate:
@@ -57,7 +73,7 @@ npm run build
 3. Set `NEXT_PUBLIC_APP_URL` to your deployed URL.
 4. Deploy.
 
-Database variables are optional for the current beta path. The app can run in database-optional deterministic-local mode while hosted Postgres, pgvector, user accounts, and payments remain intentionally out of scope.
+Database variables are optional for the current beta path. The app can run in database-optional deterministic-local mode while hosted Postgres and pgvector provide the production-grade RAG/persistence path. User accounts and payments remain intentionally out of scope.
 
 ## Local Database Optional
 
@@ -65,7 +81,7 @@ Database variables are optional for the current beta path. The app can run in da
 docker compose up -d postgres
 ```
 
-The default local URL is documented in `.env.example`. The compose file uses a pgvector-enabled image so vector retrieval can be added later without blocking open-source local use.
+The default local URL is documented in `.env.example`. The compose file uses a pgvector-enabled image. With database and embedding configuration, knowledge chunks can be stored with vectors for database-backed RAG; without database configuration, local Markdown and optional JSON embedding index retrieval still work.
 
 ## Demo Script
 

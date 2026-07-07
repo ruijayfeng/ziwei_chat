@@ -132,6 +132,7 @@ describe("POST /api/chat", () => {
         "createChart",
         "getCurrentChart",
         "summarizeChartFacts",
+        "createAnalysisPlan",
         "getPalaceAnalysis",
         "getLuckCycle",
         "loadSkill",
@@ -159,6 +160,7 @@ describe("POST /api/chat", () => {
       "createChart",
       "getCurrentChart",
       "summarizeChartFacts",
+      "createAnalysisPlan",
       "getPalaceAnalysis",
       "getLuckCycle",
       "loadSkill",
@@ -166,6 +168,7 @@ describe("POST /api/chat", () => {
       "runResponseCritic",
     ]);
     expect(snapshot.persistedToolEvents.map((event) => event.conversationId)).toEqual([
+      conversationId,
       conversationId,
       conversationId,
       conversationId,
@@ -217,7 +220,7 @@ describe("POST /api/chat", () => {
     );
 
     await expect(response.text()).resolves.toContain("模型生成的事业分析回答");
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     const evidence = readEvidenceHeader(response);
     expect(evidence.toolsUsed).toContain("generateModelResponse");
@@ -264,7 +267,7 @@ describe("POST /api/chat", () => {
     );
 
     await expect(response.text()).resolves.toBe("stream from model");
-    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
     expect(JSON.parse(String(requestInit?.body))).toMatchObject({ stream: true });
     expect(readEvidenceHeader(response).toolsUsed).toContain("generateModelResponse");
   });

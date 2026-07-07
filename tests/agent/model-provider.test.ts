@@ -6,8 +6,16 @@ import {
   normalizeModelSettings,
 } from "../../src/lib/agent/model-provider";
 
+const disabledEmbedding = {
+  provider: "disabled",
+  enabled: false,
+  baseUrl: "",
+  apiKey: "",
+  model: "",
+} as const;
+
 describe("model provider settings", () => {
-  test("keeps deterministic local mode when browser model settings are incomplete", () => {
+  test("keeps deterministic local mode when browser chat model settings are incomplete", () => {
     expect(
       normalizeModelSettings({
         provider: "deepseek",
@@ -21,16 +29,23 @@ describe("model provider settings", () => {
       baseUrl: "",
       apiKey: "",
       model: "",
+      embedding: disabledEmbedding,
     });
   });
 
-  test("normalizes a custom OpenAI-compatible model endpoint from the page", () => {
+  test("normalizes chat and embedding OpenAI-compatible endpoints from the page", () => {
     expect(
       normalizeModelSettings({
         provider: "qwen",
         baseUrl: " https://dashscope.aliyuncs.com/compatible-mode/v1/ ",
         apiKey: "sk-test",
         model: "qwen-plus",
+        embedding: {
+          provider: "openai",
+          baseUrl: " https://api.openai.com/v1/ ",
+          apiKey: "sk-embedding",
+          model: "text-embedding-3-small",
+        },
       }),
     ).toEqual({
       provider: "qwen",
@@ -38,7 +53,31 @@ describe("model provider settings", () => {
       baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
       apiKey: "sk-test",
       model: "qwen-plus",
+      embedding: {
+        provider: "openai",
+        enabled: true,
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "sk-embedding",
+        model: "text-embedding-3-small",
+      },
     });
+  });
+
+  test("disables embedding settings when they are incomplete", () => {
+    expect(
+      normalizeModelSettings({
+        provider: "openai",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "sk-chat",
+        model: "gpt-4.1-mini",
+        embedding: {
+          provider: "openai",
+          baseUrl: "https://api.openai.com/v1",
+          apiKey: "",
+          model: "text-embedding-3-small",
+        },
+      }).embedding,
+    ).toEqual(disabledEmbedding);
   });
 });
 
@@ -64,6 +103,7 @@ describe("generateModelResponse", () => {
         baseUrl: "https://example.test/v1",
         apiKey: "sk-test",
         model: "test-model",
+        embedding: disabledEmbedding,
       },
       prompt: buildModelPrompt({
         userContent: "career question",

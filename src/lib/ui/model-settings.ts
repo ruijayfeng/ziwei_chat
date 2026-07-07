@@ -1,7 +1,7 @@
 /**
  * [INPUT]: Depends on browser localStorage JSON values and chat request model settings
- * [OUTPUT]: Provides model settings draft parsing, serialization, request payload shaping, and UI status copy
- * [POS]: UI support module for user-entered OpenAI-compatible model configuration
+ * [OUTPUT]: Provides chat/embedding model settings parsing, serialization, request shaping, and UI status copy
+ * [POS]: UI support module for user-entered OpenAI-compatible model and embedding configuration
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
@@ -17,49 +17,78 @@ export const modelProviderOptions = [
 
 export type ModelProviderOption = (typeof modelProviderOptions)[number]["value"];
 
-export type ModelSettingsDraft = {
-  provider: ModelProviderOption;
+export type EmbeddingSettingsDraft = {
+  provider: Exclude<ModelProviderOption, "deterministic-local"> | "disabled";
   baseUrl: string;
   apiKey: string;
   model: string;
 };
 
-export type ModelSettingsRequest = {
+export type ModelSettingsDraft = {
   provider: ModelProviderOption;
   baseUrl: string;
   apiKey: string;
   model: string;
+  embedding: EmbeddingSettingsDraft;
 };
+
+export type ModelSettingsRequest = ModelSettingsDraft;
 
 export type ModelSettingsStatus = {
   label: string;
   description: string;
   missingFields: string[];
   ready: boolean;
+  embeddingReady: boolean;
 };
 
 export const modelSettingsStorageKey = "ziwei-chat-model-settings";
+
+export const defaultEmbeddingSettingsDraft: EmbeddingSettingsDraft = {
+  provider: "disabled",
+  baseUrl: "",
+  apiKey: "",
+  model: "",
+};
 
 export const defaultModelSettingsDraft: ModelSettingsDraft = {
   provider: "deterministic-local",
   baseUrl: "",
   apiKey: "",
   model: "",
+  embedding: defaultEmbeddingSettingsDraft,
 };
 
 export const modelProviderDefaults: Record<
   Exclude<ModelProviderOption, "deterministic-local">,
-  { baseUrl: string; model: string }
+  { baseUrl: string; model: string; embeddingModel: string }
 > = {
-  "openai-compatible": { baseUrl: "", model: "" },
-  openai: { baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini" },
-  deepseek: { baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat" },
+  "openai-compatible": { baseUrl: "", model: "", embeddingModel: "" },
+  openai: {
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4.1-mini",
+    embeddingModel: "text-embedding-3-small",
+  },
+  deepseek: {
+    baseUrl: "https://api.deepseek.com/v1",
+    model: "deepseek-chat",
+    embeddingModel: "",
+  },
   qwen: {
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen-plus",
+    embeddingModel: "text-embedding-v4",
   },
-  moonshot: { baseUrl: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k" },
-  zhipu: { baseUrl: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash" },
+  moonshot: {
+    baseUrl: "https://api.moonshot.cn/v1",
+    model: "moonshot-v1-8k",
+    embeddingModel: "",
+  },
+  zhipu: {
+    baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+    model: "glm-4-flash",
+    embeddingModel: "embedding-3",
+  },
 };
 
 export function modelSettingsDraftFromStorage(value: string | null): ModelSettingsDraft {
@@ -77,23 +106,22 @@ export function modelSettingsStorageValue(draft: ModelSettingsDraft): string {
 }
 
 export function modelSettingsRequestFromDraft(draft: ModelSettingsDraft): ModelSettingsRequest {
-  const normalized = normalizeDraft(draft);
-
-  if (normalized.provider === "deterministic-local") {
-    return defaultModelSettingsDraft;
-  }
-
-  return normalized;
+  return normalizeDraft(draft);
 }
 
 export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsStatus {
   const normalized = normalizeDraft(draft);
+  const embeddingReady = isEmbeddingReady(normalized.embedding);
+
   if (normalized.provider === "deterministic-local") {
     return {
       label: "本地模式",
-      description: "使用内置确定性回答，不会调用外部模型。",
+      description: embeddingReady
+        ? "回答使用本地规则；Embedding 已配置，可用于知识库索引或检索。"
+        : "使用内置确定性回答，不会调用外部回答模型。",
       missingFields: [],
       ready: false,
+      embeddingReady,
     };
   }
 
@@ -106,15 +134,19 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
   return missingFields.length === 0
     ? {
         label: "已启用",
-        description: "真实模型已配置，回答会优先使用流式模型生成。",
+        description: embeddingReady
+          ? "回答模型和 Embedding 模型都已配置。"
+          : "回答模型已配置；Embedding 未配置时会回退本地关键词 RAG。",
         missingFields,
         ready: true,
+        embeddingReady,
       }
     : {
         label: "待补全",
         description: `还需要填写 ${missingFields.join("、")}。`,
         missingFields,
         ready: false,
+        embeddingReady,
       };
 }
 
@@ -122,7 +154,30 @@ export function modelSettingsDraftForProvider(
   current: ModelSettingsDraft,
   provider: ModelProviderOption,
 ): ModelSettingsDraft {
-  if (provider === "deterministic-local") return defaultModelSettingsDraft;
+  const normalized = normalizeDraft(current);
+  if (provider === "deterministic-local") {
+    return {
+      ...defaultModelSettingsDraft,
+      embedding: normalized.embedding,
+    };
+  }
+
+  const defaults = modelProviderDefaults[provider];
+
+  return {
+    ...normalized,
+    provider,
+    baseUrl: normalized.baseUrl.trim() || defaults.baseUrl,
+    apiKey: normalized.apiKey,
+    model: normalized.model.trim() || defaults.model,
+  };
+}
+
+export function embeddingSettingsDraftForProvider(
+  current: EmbeddingSettingsDraft,
+  provider: EmbeddingSettingsDraft["provider"],
+): EmbeddingSettingsDraft {
+  if (provider === "disabled") return defaultEmbeddingSettingsDraft;
 
   const defaults = modelProviderDefaults[provider];
 
@@ -130,7 +185,7 @@ export function modelSettingsDraftForProvider(
     provider,
     baseUrl: current.baseUrl.trim() || defaults.baseUrl,
     apiKey: current.apiKey,
-    model: current.model.trim() || defaults.model,
+    model: current.model.trim() || defaults.embeddingModel,
   };
 }
 
@@ -138,7 +193,32 @@ function normalizeDraft(value: unknown): ModelSettingsDraft {
   if (!isRecord(value)) return defaultModelSettingsDraft;
 
   const provider = readProvider(value.provider);
-  if (provider === "deterministic-local") return defaultModelSettingsDraft;
+  const chat =
+    provider === "deterministic-local"
+      ? {
+          provider,
+          baseUrl: "",
+          apiKey: "",
+          model: "",
+        }
+      : {
+          provider,
+          baseUrl: readString(value.baseUrl).trim(),
+          apiKey: readString(value.apiKey).trim(),
+          model: readString(value.model).trim(),
+        };
+
+  return {
+    ...chat,
+    embedding: normalizeEmbeddingSettings(value.embedding),
+  };
+}
+
+function normalizeEmbeddingSettings(value: unknown): EmbeddingSettingsDraft {
+  if (!isRecord(value)) return defaultEmbeddingSettingsDraft;
+
+  const provider = readEmbeddingProvider(value.provider);
+  if (provider === "disabled") return defaultEmbeddingSettingsDraft;
 
   return {
     provider,
@@ -148,10 +228,20 @@ function normalizeDraft(value: unknown): ModelSettingsDraft {
   };
 }
 
+function isEmbeddingReady(value: EmbeddingSettingsDraft) {
+  return value.provider !== "disabled" && Boolean(value.baseUrl && value.apiKey && value.model);
+}
+
 function readProvider(value: unknown): ModelProviderOption {
   return modelProviderOptions.some((option) => option.value === value)
     ? (value as ModelProviderOption)
     : "deterministic-local";
+}
+
+function readEmbeddingProvider(value: unknown): EmbeddingSettingsDraft["provider"] {
+  if (value === "disabled") return "disabled";
+  const provider = readProvider(value);
+  return provider === "deterministic-local" ? "disabled" : provider;
 }
 
 function readString(value: unknown): string {

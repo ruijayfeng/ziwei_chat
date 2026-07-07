@@ -11,7 +11,13 @@ import { useEffect, useState } from "react";
 import { Menu, ShieldCheck, Trash2 } from "lucide-react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
-import { evidenceFromResponse, initialEvidence } from "@/lib/ui/chat-evidence";
+import {
+  evidenceFromResponse,
+  initialEvidence,
+  mergeEvidenceRun,
+  type EvidenceRun,
+  type EvidenceState,
+} from "@/lib/ui/chat-evidence";
 import {
   chatErrorFromResponse,
   classifyChatError,
@@ -121,6 +127,8 @@ export function ZiweiChatShell() {
     setDraft("");
     setError(null);
     setIsStreaming(true);
+    const evidenceRunId = createClientUuid();
+    setEvidence((current) => mergeEvidenceRun(current, createPendingEvidenceRun(evidenceRunId, content)));
 
     try {
       const response = await fetch("/api/chat", {
@@ -130,6 +138,7 @@ export function ZiweiChatShell() {
           profileId,
           conversationId,
           chartInput: chartSynced ? undefined : chartInput,
+          evidenceRunId,
           messages: nextMessages,
           modelSettings: modelSettingsRequestFromDraft(modelSettings),
         }),
@@ -142,6 +151,7 @@ export function ZiweiChatShell() {
       }
 
       const nextEvidence = evidenceFromResponse(response);
+      setEvidence((current) => mergeEvidenceState(current, nextEvidence));
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantContent = "";
@@ -170,7 +180,6 @@ export function ZiweiChatShell() {
         return;
       }
 
-      setEvidence(nextEvidence);
       if (chartInput) {
         setChartSynced(true);
       }
@@ -374,5 +383,64 @@ function createClientUuid() {
       Number(digit) ^
       ((Math.random() * 16) >> (Number(digit) / 4))
     ).toString(16),
+  );
+}
+
+function createPendingEvidenceRun(runId: string, content: string): EvidenceRun {
+  return {
+    runId,
+    title: "本次分析",
+    summary: content.length > 36 ? `${content.slice(0, 36)}...` : content,
+    status: "running",
+    startedAt: new Date().toISOString(),
+    completedAt: "",
+    steps: [
+      {
+        id: "intent",
+        label: "理解问题",
+        detail: "识别主题与安全边界",
+        status: "running",
+      },
+      {
+        id: "chart",
+        label: "读取命盘",
+        detail: "等待服务端读取命盘事实",
+        status: "pending",
+      },
+      {
+        id: "plan",
+        label: "生成计划",
+        detail: "等待 Agent 规划工具和知识检索",
+        status: "pending",
+      },
+      {
+        id: "rag",
+        label: "检索知识",
+        detail: "等待 RAG 返回知识来源",
+        status: "pending",
+      },
+      {
+        id: "model",
+        label: "模型分析",
+        detail: "等待模型分析和流式输出",
+        status: "pending",
+      },
+      {
+        id: "critic",
+        label: "critic 检查",
+        detail: "等待事实与安全检查",
+        status: "pending",
+      },
+    ],
+  };
+}
+
+function mergeEvidenceState(current: EvidenceState, next: EvidenceState): EvidenceState {
+  return next.runs.reduce(
+    (merged, run) => mergeEvidenceRun(merged, run),
+    {
+      ...next,
+      runs: current.runs,
+    },
   );
 }

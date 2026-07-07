@@ -85,8 +85,8 @@ RAG must not decide the analysis workflow.
 The open-source baseline must support local retrieval without external embedding services:
 
 - `local`: parse curated Markdown and search by topic, terms, title, and keyword matches.
-- `vector`: use pgvector embeddings when an embedding provider is configured.
-- `hybrid`: combine local keyword filtering with vector ranking.
+- `vector`: use pgvector embeddings when a database and embedding provider are configured.
+- `hybrid`: combine topic/term filtering, vector similarity, and confidence/source-quality ranking. In no-database mode this can use `content/knowledge-index/embeddings.json`; in database mode it can use Postgres/pgvector.
 
 MVP must implement `local`. `vector` and `hybrid` improve quality but must not block first use.
 

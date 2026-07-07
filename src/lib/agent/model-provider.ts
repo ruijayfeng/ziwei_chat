@@ -12,6 +12,20 @@ export type IncomingModelSettings = {
   baseUrl?: string;
   apiKey?: string;
   model?: string;
+  embedding?: {
+    provider?: string;
+    baseUrl?: string;
+    apiKey?: string;
+    model?: string;
+  };
+};
+
+export type ResolvedProviderSettings = {
+  provider: ModelProviderOption | "disabled";
+  enabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
 };
 
 export type ResolvedModelSettings = {
@@ -20,6 +34,7 @@ export type ResolvedModelSettings = {
   baseUrl: string;
   apiKey: string;
   model: string;
+  embedding: ResolvedProviderSettings;
 };
 
 export type ModelPromptInput = {
@@ -57,6 +72,7 @@ export function normalizeModelSettings(value: IncomingModelSettings | undefined)
   const baseUrl = trimTrailingSlash(value?.baseUrl ?? "");
   const apiKey = (value?.apiKey ?? "").trim();
   const model = (value?.model ?? "").trim();
+  const embedding = normalizeEmbeddingSettings(value?.embedding);
 
   if (provider === "deterministic-local" || !baseUrl || !apiKey || !model) {
     return {
@@ -65,6 +81,7 @@ export function normalizeModelSettings(value: IncomingModelSettings | undefined)
       baseUrl: "",
       apiKey: "",
       model: "",
+      embedding,
     };
   }
 
@@ -74,6 +91,7 @@ export function normalizeModelSettings(value: IncomingModelSettings | undefined)
     baseUrl,
     apiKey,
     model,
+    embedding,
   };
 }
 
@@ -162,6 +180,39 @@ function readProvider(value: unknown): ModelProviderOption {
   return typeof value === "string" && providerValues.has(value as ModelProviderOption)
     ? (value as ModelProviderOption)
     : "deterministic-local";
+}
+
+function normalizeEmbeddingSettings(
+  value: IncomingModelSettings["embedding"] | undefined,
+): ResolvedProviderSettings {
+  const provider = readEmbeddingProvider(value?.provider);
+  const baseUrl = trimTrailingSlash(value?.baseUrl ?? "");
+  const apiKey = (value?.apiKey ?? "").trim();
+  const model = (value?.model ?? "").trim();
+
+  if (provider === "disabled" || !baseUrl || !apiKey || !model) {
+    return {
+      provider: "disabled",
+      enabled: false,
+      baseUrl: "",
+      apiKey: "",
+      model: "",
+    };
+  }
+
+  return {
+    provider,
+    enabled: true,
+    baseUrl,
+    apiKey,
+    model,
+  };
+}
+
+function readEmbeddingProvider(value: unknown): ResolvedProviderSettings["provider"] {
+  if (value === "disabled") return "disabled";
+  const provider = readProvider(value);
+  return provider === "deterministic-local" ? "disabled" : provider;
 }
 
 function trimTrailingSlash(value: string) {

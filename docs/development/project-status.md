@@ -20,7 +20,7 @@
 - Deterministic-local agent runtime for open-source fallback without a hosted model key.
 - Page-configured OpenAI-compatible model runtime: users can enter provider, Base URL, API key, and model in the browser; provider responses are read from streaming OpenAI-compatible chat completion responses and forwarded as tokens through the chat stream.
 - Deterministic-local remains the fallback when settings are incomplete or provider generation fails.
-- Agent pipeline components: intent router, planner, tools, skill loader, local knowledge search, response composer, and critic.
+- Agent pipeline components: intent router, deterministic planner fallback, optional LLM planner, deterministic tools, skill loader, local/hybrid knowledge search, optional LLM analyst, response composer fallback, and critic.
 - Expanded `Renhuai123/ziwei-doushu` RAG seed import exists under `content/knowledge/imported/ziwei-doushu/`, with topic classification and source repo/path/license metadata exposed through evidence.
 - Six beta topic entries: recent fortune, career/work, relationships, wealth, personality, and chart explanation.
 - Chat API at `/api/chat` with response streaming surface, persistence boundary, and structured error behavior.
@@ -58,7 +58,7 @@ Latest verified local results for the public beta pass:
 - The Agent/frontend evidence loop is now the main active development path. Domain skill and knowledge content remains seed-level; see `docs/development/agent-content-gaps.md`.
 - Provider-backed token streaming is implemented and covered by route/model-provider tests, but should still be manually tested against at least one real OpenAI-compatible provider before public announcement.
 - Imported RAG content is broader than the MVP seed, but still needs editorial curation before it should be treated as high-confidence domain doctrine.
-- pgvector retrieval is documented and schema-aware but not a required active retrieval path for the open-source baseline.
+- RAG is hot-swappable: local Markdown keyword search remains the no-database baseline; optional embedding settings can use a local JSON embedding index for hybrid retrieval, and a Postgres/pgvector retriever adapter is available for database-backed deployments.
 - Product authentication, hosted accounts, payments, subscriptions, multi-chart management, reports, and large ingestion are intentionally out of V1 scope.
 - `npm audit` still reports moderate advisories in Next/PostCSS and drizzle-kit/esbuild chains. npm suggests force fixes that imply breaking downgrades, so they were not applied.
 - UI is a stronger MVP product shell, but not yet a final flagship design pass. Future design work should continue using `impeccable`/product UI review with browser evidence.

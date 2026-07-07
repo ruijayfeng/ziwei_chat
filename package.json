@@ -10,7 +10,8 @@
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "eval:agent": "tsx src/lib/evaluation/run-evals.ts",
-    "import:ziwei-doushu": "tsx scripts/import-ziwei-doushu.ts"
+    "import:ziwei-doushu": "tsx scripts/import-ziwei-doushu.ts",
+    "build:knowledge-embeddings": "tsx scripts/build-knowledge-embeddings.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

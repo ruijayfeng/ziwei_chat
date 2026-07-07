@@ -13,7 +13,7 @@ describe("chat evidence UI helpers", () => {
     expect(evidenceFromResponse(response)).toEqual(initialEvidence);
   });
 
-  test("decodes structured evidence from the chat response header", () => {
+  test("decodes structured evidence and creates a legacy timeline run", () => {
     const evidence = {
       toolsUsed: ["getCurrentChart", "summarizeChartFacts", "runResponseCritic"],
       chartFacts: [
@@ -24,7 +24,7 @@ describe("chat evidence UI helpers", () => {
           stars: ["紫微"],
           transforms: [],
           patterns: ["命宫主星"],
-          rawText: "官禄宫位主星为 紫微。",
+          rawText: "官禄宫位主星为紫微。",
           confidence: "high",
         },
       ],
@@ -43,6 +43,53 @@ describe("chat evidence UI helpers", () => {
         },
       ],
       critic: { status: "passed", issues: [] },
+    };
+    const response = new Response("ok", {
+      headers: {
+        "X-Ziwei-Evidence": encodeURIComponent(JSON.stringify(evidence)),
+      },
+    });
+
+    const decoded = evidenceFromResponse(response);
+    expect(decoded).toMatchObject(evidence);
+    expect(decoded.runs).toEqual([
+      expect.objectContaining({
+        title: "本次分析",
+        status: "completed",
+        steps: expect.arrayContaining([
+          expect.objectContaining({ label: "理解问题", status: "completed" }),
+          expect.objectContaining({ label: "读取命盘", status: "completed" }),
+          expect.objectContaining({ label: "检索知识", status: "completed" }),
+          expect.objectContaining({ label: "critic 检查", status: "completed" }),
+        ]),
+      }),
+    ]);
+  });
+
+  test("keeps explicit evidence timeline runs from the response header", () => {
+    const evidence = {
+      toolsUsed: ["getCurrentChart"],
+      chartFacts: [],
+      knowledgeSources: [],
+      critic: { status: "not_run", issues: [] },
+      runs: [
+        {
+          runId: "run-1",
+          title: "事业分析",
+          summary: "正在读取命盘",
+          status: "running",
+          startedAt: "2026-07-07T00:00:00.000Z",
+          completedAt: "",
+          steps: [
+            {
+              id: "chart",
+              label: "读取命盘",
+              detail: "读取官禄宫",
+              status: "running",
+            },
+          ],
+        },
+      ],
     };
     const response = new Response("ok", {
       headers: {

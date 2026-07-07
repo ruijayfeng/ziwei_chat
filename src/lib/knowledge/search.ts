@@ -10,6 +10,10 @@ import path from "node:path";
 
 import matter from "gray-matter";
 
+import type { ResolvedProviderSettings } from "../agent/model-provider";
+import { generateEmbedding } from "./embedding-provider";
+import { loadKnowledgeEmbeddingIndex, rankEmbeddingRecords } from "./embedding-index";
+
 export type SearchKnowledgeInput = {
   query: string;
   topic: string;
@@ -17,6 +21,8 @@ export type SearchKnowledgeInput = {
   limit: number;
   retrievalMode?: "local" | "vector" | "hybrid";
   contentRoot?: string;
+  embeddingSettings?: ResolvedProviderSettings;
+  fetchImplementation?: typeof fetch;
 };
 
 export type KnowledgeSource = {
@@ -45,7 +51,28 @@ export async function searchKnowledge({
   limit,
   retrievalMode = "local",
   contentRoot = process.cwd(),
+  embeddingSettings,
+  fetchImplementation,
 }: SearchKnowledgeInput): Promise<KnowledgeSource[]> {
+  if (retrievalMode !== "local" && embeddingSettings?.enabled) {
+    const vectorResults = await searchEmbeddingIndex({
+      query,
+      topic,
+      chartTerms,
+      limit,
+      contentRoot,
+      embeddingSettings,
+      fetchImplementation,
+    });
+
+    if (vectorResults.length > 0) {
+      return vectorResults.map((source) => ({
+        ...source,
+        retrievalMode: retrievalMode === "vector" ? "vector" : "hybrid",
+      }));
+    }
+  }
+
   const chunks = await loadKnowledgeChunks(contentRoot);
 
   return chunks
@@ -82,6 +109,37 @@ async function loadKnowledgeChunks(contentRoot: string) {
       return parseKnowledgeMarkdown(fileName, markdown);
     }),
   );
+}
+
+async function searchEmbeddingIndex({
+  query,
+  topic,
+  chartTerms,
+  limit,
+  contentRoot,
+  embeddingSettings,
+  fetchImplementation,
+}: Required<Pick<SearchKnowledgeInput, "query" | "topic" | "chartTerms" | "limit" | "contentRoot">> & {
+  embeddingSettings: ResolvedProviderSettings;
+  fetchImplementation?: typeof fetch;
+}) {
+  const index = await loadKnowledgeEmbeddingIndex(contentRoot);
+  if (!index) return [];
+
+  const embedding = await generateEmbedding({
+    settings: embeddingSettings,
+    input: [query, topic, ...chartTerms].filter(Boolean).join("\n"),
+    fetchImplementation,
+  });
+  if (!embedding.ok) return [];
+
+  return rankEmbeddingRecords({
+    records: index.records,
+    queryEmbedding: embedding.embedding,
+    topic,
+    chartTerms,
+    limit,
+  });
 }
 
 async function listMarkdownFiles(dir: string): Promise<string[]> {
