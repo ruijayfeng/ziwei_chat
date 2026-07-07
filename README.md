@@ -12,7 +12,8 @@ The beta does not require product login, payment, a hosted Ziwei Chat account, P
 - OpenAI-compatible real model streaming from page-supplied provider, Base URL, API key, and model.
 - Optional OpenAI-compatible embedding settings for semantic RAG.
 - Deterministic-local fallback when no model is configured or a model call fails.
-- Evidence drawer for tools, chart facts, knowledge sources, and critic status.
+- Evidence drawer for tools, chart facts, knowledge sources, critic status, and dynamic Agent run events.
+- Model-backed answers stream evidence events and answer tokens; final model output is checked by the critic before user-visible text is emitted.
 - Local Markdown/keyword knowledge search, including curated notes and imported `Renhuai123/ziwei-doushu` chunks with source/license metadata.
 
 ## Local Development

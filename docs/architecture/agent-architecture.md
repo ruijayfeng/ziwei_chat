@@ -4,7 +4,7 @@
 
 ## Goal
 
-Build a narrow but real Ziwei Dou Shu vertical agent. The agent must inspect intent, plan analysis, call deterministic tools, load domain knowledge, let the configured model act as analyst when available, and critique the answer before returning it.
+Build a narrow but real Ziwei Dou Shu vertical agent. The agent must inspect intent, plan analysis, call deterministic tools, load domain knowledge, let the configured model act as analyst when available, and critique the answer before returning it. Model-backed answers are buffered for a final critic pass before user-visible tokens are emitted; if they fail, the route streams the conservative grounded fallback.
 
 ## Request Flow
 

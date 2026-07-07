@@ -9,6 +9,10 @@ import { randomUUID } from "node:crypto";
 
 import { runResponseCritic } from "../../../lib/agent/critic";
 import {
+  chatStreamHeader,
+  encodeChatStreamEvent,
+} from "../../../lib/agent/evidence-events";
+import {
   deleteProfileRuntimeData,
   getChatRuntimeStores,
   persistChatMessage,
@@ -89,6 +93,12 @@ type StreamingChartAnswer = {
     criticIssues: string[];
   };
   modelSettings: ReturnType<typeof normalizeModelSettings>;
+  postCriticContext: {
+    intent: Intent;
+    chartFacts: ChartFact[];
+    knowledgeSources: KnowledgeSource[];
+    safetyLevel: ReturnType<typeof buildAnalysisPlan>["safetyLevel"];
+  };
 };
 
 type ChartAnswer = StaticChartAnswer | StreamingChartAnswer;
@@ -171,6 +181,7 @@ export async function POST(request: Request) {
             deterministicContent: answer.deterministicContent,
             evidence: answer.evidence,
             analysisContext: answer.analysisContext,
+            postCriticContext: answer.postCriticContext,
             metadata,
             modelSettings: answer.modelSettings,
           })
@@ -375,6 +386,12 @@ async function answerWithChartContext({
         critique,
       }),
       modelSettings,
+      postCriticContext: {
+        intent,
+        chartFacts,
+        knowledgeSources,
+        safetyLevel: agentPlan.safetyLevel,
+      },
     };
   }
 
@@ -502,6 +519,7 @@ function streamModelAndPersist({
   evidence,
   modelSettings,
   analysisContext,
+  postCriticContext,
 }: {
   profileId: string;
   conversationId: string;
@@ -510,20 +528,51 @@ function streamModelAndPersist({
   evidence: ChatEvidence;
   modelSettings: ReturnType<typeof normalizeModelSettings>;
   analysisContext: StreamingChartAnswer["analysisContext"];
+  postCriticContext: StreamingChartAnswer["postCriticContext"];
 }) {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      enqueueEvent(controller, encoder, {
+        event: "evidence",
+        data: updateEvidenceRunStep(evidence, "model", "running", "模型正在综合命盘、skill 和 RAG。"),
+      });
       const modelResult = await generateLlmAnalysis({
         settings: modelSettings,
         ...analysisContext,
-        onToken: (token) => controller.enqueue(encoder.encode(token)),
       });
-      const content = modelResult.ok ? modelResult.content : deterministicContent;
+      const modelContent = modelResult.ok ? modelResult.content : deterministicContent;
+      enqueueEvent(controller, encoder, {
+        event: "evidence",
+        data: updateEvidenceRunStep(evidence, "critic", "running", "正在检查模型回答的事实边界。"),
+      });
+      const postCritique = runResponseCritic({
+        intent: postCriticContext.intent,
+        draft: modelContent,
+        toolsUsed: evidence.toolsUsed,
+        chartFacts: postCriticContext.chartFacts,
+        knowledgeSources: postCriticContext.knowledgeSources,
+        safetyLevel: postCriticContext.safetyLevel,
+      });
+      await recordRouteToolEvent(
+        profileId,
+        conversationId,
+        "runModelResponseCritic",
+        { intent: postCriticContext.intent, draft: modelContent },
+        postCritique,
+        postCritique.passed,
+      );
+      const content = modelResult.ok && postCritique.passed ? modelContent : deterministicContent;
+      const finalEvidence = updateEvidenceAfterModelCritic({
+        evidence,
+        critique: postCritique,
+        usedFallback: !modelResult.ok || !postCritique.passed,
+      });
 
-      if (!modelResult.ok) {
-        controller.enqueue(encoder.encode(deterministicContent));
+      enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
+      for (const chunk of chunkText(content, 32)) {
+        enqueueEvent(controller, encoder, { event: "token", data: chunk });
       }
 
       await persistChatMessage({
@@ -533,16 +582,95 @@ function streamModelAndPersist({
         content,
         metadata,
       });
+      enqueueEvent(controller, encoder, { event: "done", data: null });
       controller.close();
     },
   });
 
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
+      "Content-Type": "application/x-ziwei-events; charset=utf-8",
+      "X-Ziwei-Stream": chatStreamHeader,
       "X-Ziwei-Evidence": encodeURIComponent(JSON.stringify(evidence)),
     },
   });
+}
+
+function enqueueEvent(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder,
+  event: Parameters<typeof encodeChatStreamEvent>[0],
+) {
+  controller.enqueue(encoder.encode(encodeChatStreamEvent(event)));
+}
+
+function updateEvidenceRunStep(
+  evidence: ChatEvidence,
+  stepId: string,
+  status: ChatEvidence["runs"][number]["steps"][number]["status"],
+  detail: string,
+): ChatEvidence {
+  return {
+    ...evidence,
+    runs: evidence.runs.map((run) => ({
+      ...run,
+      status: status === "failed" ? "failed" : "running",
+      steps: run.steps.map((step) =>
+        step.id === stepId
+          ? {
+              ...step,
+              status,
+              detail,
+            }
+          : step,
+      ),
+    })),
+  };
+}
+
+function updateEvidenceAfterModelCritic({
+  evidence,
+  critique,
+  usedFallback,
+}: {
+  evidence: ChatEvidence;
+  critique: CritiqueResult;
+  usedFallback: boolean;
+}): ChatEvidence {
+  return {
+    ...evidence,
+    critic: {
+      status: critique.passed ? "passed" : "needs_review",
+      issues: critique.issues,
+    },
+    runs: evidence.runs.map((run) => ({
+      ...run,
+      status: usedFallback ? "failed" : "completed",
+      completedAt: new Date().toISOString(),
+      summary: usedFallback
+        ? `${run.summary} 模型输出未通过最终检查，已降级为保守回答。`
+        : `${run.summary} 模型输出已通过最终检查。`,
+      steps: run.steps.map((step) => {
+        if (step.id === "model") {
+          return {
+            ...step,
+            status: "completed",
+            detail: usedFallback ? "模型输出已生成，但最终采用保守回答" : "模型已完成综合分析",
+          };
+        }
+
+        if (step.id === "critic") {
+          return {
+            ...step,
+            status: critique.passed ? "completed" : "failed",
+            detail: critique.passed ? "模型输出已通过最终检查" : critique.issues.join("；"),
+          };
+        }
+
+        return step.status === "running" ? { ...step, status: "completed" } : step;
+      }),
+    })),
+  };
 }
 
 function buildEvidence({

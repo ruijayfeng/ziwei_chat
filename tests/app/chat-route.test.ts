@@ -226,13 +226,14 @@ describe("POST /api/chat", () => {
     expect(evidence.toolsUsed).toContain("generateModelResponse");
   });
 
-  test("forwards OpenAI-compatible model stream tokens through the chat response", async () => {
+  test("streams model answers as evidence and token events after final critic", async () => {
+    const modelAnswer =
+      "结论：模型生成的事业分析回答。\n\n命盘依据：\n- 工具已提供事业判断基础。\n\n现实解释：先观察机会，再决定行动节奏。\n\n建议：先整理岗位条件和市场反馈。\n\n追问：你现在更想换环境还是换内容?";
     const fetchMock = vi.fn<typeof fetch>(async () =>
       new Response(
         [
-          'data: {"choices":[{"delta":{"content":"stream "}}]}\n\n',
-          'data: {"choices":[{"delta":{"content":"from "}}]}\n\n',
-          'data: {"choices":[{"delta":{"content":"model"}}]}\n\n',
+          `data: {"choices":[{"delta":{"content":${JSON.stringify(modelAnswer.slice(0, 12))}}}]}\n\n`,
+          `data: {"choices":[{"delta":{"content":${JSON.stringify(modelAnswer.slice(12))}}}]}\n\n`,
           "data: [DONE]\n\n",
         ].join(""),
         { status: 200, headers: { "content-type": "text/event-stream" } },
@@ -266,10 +267,60 @@ describe("POST /api/chat", () => {
       }),
     );
 
-    await expect(response.text()).resolves.toBe("stream from model");
+    expect(response.headers.get("X-Ziwei-Stream")).toBe("events");
+    const events = parseStreamEvents(await response.text());
+    expect(events.filter((event) => event.event === "evidence").length).toBeGreaterThanOrEqual(2);
+    expect(events.filter((event) => event.event === "token").map((event) => event.data).join("")).toBe(
+      modelAnswer,
+    );
+    expect(events.at(-1)).toEqual({ event: "done", data: null });
     const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
     expect(JSON.parse(String(requestInit?.body))).toMatchObject({ stream: true });
     expect(readEvidenceHeader(response).toolsUsed).toContain("generateModelResponse");
+  });
+
+  test("falls back when the model answer fails the final critic", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: careerQuestion }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    const events = parseStreamEvents(await response.text());
+    const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
+    expect(answer).toContain("追问");
+    expect(answer).not.toContain("unsafe model answer");
+    expect(events.some((event) => event.event === "evidence" && JSON.stringify(event.data).includes("降级"))).toBe(
+      true,
+    );
   });
 
   test("returns a response body that can be fully consumed by Web Response readers", async () => {
@@ -397,4 +448,12 @@ function readEvidenceHeader(response: Response) {
   }
 
   return JSON.parse(decodeURIComponent(encoded));
+}
+
+function parseStreamEvents(text: string): Array<{ event: string; data: unknown }> {
+  return text
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { event: string; data: unknown });
 }

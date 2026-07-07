@@ -20,10 +20,10 @@
 - Deterministic-local agent runtime for open-source fallback without a hosted model key.
 - Page-configured OpenAI-compatible model runtime: users can enter provider, Base URL, API key, and model in the browser; provider responses are read from streaming OpenAI-compatible chat completion responses and forwarded as tokens through the chat stream.
 - Deterministic-local remains the fallback when settings are incomplete or provider generation fails.
-- Agent pipeline components: intent router, deterministic planner fallback, optional LLM planner, deterministic tools, skill loader, local/hybrid knowledge search, optional LLM analyst, response composer fallback, and critic.
+- Agent pipeline components: intent router, deterministic planner fallback, optional LLM planner, deterministic tools, skill loader, local/hybrid knowledge search, optional LLM analyst, response composer fallback, pre-answer critic, and final model-output critic with conservative fallback.
 - Expanded `Renhuai123/ziwei-doushu` RAG seed import exists under `content/knowledge/imported/ziwei-doushu/`, with topic classification and source repo/path/license metadata exposed through evidence.
 - Six beta topic entries: recent fortune, career/work, relationships, wealth, personality, and chart explanation.
-- Chat API at `/api/chat` with response streaming surface, persistence boundary, and structured error behavior.
+- Chat API at `/api/chat` with response streaming surface, event-framed evidence/token streams for model-backed answers, persistence boundary, and structured error behavior.
 - Persistence boundary that uses Postgres when `DATABASE_URL` is configured and falls back to deterministic/local behavior when it is not.
 - Anonymous profile data deletion through `DELETE /api/chat?profileId=...`.
 - Runtime fixed-window rate limiter for `/api/chat`.

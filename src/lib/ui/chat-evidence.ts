@@ -79,6 +79,10 @@ export function evidenceFromResponse(response: Response): EvidenceState {
   }
 }
 
+export function evidenceFromPayload(value: unknown): EvidenceState {
+  return normalizeEvidence(value);
+}
+
 export function mergeEvidenceRun(base: EvidenceState, run: EvidenceRun): EvidenceState {
   const index = base.runs.findIndex((item) => item.runId === run.runId);
   const runs =

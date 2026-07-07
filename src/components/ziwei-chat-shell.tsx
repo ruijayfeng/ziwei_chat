@@ -11,7 +11,9 @@ import { useEffect, useState } from "react";
 import { Menu, ShieldCheck, Trash2 } from "lucide-react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
+import { chatStreamHeader, readChatStreamEvents } from "@/lib/agent/evidence-events";
 import {
+  evidenceFromPayload,
   evidenceFromResponse,
   initialEvidence,
   mergeEvidenceRun,
@@ -155,6 +157,8 @@ export function ZiweiChatShell() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantContent = "";
+      let eventBuffer = "";
+      const usesEventStream = response.headers.get("X-Ziwei-Stream") === chatStreamHeader;
 
       setMessages((current) => [...current, { role: "assistant", content: "" }]);
 
@@ -162,7 +166,22 @@ export function ZiweiChatShell() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          assistantContent += decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true });
+          if (usesEventStream) {
+            eventBuffer += chunk;
+            const parsed = readChatStreamEvents(eventBuffer);
+            eventBuffer = parsed.rest;
+            for (const event of parsed.events) {
+              if (event.event === "evidence") {
+                setEvidence((current) => mergeEvidenceState(current, evidenceFromPayload(event.data)));
+              }
+              if (event.event === "token") {
+                assistantContent += event.data;
+              }
+            }
+          } else {
+            assistantContent += chunk;
+          }
           setMessages((current) =>
             current.map((message, index) =>
               index === current.length - 1
