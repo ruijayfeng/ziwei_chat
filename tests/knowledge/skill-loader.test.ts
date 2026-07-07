@@ -158,6 +158,54 @@ describe("local knowledge search", () => {
     }
   });
 
+  test("covers palace, major star, sihua, and pattern basics with high-confidence Renhuai123 extracts", async () => {
+    const coverageChecks = [
+      {
+        label: "twelve palaces",
+        query: "chart explanation",
+        topic: "general",
+        terms: ["兄弟", "子女", "疾厄", "迁移", "交友", "田宅", "福德", "父母"],
+      },
+      {
+        label: "fourteen major stars",
+        query: "major stars",
+        topic: "general",
+        terms: ["紫微", "天机", "太阳", "武曲", "天同", "廉贞", "天府", "太阴", "贪狼", "巨门", "天相", "天梁", "七杀", "破军"],
+      },
+      {
+        label: "sihua applications",
+        query: "recent fortune timing",
+        topic: "recent_fortune",
+        terms: ["化禄", "化权", "化科", "化忌", "大限", "流年"],
+      },
+      {
+        label: "common patterns",
+        query: "chart explanation",
+        topic: "general",
+        terms: ["杀破狼", "机月同梁", "府相朝垣", "火贪", "铃贪", "科权双会"],
+      },
+    ];
+
+    for (const item of coverageChecks) {
+      const results = await searchKnowledge({
+        query: item.query,
+        topic: item.topic,
+        chartTerms: item.terms,
+        limit: 8,
+        retrievalMode: "local",
+      });
+
+      expect(
+        results.some(
+          (result) =>
+            result.source === "Renhuai123/ziwei-doushu" &&
+            result.confidence === "high",
+        ),
+        item.label,
+      ).toBe(true);
+    }
+  });
+
   test("can retrieve topic-classified imported knowledge with source path and license", async () => {
     const root = await mkdtemp(join(tmpdir(), "ziwei-topic-knowledge-"));
     const importedDir = join(root, "content", "knowledge", "imported", "ziwei-doushu");
@@ -262,6 +310,63 @@ describe("local knowledge search", () => {
       "career-curated",
       "career-low",
     ]);
+  });
+
+  test("does not return high-confidence chunks that do not match the query or chart terms", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ziwei-relevance-knowledge-"));
+    const knowledgeDir = join(root, "content", "knowledge");
+    await mkdir(knowledgeDir, { recursive: true });
+    await writeFile(
+      join(knowledgeDir, "general-unrelated.md"),
+      [
+        "---",
+        "title: Unrelated high confidence",
+        "topic: general",
+        "terms:",
+        "  - 天马",
+        "school: default",
+        "confidence: high",
+        "source: curated-internal",
+        "sourcePath: content/knowledge/general-unrelated.md",
+        "sourceUrl: ",
+        "license: internal",
+        "---",
+        "",
+        "这条内容只讨论天马和外出变化，不应该在无关查询里出现。",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      join(knowledgeDir, "general-related.md"),
+      [
+        "---",
+        "title: Parent palace",
+        "topic: general",
+        "terms:",
+        "  - 父母",
+        "school: default",
+        "confidence: medium",
+        "source: curated-internal",
+        "sourcePath: content/knowledge/general-related.md",
+        "sourceUrl: ",
+        "license: internal",
+        "---",
+        "",
+        "父母宫用于观察长辈、文书和早期支持。",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const results = await searchKnowledge({
+      query: "chart explanation",
+      topic: "general",
+      chartTerms: ["父母"],
+      limit: 5,
+      retrievalMode: "local",
+      contentRoot: root,
+    });
+
+    expect(results.map((result) => result.chunkId)).toEqual(["general-related"]);
   });
 
   test("loads imported knowledge chunks from nested directories", async () => {

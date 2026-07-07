@@ -141,7 +141,7 @@ function scoreChunk(chunk: KnowledgeChunk, query: string, chartTerms: string[]) 
     if (chunk.content.includes(term)) score += 2;
   }
 
-  return score + confidenceScore(chunk.confidence);
+  return score > 0 ? score + confidenceScore(chunk.confidence) : 0;
 }
 
 function confidenceScore(confidence: KnowledgeChunk["confidence"]) {
