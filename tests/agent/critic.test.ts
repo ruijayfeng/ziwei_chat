@@ -9,7 +9,7 @@ const chartFact = {
   stars: ["天同"],
   transforms: ["忌"],
   patterns: [],
-  rawText: "官禄 palace has 天同 with transforms 忌.",
+  rawText: "官禄宫位主星为 天同，四化为 忌。",
   confidence: "high" as const,
 };
 
@@ -18,7 +18,7 @@ describe("runResponseCritic", () => {
     const result = runResponseCritic({
       intent: "career",
       draft:
-        "结论：最近更适合先观察机会。\n命盘依据：官禄宫有天同化忌。\n现实解释：这更像工作节奏需要调整。\n建议：先用两周整理选择。\n追问：你现在更想换环境，还是换岗位？",
+        "结论：最近更适合先观察机会。\n\n命盘依据：官禄宫有天同化忌。\n\n现实解释：这更像工作节奏需要调整。\n\n建议：先用两周整理选择。\n\n追问：你现在更想换环境，还是换岗位？",
       toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
       chartFacts: [chartFact],
       knowledgeSources: [],
@@ -48,6 +48,56 @@ describe("runResponseCritic", () => {
       expect.arrayContaining([
         "Serious Ziwei analysis must include chart facts.",
         "Response contains overconfident language.",
+      ]),
+    );
+  });
+
+  test("fails answers that fabricate palaces or stars not returned by tools", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft:
+        "结论：先观察机会。\n\n命盘依据：\n- 官禄宫有天同，也可以看出迁移宫有紫微。\n\n现实解释：这只是倾向。\n\n建议：先整理选择。\n\n追问：你现在更想换环境还是换内容？",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [
+        {
+          ...chartFact,
+          palace: "官禄",
+          stars: ["天同"],
+          rawText: "官禄宫主星为天同。",
+        },
+      ],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContain("Response mentions chart facts that tools did not return.");
+  });
+
+  test("fails dangerous advice and missing follow-up questions", () => {
+    const result = runResponseCritic({
+      intent: "wealth",
+      draft:
+        "结论：财运很好。\n\n命盘依据：财帛宫有依据。\n\n现实解释：这是倾向。\n\n建议：现在买入并加杠杆。",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [
+        {
+          ...chartFact,
+          topic: "wealth",
+          palace: "财帛",
+          stars: ["武曲"],
+          rawText: "财帛宫主星为武曲。",
+        },
+      ],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        "Response contains prohibited high-stakes advice.",
+        "Response must include exactly one useful follow-up question.",
       ]),
     );
   });

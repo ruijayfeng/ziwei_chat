@@ -13,5 +13,6 @@ knowledge/relationship-palace.md: Curated local knowledge chunk for relationship
 knowledge/wealth-palace.md: Curated local knowledge chunk for wealth palace interpretation.
 knowledge/personality-life-palace.md: Curated local knowledge chunk for life palace personality interpretation.
 knowledge/recent-fortune-timing.md: Curated local knowledge chunk for near-term timing interpretation.
+knowledge/imported/ziwei-doushu/: Generated local RAG seed chunks imported from Renhuai123/ziwei-doushu with MIT/source attribution.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

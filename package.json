@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "eval:agent": "tsx src/lib/evaluation/run-evals.ts"
+    "eval:agent": "tsx src/lib/evaluation/run-evals.ts",
+    "import:ziwei-doushu": "tsx scripts/import-ziwei-doushu.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

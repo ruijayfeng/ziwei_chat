@@ -7,10 +7,11 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, ShieldCheck, Trash2 } from "lucide-react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
+import { evidenceFromResponse, initialEvidence } from "@/lib/ui/chat-evidence";
 import {
   chatErrorFromResponse,
   classifyChatError,
@@ -18,6 +19,14 @@ import {
   isEmptyAssistantResponse,
   type ChatErrorState,
 } from "@/lib/ui/chat-errors";
+import {
+  defaultModelSettingsDraft,
+  modelSettingsDraftFromStorage,
+  modelSettingsRequestFromDraft,
+  modelSettingsStorageKey,
+  modelSettingsStorageValue,
+  type ModelSettingsDraft,
+} from "@/lib/ui/model-settings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,15 +51,9 @@ import {
 } from "@/components/ui/sheet";
 import { ChartOnboarding } from "./chart-onboarding";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
-import { EvidenceDrawer, type EvidenceState } from "./evidence-drawer";
+import { EvidenceDrawer } from "./evidence-drawer";
+import { ModelSettingsPanel } from "./model-settings-panel";
 import { TopicEntry } from "./topic-entry";
-
-const initialEvidence: EvidenceState = {
-  toolsUsed: [],
-  chartFacts: [],
-  knowledgeSources: [],
-  critic: "not_run",
-};
 
 export function ZiweiChatShell() {
   const [profileId] = useState(() => {
@@ -74,8 +77,16 @@ export function ZiweiChatShell() {
   const [lastFailedContent, setLastFailedContent] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<ChatErrorState | null>(null);
-  const [evidence, setEvidence] = useState<EvidenceState>(initialEvidence);
+  const [evidence, setEvidence] = useState(initialEvidence);
   const [chartSynced, setChartSynced] = useState(false);
+  const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(() => {
+    if (typeof window === "undefined") return defaultModelSettingsDraft;
+    return modelSettingsDraftFromStorage(window.localStorage.getItem(modelSettingsStorageKey));
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(modelSettingsStorageKey, modelSettingsStorageValue(modelSettings));
+  }, [modelSettings]);
 
   const workspace = (
     <WorkspacePanel
@@ -87,8 +98,10 @@ export function ZiweiChatShell() {
         setError(null);
       }}
       onClear={deleteLocalData}
+      onModelSettingsChange={setModelSettings}
       onResetChart={resetChartDraft}
       onTopicSelect={setDraft}
+      modelSettings={modelSettings}
       profileId={profileId}
     />
   );
@@ -118,6 +131,7 @@ export function ZiweiChatShell() {
           conversationId,
           chartInput: chartSynced ? undefined : chartInput,
           messages: nextMessages,
+          modelSettings: modelSettingsRequestFromDraft(modelSettings),
         }),
       });
       const responseError = chatErrorFromResponse(response);
@@ -127,6 +141,7 @@ export function ZiweiChatShell() {
         return;
       }
 
+      const nextEvidence = evidenceFromResponse(response);
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantContent = "";
@@ -155,20 +170,7 @@ export function ZiweiChatShell() {
         return;
       }
 
-      setEvidence({
-        toolsUsed: chartInput
-          ? [
-              "getCurrentChart",
-              "summarizeChartFacts",
-              "loadSkill",
-              "searchKnowledge",
-              "runResponseCritic",
-            ]
-          : [],
-        chartFacts: chartInput ? ["事业宫 / 财帛宫 / 命宫等主题宫位"] : [],
-        knowledgeSources: chartInput ? ["curated-internal · local"] : [],
-        critic: chartInput ? "passed" : "not_run",
-      });
+      setEvidence(nextEvidence);
       if (chartInput) {
         setChartSynced(true);
       }
@@ -199,6 +201,7 @@ export function ZiweiChatShell() {
     });
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("ziwei-chat-profile-id");
+      window.localStorage.removeItem(modelSettingsStorageKey);
     }
     setChartInput(null);
     setChartSynced(false);
@@ -207,6 +210,7 @@ export function ZiweiChatShell() {
     setLastFailedContent(null);
     setError(null);
     setEvidence(initialEvidence);
+    setModelSettings(defaultModelSettingsDraft);
   }
 
   return (
@@ -299,14 +303,18 @@ function WorkspacePanel({
   chartInput,
   chartSynced,
   onChartReady,
+  onModelSettingsChange,
   onResetChart,
   onTopicSelect,
   onClear,
+  modelSettings,
 }: {
   profileId: string;
   chartInput: CreateChartInput | null;
   chartSynced: boolean;
+  modelSettings: ModelSettingsDraft;
   onChartReady: (chart: CreateChartInput) => void;
+  onModelSettingsChange: (value: ModelSettingsDraft) => void;
   onResetChart: () => void;
   onTopicSelect: (prompt: string) => void;
   onClear: () => void;
@@ -320,6 +328,7 @@ function WorkspacePanel({
         onResetChart={onResetChart}
         profileId={profileId}
       />
+      <ModelSettingsPanel value={modelSettings} onChange={onModelSettingsChange} />
       <TopicEntry onSelect={onTopicSelect} />
       <ClearDataDialog onConfirm={onClear} />
     </div>
@@ -341,7 +350,7 @@ function ClearDataDialog({ onConfirm }: { onConfirm: () => void }) {
           <AlertDialogTitle>清除匿名资料数据？</AlertDialogTitle>
           <AlertDialogDescription>
             这会清除当前浏览器里的匿名 profile 状态、当前命盘、对话消息和已显示的依据。
-            MVP 没有产品账号，所以这不是账号删除。
+            Beta 没有产品账号，所以这不是账号删除。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

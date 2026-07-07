@@ -12,7 +12,7 @@ describe("routeIntent", () => {
   });
 
   test("routes out-of-scope divination systems away from Ziwei analysis", () => {
-    expect(routeIntent("帮我用八字看看今年运势")).toMatchObject({
+    expect(routeIntent("帮我用八字看看今年运势。")).toMatchObject({
       intent: "out_of_scope",
       requiresChart: false,
     });

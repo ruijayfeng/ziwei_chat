@@ -4,12 +4,13 @@
 Member List
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, in-memory MVP storage adapters, and tool event recording.
-agent/critic.ts: Deterministic response critic for grounding, overclaiming, safety, and follow-up count.
+agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, safety, and follow-up count.
 agent/chat-runtime.ts: Runtime tool stores, persistence selection, and current anonymous profile data deletion for the MVP API route.
 agent/chat-persistence.ts: Storage-agnostic chat message, tool event, and profile data deletion persistence contract with in-memory implementation.
 agent/intent-router.ts: Rule-based MVP intent router for Ziwei topics, management intents, and safety-sensitive prompts.
+agent/model-provider.ts: OpenAI-compatible model adapter that uses page-supplied Base URL, API key, and model after deterministic tool grounding.
 agent/planner.ts: Explicit analysis planner mapping intents to tools, skills, facts, retrieval queries, and response shape.
-agent/response-composer.ts: Response protocol composer for conclusion, chart basis, explanation, suggestion, and follow-up.
+agent/response-composer.ts: Response protocol composer for conclusion, chart basis, explanation, suggestion, follow-up, skill analysis steps, and knowledge source titles.
 chart/create-chart.ts: iztro chart creation adapter, birth validation, and structured chart engine errors.
 chart/summarize-chart.ts: Deterministic chart fact extraction from raw iztro chart JSON.
 db/client.ts: Drizzle/Postgres client factory and default database instance.
@@ -20,7 +21,12 @@ domain/chart.ts: Shared chart input, output, summary, fact, and error contracts.
 evaluation/cases.ts: Seed MVP regression cases for topics, missing chart, invalid input, safety, and out-of-scope prompts.
 evaluation/run-evals.ts: Deterministic local evaluation runner that records responses, tool events, critic results, and pass/fail evidence.
 http/rate-limit.ts: Fixed-window request limiter for API route abuse protection without external infrastructure.
+ui/chat-evidence.ts: Chat evidence header parsing and UI-ready evidence state contracts for tool, chart, knowledge, and critic display.
+ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, server, and empty-response failures.
+ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.
+ui/model-settings.ts: Browser-local model settings parser, serializer, provider defaults, and chat request payload shaping.
 knowledge/skill-loader.ts: Markdown skill loader and validator for deterministic topic workflows.
-knowledge/search.ts: Local Markdown/keyword retrieval for curated knowledge chunks.
+knowledge/search.ts: Local Markdown/keyword retrieval for curated and imported knowledge chunks, including confidence-aware scoring.
+knowledge/ziwei-doushu-importer.ts: Offline Renhuai123/ziwei-doushu importer with source metadata, topic inference, and Markdown chunk formatting.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

@@ -111,7 +111,7 @@ export function ChartOnboarding({
           <div>
             <h3 className="text-sm font-semibold text-foreground">命盘资料</h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              MVP 只保存一张主命盘，用当前浏览器的匿名 profile 关联对话。
+              Beta 只保存一张主命盘，并用当前浏览器的匿名 profile 关联对话。
             </p>
           </div>
 

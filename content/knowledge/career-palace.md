@@ -1,9 +1,10 @@
 ---
-title: Career palace basics
+title: 事业宫基础
 topic: career
 terms:
   - 官禄
   - 事业
+  - 工作
   - 职业
 school: default
 confidence: high
@@ -12,4 +13,4 @@ sourceUrl: ""
 license: internal
 ---
 
-The career palace, 官禄, is used to observe work style, role preference, responsibility pressure, and how a person tends to meet external expectations. It should be read together with the life palace, wealth palace, migration palace, major stars, transforms, and current timing. A career answer should avoid telling the user to make irreversible decisions and should translate chart tendencies into observation points, preparation steps, or decision criteria.
+官禄宫用于观察工作风格、岗位偏好、责任压力，以及一个人面对外部期待时常见的回应方式。事业问题需要和命宫、财帛宫、迁移宫、主星、四化与当前运限一起看。回答时不能直接要求用户辞职或做不可逆决定，应把命盘倾向翻译成观察点、准备步骤和现实决策条件。

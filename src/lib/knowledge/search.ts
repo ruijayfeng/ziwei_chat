@@ -23,6 +23,9 @@ export type KnowledgeSource = {
   chunkId: string;
   title: string;
   source: string;
+  sourcePath: string;
+  sourceUrl: string;
+  license: string;
   school: string;
   confidence: "high" | "medium" | "low";
   excerpt: string;
@@ -58,6 +61,9 @@ export async function searchKnowledge({
       chunkId: chunk.chunkId,
       title: chunk.title,
       source: chunk.source,
+      sourcePath: chunk.sourcePath,
+      sourceUrl: chunk.sourceUrl,
+      license: chunk.license,
       school: chunk.school,
       confidence: chunk.confidence,
       excerpt: chunk.excerpt,
@@ -67,9 +73,7 @@ export async function searchKnowledge({
 
 async function loadKnowledgeChunks(contentRoot: string) {
   const dir = path.join(contentRoot, "content", "knowledge");
-  const fileNames = (await readdir(dir)).filter((fileName) =>
-    fileName.endsWith(".md"),
-  );
+  const fileNames = await listMarkdownFiles(dir);
 
   return Promise.all(
     fileNames.map(async (fileName) => {
@@ -78,6 +82,22 @@ async function loadKnowledgeChunks(contentRoot: string) {
       return parseKnowledgeMarkdown(fileName, markdown);
     }),
   );
+}
+
+async function listMarkdownFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const nested = await Promise.all(
+    entries.map(async (entry) => {
+      if (entry.isDirectory()) {
+        const children = await listMarkdownFiles(path.join(dir, entry.name));
+        return children.map((child) => path.join(entry.name, child));
+      }
+
+      return entry.isFile() && entry.name.endsWith(".md") ? [entry.name] : [];
+    }),
+  );
+
+  return nested.flat();
 }
 
 function parseKnowledgeMarkdown(
@@ -93,12 +113,20 @@ function parseKnowledgeMarkdown(
     topic: requireString(data, "topic", fileName),
     terms: requireStringArray(data, "terms", fileName),
     source: requireString(data, "source", fileName),
+    sourcePath: readOptionalString(data, "sourcePath"),
+    sourceUrl: readOptionalString(data, "sourceUrl"),
+    license: readOptionalString(data, "license"),
     school: requireString(data, "school", fileName),
     confidence: requireConfidence(data, fileName),
     excerpt: parsed.content.trim().slice(0, 260),
     retrievalMode: "local",
     content: parsed.content,
   };
+}
+
+function readOptionalString(data: Record<string, unknown>, field: string) {
+  const value = data[field];
+  return typeof value === "string" ? value : "";
 }
 
 function scoreChunk(chunk: KnowledgeChunk, query: string, chartTerms: string[]) {
@@ -113,7 +141,13 @@ function scoreChunk(chunk: KnowledgeChunk, query: string, chartTerms: string[]) 
     if (chunk.content.includes(term)) score += 2;
   }
 
-  return score;
+  return score + confidenceScore(chunk.confidence);
+}
+
+function confidenceScore(confidence: KnowledgeChunk["confidence"]) {
+  if (confidence === "high") return 2;
+  if (confidence === "low") return -2;
+  return 0;
 }
 
 function requireString(

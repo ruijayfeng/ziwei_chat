@@ -73,7 +73,7 @@ function buildFactsForTopic(
         stars: [],
         transforms: [],
         patterns: [],
-        rawText: `No palace data was available for ${topic}.`,
+        rawText: `没有找到 ${topic} 对应的宫位资料。`,
         confidence: "low",
       },
     ];
@@ -84,6 +84,9 @@ function buildFactsForTopic(
     const stars = readStars(palace);
     const transforms = readTransforms(palace);
     const patterns = readPatterns(palace);
+    const starText = stars.length > 0 ? stars.join("、") : "暂无主星";
+    const transformText =
+      transforms.length > 0 ? `，四化为 ${transforms.join("、")}` : "";
 
     return {
       id: `${chartId}:${topic}:${palaceName}`,
@@ -92,7 +95,7 @@ function buildFactsForTopic(
       stars,
       transforms,
       patterns,
-      rawText: `${palaceName} palace has ${stars.length > 0 ? stars.join("、") : "no major stars"}${transforms.length > 0 ? ` with transforms ${transforms.join("、")}` : ""}.`,
+      rawText: `${palaceName}宫位主星为 ${starText}${transformText}。`,
       confidence: stars.length > 0 ? "high" : "medium",
     };
   });

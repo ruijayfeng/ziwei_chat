@@ -54,7 +54,7 @@ describe("summarizeChart", () => {
           stars: [],
           transforms: [],
           patterns: [],
-          rawText: "No palace data was available for career.",
+        rawText: "没有找到 career 对应的宫位资料。",
           confidence: "low",
         },
       ],

@@ -1,13 +1,11 @@
 /**
  * [INPUT]: Depends on Vercel AI SDK text streaming, deterministic agent core, chart tools, skills, and local knowledge
- * [OUTPUT]: Provides POST /api/chat streaming response for the MVP chat surface
- * [POS]: App Router API boundary that wires session context, tool-grounded analysis, critic, and persistence
+ * [OUTPUT]: Provides POST /api/chat streaming response and evidence metadata for the MVP chat surface
+ * [POS]: App Router API boundary that wires session context, tool-grounded analysis, critic, evidence, and persistence
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
 import { randomUUID } from "node:crypto";
-
-import { createTextStreamResponse } from "ai";
 
 import { runResponseCritic } from "../../../lib/agent/critic";
 import {
@@ -17,14 +15,20 @@ import {
   recordRouteToolEvent,
 } from "../../../lib/agent/chat-runtime";
 import { routeIntent } from "../../../lib/agent/intent-router";
+import {
+  buildModelPrompt,
+  generateModelResponse,
+  normalizeModelSettings,
+  type IncomingModelSettings,
+} from "../../../lib/agent/model-provider";
 import { buildAnalysisPlan } from "../../../lib/agent/planner";
 import { composeResponse } from "../../../lib/agent/response-composer";
 import { createAgentTools } from "../../../lib/agent/tools";
+import type { CritiqueResult, Intent } from "../../../lib/domain/analysis";
 import type { ChartFact, ChartTopic, CreateChartInput } from "../../../lib/domain/chart";
-import type { Intent } from "../../../lib/domain/analysis";
 import { checkRateLimit } from "../../../lib/http/rate-limit";
 import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
-import { searchKnowledge } from "../../../lib/knowledge/search";
+import { searchKnowledge, type KnowledgeSource } from "../../../lib/knowledge/search";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
@@ -37,7 +41,34 @@ type ChatRequestBody = {
   messages?: IncomingMessage[];
   message?: string;
   chartInput?: CreateChartInput;
+  modelSettings?: IncomingModelSettings;
 };
+
+type ChatEvidence = {
+  toolsUsed: string[];
+  chartFacts: Array<Pick<ChartFact, "id" | "topic" | "palace" | "stars" | "transforms" | "patterns" | "rawText" | "confidence">>;
+  knowledgeSources: KnowledgeSource[];
+  critic: {
+    status: "not_run" | "passed" | "needs_review";
+    issues: string[];
+  };
+};
+
+type StaticChartAnswer = {
+  kind: "static";
+  content: string;
+  evidence: ChatEvidence;
+};
+
+type StreamingChartAnswer = {
+  kind: "model_stream";
+  deterministicContent: string;
+  evidence: ChatEvidence;
+  prompt: string;
+  modelSettings: ReturnType<typeof normalizeModelSettings>;
+};
+
+type ChartAnswer = StaticChartAnswer | StreamingChartAnswer;
 
 const chartTopics = new Set<Intent>([
   "career",
@@ -83,6 +114,12 @@ export async function POST(request: Request) {
         content:
           "请先创建一张命盘，我才能基于确定性排盘给你分析。你可以提供出生日期、出生时间、性别和历法类型。",
         metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
+        evidence: buildEvidence({
+          toolEventStartIndex,
+          chartFacts: [],
+          knowledgeSources: [],
+          critique: null,
+        }),
       });
     }
 
@@ -95,14 +132,29 @@ export async function POST(request: Request) {
         plan,
         conversationId,
         toolEventStartIndex,
+        userContent,
+        modelSettings: normalizeModelSettings(body.modelSettings),
       });
 
-      return await streamAndPersist({
-        profileId,
-        conversationId,
-        content: answer,
-        metadata: { intent: route.intent, safetyLevel: plan.safetyLevel },
-      });
+      const metadata = { intent: route.intent, safetyLevel: plan.safetyLevel };
+
+      return answer.kind === "model_stream"
+        ? streamModelAndPersist({
+            profileId,
+            conversationId,
+            deterministicContent: answer.deterministicContent,
+            evidence: answer.evidence,
+            metadata,
+            modelSettings: answer.modelSettings,
+            prompt: answer.prompt,
+          })
+        : await streamAndPersist({
+            profileId,
+            conversationId,
+            content: answer.content,
+            metadata,
+            evidence: answer.evidence,
+          });
     }
   }
 
@@ -116,6 +168,12 @@ export async function POST(request: Request) {
     conversationId,
     content: fallback,
     metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
+    evidence: buildEvidence({
+      toolEventStartIndex,
+      chartFacts: [],
+      knowledgeSources: [],
+      critique: null,
+    }),
   });
 }
 
@@ -143,6 +201,8 @@ async function answerWithChartContext({
   plan,
   conversationId,
   toolEventStartIndex,
+  userContent,
+  modelSettings,
 }: {
   tools: ReturnType<typeof createAgentTools>;
   profileId: string;
@@ -151,7 +211,9 @@ async function answerWithChartContext({
   plan: ReturnType<typeof buildAnalysisPlan>;
   conversationId: string;
   toolEventStartIndex: number;
-}) {
+  userContent: string;
+  modelSettings: ReturnType<typeof normalizeModelSettings>;
+}): Promise<ChartAnswer> {
   const topic = toChartTopic(intent);
   const summary = await tools.summarizeChartFacts({
     chartId,
@@ -159,8 +221,16 @@ async function answerWithChartContext({
   });
   const chartFacts = summary.ok ? summary.data.facts : [];
   const firstFact = chartFacts[0];
+
+  await runSupplementalTools({ tools, chartId, topic, plan, firstFact });
+
   const skill = await loadRouteSkill(plan.requiredSkills[0]);
-  const knowledge = await searchRouteKnowledge(plan.knowledgeQueries[0] ?? topic, topic, firstFact);
+  const knowledgeSources = await searchRouteKnowledge(
+    plan.knowledgeQueries[0] ?? topic,
+    topic,
+    firstFact,
+  );
+
   await recordRouteToolEvent(
     profileId,
     conversationId,
@@ -174,19 +244,21 @@ async function answerWithChartContext({
     conversationId,
     "searchKnowledge",
     { query: plan.knowledgeQueries[0], topic },
-    knowledge,
-    knowledge.length > 0,
+    knowledgeSources,
+    knowledgeSources.length > 0,
   );
 
   const draft = composeResponse({
     conclusion: buildConclusion(topic),
     chartBasis:
       firstFact !== undefined
-        ? [`${firstFact.palace}：${firstFact.rawText}`]
+        ? [formatChartFact(firstFact)]
         : ["当前命盘事实不足，回答需要保持保守。"],
-    plainExplanation: buildPlainExplanation(topic, firstFact),
+    plainExplanation: buildPlainExplanation(topic, firstFact, skill !== null, knowledgeSources),
     suggestion: buildSuggestion(topic),
     followUp: buildFollowUp(topic),
+    analysisSteps: skill?.analysisSteps,
+    knowledgeSources: knowledgeSources.map((source) => source.title),
   });
   const toolsUsed = getChatRuntimeStores()
     .toolEvents.slice(toolEventStartIndex)
@@ -196,7 +268,7 @@ async function answerWithChartContext({
     draft,
     toolsUsed,
     chartFacts,
-    knowledgeSources: knowledge,
+    knowledgeSources,
     safetyLevel: plan.safetyLevel,
   });
   await recordRouteToolEvent(
@@ -208,22 +280,117 @@ async function answerWithChartContext({
     critique.passed,
   );
 
-  if (!critique.passed) {
-    return composeResponse({
-      conclusion: "这个问题可以看，但我会先保守处理。",
-      chartBasis: chartFacts.slice(0, 1).map((fact) => `${fact.palace}：${fact.rawText}`),
-      plainExplanation: "目前依据不足以做很强的判断，所以更适合把它当成观察方向。",
-      suggestion: "先补足具体背景，再结合命盘事实继续分析。",
-      followUp: "你愿意先补充一下当前现实处境吗？",
+  const deterministicContent = critique.passed
+    ? draft
+    : composeResponse({
+        conclusion: "这个问题可以看，但我会先保守处理。",
+        chartBasis: chartFacts.slice(0, 1).map(formatChartFact),
+        plainExplanation:
+          "目前依据不足以做很强的判断，所以更适合把它当成观察方向，而不是定论。",
+        suggestion: "先补充具体背景，再结合命盘事实继续分析。",
+        followUp: "你愿意先补充一下当前现实处境吗？",
+      });
+  if (modelSettings.enabled) {
+    const prompt = buildModelPrompt({
+      userContent,
+      deterministicDraft: deterministicContent,
+      chartFacts: chartFacts.map(formatChartFact),
+      knowledgeSources: knowledgeSources.map(formatKnowledgeSource),
+      criticStatus: critique.passed ? "passed" : "needs_review",
+      criticIssues: critique.issues,
+    });
+
+    await recordRouteToolEvent(
+      profileId,
+      conversationId,
+      "generateModelResponse",
+      {
+        provider: modelSettings.provider,
+        baseUrl: modelSettings.baseUrl,
+        model: modelSettings.model,
+      },
+      { streaming: true },
+      true,
+    );
+
+    return {
+      kind: "model_stream",
+      deterministicContent,
+      evidence: buildEvidence({
+        toolEventStartIndex,
+        chartFacts,
+        knowledgeSources,
+        critique,
+      }),
+      modelSettings,
+      prompt,
+    };
+  }
+
+  return {
+    kind: "static",
+    content: deterministicContent,
+    evidence: buildEvidence({
+      toolEventStartIndex,
+      chartFacts,
+      knowledgeSources,
+      critique,
+    }),
+  };
+}
+
+async function runSupplementalTools({
+  tools,
+  chartId,
+  topic,
+  plan,
+  firstFact,
+}: {
+  tools: ReturnType<typeof createAgentTools>;
+  chartId: string;
+  topic: ChartTopic;
+  plan: ReturnType<typeof buildAnalysisPlan>;
+  firstFact: ChartFact | undefined;
+}) {
+  if (plan.requiredTools.includes("getPalaceAnalysis") && firstFact) {
+    await tools.getPalaceAnalysis({
+      chartId,
+      palace: firstFact.palace,
+      topic,
     });
   }
 
-  return draft;
+  if (plan.requiredTools.includes("getStarAnalysis") && firstFact?.stars.length) {
+    await tools.getStarAnalysis({
+      chartId,
+      stars: firstFact.stars.slice(0, 3),
+      palace: firstFact.palace,
+      topic,
+    });
+  }
+
+  if (plan.requiredTools.includes("getPatternAnalysis")) {
+    await tools.getPatternAnalysis({ chartId, topic });
+  }
+
+  if (plan.requiredTools.includes("getLuckCycle")) {
+    await tools.getLuckCycle({
+      chartId,
+      date: new Date().toISOString().slice(0, 10),
+      range: topic === "recent_fortune" ? "three_months" : "current",
+      topic,
+    });
+  }
 }
 
 async function loadRouteSkill(skillId: string | undefined) {
   if (!skillId) return null;
-  return loadSkill(skillId as SkillId);
+
+  try {
+    return await loadSkill(skillId as SkillId);
+  } catch {
+    return null;
+  }
 }
 
 async function searchRouteKnowledge(
@@ -231,15 +398,17 @@ async function searchRouteKnowledge(
   topic: ChartTopic,
   fact: ChartFact | undefined,
 ) {
-  const sources = await searchKnowledge({
-    query,
-    topic,
-    chartTerms: fact ? [fact.palace, ...fact.stars] : [],
-    limit: 3,
-    retrievalMode: "local",
-  });
-
-  return sources;
+  try {
+    return await searchKnowledge({
+      query,
+      topic,
+      chartTerms: fact ? [fact.palace, ...fact.stars] : [],
+      limit: 3,
+      retrievalMode: "local",
+    });
+  } catch {
+    return [];
+  }
 }
 
 async function streamAndPersist({
@@ -247,11 +416,13 @@ async function streamAndPersist({
   conversationId,
   content,
   metadata,
+  evidence,
 }: {
   profileId: string;
   conversationId: string;
   content: string;
   metadata: Record<string, unknown>;
+  evidence: ChatEvidence;
 }) {
   await persistChatMessage({
     conversationId,
@@ -261,16 +432,105 @@ async function streamAndPersist({
     metadata,
   });
 
-  return createTextStreamResponse({
-    stream: textToStream(content),
+  return new Response(textToStream(content), {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Ziwei-Evidence": encodeURIComponent(JSON.stringify(evidence)),
+    },
   });
 }
 
+function streamModelAndPersist({
+  profileId,
+  conversationId,
+  deterministicContent,
+  metadata,
+  evidence,
+  modelSettings,
+  prompt,
+}: {
+  profileId: string;
+  conversationId: string;
+  deterministicContent: string;
+  metadata: Record<string, unknown>;
+  evidence: ChatEvidence;
+  modelSettings: ReturnType<typeof normalizeModelSettings>;
+  prompt: string;
+}) {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const modelResult = await generateModelResponse({
+        settings: modelSettings,
+        prompt,
+        onToken: (token) => controller.enqueue(encoder.encode(token)),
+      });
+      const content = modelResult.ok ? modelResult.content : deterministicContent;
+
+      if (!modelResult.ok) {
+        controller.enqueue(encoder.encode(deterministicContent));
+      }
+
+      await persistChatMessage({
+        conversationId,
+        profileId,
+        role: "assistant",
+        content,
+        metadata,
+      });
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Ziwei-Evidence": encodeURIComponent(JSON.stringify(evidence)),
+    },
+  });
+}
+
+function buildEvidence({
+  toolEventStartIndex,
+  chartFacts,
+  knowledgeSources,
+  critique,
+}: {
+  toolEventStartIndex: number;
+  chartFacts: ChartFact[];
+  knowledgeSources: KnowledgeSource[];
+  critique: CritiqueResult | null;
+}): ChatEvidence {
+  return {
+    toolsUsed: getChatRuntimeStores()
+      .toolEvents.slice(toolEventStartIndex)
+      .map((event) => event.toolName),
+    chartFacts: chartFacts.map((fact) => ({
+      id: fact.id,
+      topic: fact.topic,
+      palace: fact.palace,
+      stars: fact.stars,
+      transforms: fact.transforms,
+      patterns: fact.patterns,
+      rawText: fact.rawText,
+      confidence: fact.confidence,
+    })),
+    knowledgeSources,
+    critic: {
+      status: critique === null ? "not_run" : critique.passed ? "passed" : "needs_review",
+      issues: critique?.issues ?? [],
+    },
+  };
+}
+
 function textToStream(content: string) {
-  return new ReadableStream<string>({
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
     start(controller) {
       for (const chunk of chunkText(content, 32)) {
-        controller.enqueue(chunk);
+        controller.enqueue(encoder.encode(chunk));
       }
       controller.close();
     },
@@ -324,25 +584,48 @@ function toChartTopic(intent: Intent): ChartTopic {
   return intent === "chart_explanation" ? "general" : (intent as ChartTopic);
 }
 
+function formatChartFact(fact: ChartFact) {
+  const starText = fact.stars.length > 0 ? `主星 ${fact.stars.join("、")}` : "暂无主星";
+  const transformText =
+    fact.transforms.length > 0 ? `，四化 ${fact.transforms.join("、")}` : "";
+
+  return `${fact.palace}：${starText}${transformText}。${fact.rawText}`;
+}
+
+function formatKnowledgeSource(source: KnowledgeSource) {
+  return `${source.title}（${source.source} / ${source.school}）：${source.excerpt}`;
+}
+
 function buildConclusion(topic: ChartTopic) {
   const conclusions: Record<ChartTopic, string> = {
-    career: "你最近更适合先观察机会，再决定要不要动。",
+    career: "你最近更适合先观察机会，再决定要不要行动。",
     relationship: "这段关系更适合先看互动模式，而不是急着下定论。",
-    wealth: "这个盘更适合先看赚钱方式和风险节奏。",
-    personality: "这个盘给人的感觉是有明确倾向，但不能用单一标签概括。",
-    recent_fortune: "近期更像是需要整理重点、避免被情绪推着走。",
+    wealth: "这个问题更适合先看赚钱方式和风险节奏。",
+    personality: "这张盘能看出一些稳定倾向，但不能用单一标签概括你。",
+    recent_fortune: "近期重点更像是整理优先级，避免被情绪推着走。",
     general: "这张盘可以先从核心宫位和主星开始理解。",
   };
 
   return conclusions[topic];
 }
 
-function buildPlainExplanation(topic: ChartTopic, fact: ChartFact | undefined) {
+function buildPlainExplanation(
+  topic: ChartTopic,
+  fact: ChartFact | undefined,
+  hasSkill: boolean,
+  knowledgeSources: KnowledgeSource[],
+) {
+  const supportNotes: string[] = [];
+  if (!hasSkill) supportNotes.push("当前还没有加载到完整技能流程");
+  if (knowledgeSources.length === 0) supportNotes.push("本地知识库没有命中可用条目");
+  const supportText =
+    supportNotes.length > 0 ? `（${supportNotes.join("，")}，所以我会保守表达。）` : "";
+
   if (!fact) {
-    return "落到现实里，目前只能给出保守观察，不能直接做强判断。";
+    return `落到现实里，目前只能给出保守观察，不能直接做强判断。${supportText}`;
   }
 
-  return `落到现实里，${topic} 相关的重点会先看 ${fact.palace}，再结合主星和四化去判断倾向。`;
+  return `落到现实里，${topicLabel(topic)} 会先看 ${fact.palace}，再结合主星、四化和当前问题判断倾向。${supportText}`;
 }
 
 function buildSuggestion(topic: ChartTopic) {
@@ -369,4 +652,17 @@ function buildFollowUp(topic: ChartTopic) {
   };
 
   return followUps[topic];
+}
+
+function topicLabel(topic: ChartTopic) {
+  const labels: Record<ChartTopic, string> = {
+    career: "事业工作",
+    relationship: "感情关系",
+    wealth: "财富节奏",
+    personality: "性格倾向",
+    recent_fortune: "近期运势",
+    general: "命盘结构",
+  };
+
+  return labels[topic];
 }

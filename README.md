@@ -1,8 +1,20 @@
 # Ziwei Chat
 
-Ziwei Chat is an open-source-first, Vercel-first Ziwei Dou Shu vertical agent. The first version is being built around anonymous profiles, deterministic chart generation with iztro, Vercel AI SDK streaming/tool calls, local Markdown knowledge retrieval, response critique, and Postgres persistence.
+Ziwei Chat is an open-source-first Ziwei Dou Shu agent. It lets a user create one anonymous primary chart, ask natural-language questions, and receive answers grounded in deterministic chart facts, topic skills, local knowledge retrieval, and a response critic.
 
-## Development
+The beta does not require product login, payment, a hosted Ziwei Chat account, Postgres, pgvector, or an embedding service.
+
+## What Works In Beta
+
+- Anonymous local profile and one primary chart.
+- Deterministic chart generation through `iztro`.
+- Chat flow: user message -> intent -> plan -> deterministic tools -> skill -> knowledge -> composer -> critic -> response.
+- OpenAI-compatible real model streaming from page-supplied provider, Base URL, API key, and model.
+- Deterministic-local fallback when no model is configured or a model call fails.
+- Evidence drawer for tools, chart facts, knowledge sources, and critic status.
+- Local Markdown/keyword knowledge search, including curated notes and imported `Renhuai123/ziwei-doushu` chunks with source/license metadata.
+
+## Local Development
 
 ```bash
 npm install
@@ -11,55 +23,81 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Current Status
+## Configure A Real Model
 
-The current `master` branch contains the merged open-source MVP foundation and
-product UI refinement from PR #2. See
-`docs/development/project-status.md` for the handoff snapshot, implemented
-surface, known gaps, and recommended next work.
+Open the app, use the **模型设置** panel, and choose a provider.
+
+Required fields:
+
+- Provider
+- Base URL
+- API Key
+- Model
+
+The API key is stored only in this browser's `localStorage`; it is sent to `/api/chat` for that request and is not written to the project database by this MVP. Use the **清空 API Key** button to remove it from browser storage.
+
+If settings are incomplete, Ziwei Chat stays in deterministic-local mode.
 
 ## Verification
 
+Run the full beta gate:
+
 ```bash
 npm run lint
-npm run test
 npm run typecheck
+npm run test
 npm run eval:agent
 npm run build
 ```
 
-## Continuous Integration
+## Deploy To Vercel
 
-GitHub Actions runs the same verification gate on pull requests and pushes to
-`master`: install with `npm ci`, then lint, typecheck, test, evaluate the agent,
-and build.
+1. Push this repository to GitHub.
+2. Import it in Vercel as a Next.js project.
+3. Set `NEXT_PUBLIC_APP_URL` to your deployed URL.
+4. Deploy.
 
-## Runtime Hardening
+Database variables are optional for the current beta path. The app can run in database-optional deterministic-local mode while hosted Postgres, pgvector, user accounts, and payments remain intentionally out of scope.
 
-`/api/chat` has a fixed-window request limiter. Defaults are documented in
-`.env.example`:
-
-```bash
-CHAT_RATE_LIMIT_MAX=30
-CHAT_RATE_LIMIT_WINDOW_MS=60000
-```
-
-Set `CHAT_RATE_LIMIT_MAX=0` only for trusted local development.
-
-## Local Database
+## Local Database Optional
 
 ```bash
 docker compose up -d postgres
 ```
 
-The default local URL is documented in `.env.example`. The compose file uses a pgvector-enabled Postgres image so vector retrieval can be added without making embeddings mandatory for the open-source baseline.
+The default local URL is documented in `.env.example`. The compose file uses a pgvector-enabled image so vector retrieval can be added later without blocking open-source local use.
 
-## Deployment Direction
+## Demo Script
 
-Vercel is the primary deployment path for V1. Neon/Postgres is supported through
-`DATABASE_URL`, but the current project can still run in deterministic-local /
-database-optional mode while hosted database setup is intentionally
-deprioritized. Auth, product accounts, payments, and subscriptions are
-intentionally outside the first-version scope.
+1. Start the app with `npm run dev`.
+2. Fill the chart form with birth date, time, gender, and calendar type.
+3. Ask: `我最近想换工作，适合动吗？`
+4. Watch the assistant answer.
+5. Open evidence and confirm tools, chart facts, knowledge sources, and critic status are present.
+6. Configure a real OpenAI-compatible model and ask another question to verify token streaming.
 
-See `docs/development/deployment.md` for environment variables, migration steps, Vercel setup, Neon setup, and smoke checks.
+## Screenshots
+
+Beta screenshots live in `public/screenshots/`:
+
+- `desktop-chat-evidence.png` - chart panel, chat answer, and evidence drawer after a career question.
+- `desktop-model-settings.png` - model settings panel with a configured provider.
+- `mobile-chart-sheet.png` - mobile chart/profile sheet.
+- `mobile-evidence-sheet.png` - mobile evidence sheet.
+
+## Safety And Scope
+
+- Ziwei Chat does not replace professional medical, legal, financial, psychological, or career advice.
+- Answers describe chart tendencies and practical reflection points, not guaranteed predictions.
+- The LLM must not invent chart facts or calculate chart positions. Chart facts must come from deterministic tools.
+- Missing Ziwei content should stay a gap; do not fill it with unsupported claims.
+
+## Continuous Integration
+
+GitHub Actions runs the same verification gate on pull requests and pushes to `master`: install with `npm ci`, then lint, typecheck, test, evaluate the agent, and build.
+
+## More Docs
+
+- `docs/development/deployment.md`
+- `docs/development/project-status.md`
+- `docs/development/public-beta-qa.md`

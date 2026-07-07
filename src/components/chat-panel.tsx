@@ -53,7 +53,7 @@ export function ChatPanel({
             ) : null}
           </div>
           <h2 className="mt-1 truncate text-base font-semibold text-foreground sm:text-lg">
-            温和但有依据的分析
+            温和但有依据的命盘分析
           </h2>
         </div>
       </div>
