@@ -40,6 +40,7 @@ next-dev*.log
 
 # local agent workflow state
 .superpowers/
+.claude/skills/
 
 # typescript
 *.tsbuildinfo

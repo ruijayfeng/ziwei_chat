@@ -3,6 +3,8 @@
 Open-source-first Next.js application planned around Vercel AI SDK, iztro, Postgres, pgvector, and a domain-specific agent harness for Ziwei Dou Shu analysis.
 
 <directory>
+.agents/ - Project-installed third-party skills used by Claude Code and compatible agent CLIs.
+.claude/ - Claude Code project wiring, currently symlinking installed skills from `.agents/skills`.
 docs/ - Product, architecture, knowledge, prompt, evaluation, and development planning documents.
 docs/product/ - Product positioning, final-state PRD, and roadmap.
 docs/architecture/ - Agent architecture, tool contracts, and data model.
@@ -32,6 +34,7 @@ package.json - Node package manifest and development scripts.
 postcss.config.mjs - Tailwind CSS PostCSS configuration.
 PRODUCT.md - Product register, audience, brand personality, anti-references, and design principles for UI work.
 README.md - Contributor setup, verification, database, and deployment pointers.
+skills-lock.json - Lockfile for installed third-party agent skills and source hashes.
 tsconfig.json - TypeScript compiler configuration.
 </config>
 
