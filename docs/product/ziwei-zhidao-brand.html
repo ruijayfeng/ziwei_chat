@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>紫微知道 — 品牌设计体系</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --stone-950: #0c0b09;
+  --stone-900: #1c1917;
+  --stone-800: #292524;
+  --stone-700: #44403c;
+  --stone-600: #57534e;
+  --stone-500: #78716c;
+  --stone-400: #a8a29e;
+  --stone-300: #d6d3d1;
+  --stone-200: #e7e5e4;
+  --stone-100: #f5f5f4;
+  --stone-50: #fafaf9;
+
+  --teal-600: #0d9488;
+  --teal-500: #14b8a6;
+  --teal-400: #2dd4bf;
+  --teal-300: #5eead4;
+  --teal-200: #99f6e4;
+  --teal-100: #ccfbf1;
+  --teal-50: #f0fdfa;
+
+  --warm-400: #d6a35c;
+  --warm-300: #e5be7a;
+  --warm-200: #f0d9a0;
+  --warm-100: #faf0d7;
+  --warm-50: #fdf8ed;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--stone-50);
+  color: var(--stone-800);
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Hero ── */
+.hero {
+  padding: 6rem 2rem 5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(175deg, var(--stone-50) 0%, #f0f7f5 40%, #eaf5f2 100%);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -30%; left: 50%;
+  transform: translateX(-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(20,184,166,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--teal-600);
+  margin-bottom: 1.25rem;
+}
+
+.hero h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 900;
+  color: var(--stone-950);
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  margin-bottom: 1rem;
+}
+
+.hero h1 .accent {
+  color: var(--teal-500);
+}
+
+.hero-slogan {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.35rem;
+  color: var(--stone-500);
+  font-weight: 400;
+  margin-bottom: 2rem;
+}
+
+.hero-divider {
+  display: inline-block;
+  width: 40px;
+  height: 2px;
+  background: var(--teal-400);
+  margin: 0.5rem 0 1.5rem;
+}
+
+.hero-desc {
+  max-width: 560px;
+  margin: 0 auto;
+  font-size: 0.95rem;
+  color: var(--stone-500);
+  line-height: 1.8;
+}
+
+/* ── Sections ── */
+.section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 5rem 2rem;
+}
+
+.section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal-600);
+  margin-bottom: 0.75rem;
+}
+
+.section h2 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--stone-950);
+  margin-bottom: 2.5rem;
+  letter-spacing: 0.02em;
+}
+
+.section h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--stone-900);
+  margin: 2rem 0 1rem;
+}
+
+.section p {
+  color: var(--stone-600);
+  margin-bottom: 1rem;
+  font-size: 0.925rem;
+}
+
+.divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--stone-200) 15%, var(--stone-200) 85%, transparent);
+  margin: 0;
+}
+
+/* ── Name Breakdown ── */
+.name-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.name-card {
+  background: #fff;
+  border: 1px solid var(--stone-200);
+  border-radius: 12px;
+  padding: 1.75rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.name-card:hover {
+  border-color: var(--teal-200);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+}
+
+.name-card .card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.name-card h4 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--stone-950);
+  margin-bottom: 0.5rem;
+}
+
+.name-card p {
+  font-size: 0.825rem;
+  color: var(--stone-500);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Slogan Cards ── */
+.slogan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+
+.slogan-item {
+  background: #fff;
+  border: 1px solid var(--stone-200);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  transition: border-color 0.2s;
+}
+
+.slogan-item:hover { border-color: var(--teal-300); }
+
+.slogan-item.primary {
+  border-color: var(--teal-300);
+  background: var(--teal-50);
+}
+
+.slogan-tier {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.2em 0.65em;
+  border-radius: 100px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.slogan-tier.primary-tier { background: var(--teal-100); color: var(--teal-600); }
+.slogan-tier.secondary-tier { background: var(--stone-100); color: var(--stone-600); }
+
+.slogan-text {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--stone-900);
+  flex: 1;
+}
+
+.slogan-usage {
+  font-size: 0.75rem;
+  color: var(--stone-400);
+  white-space: nowrap;
+}
+
+/* ── Color Palette ── */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.color-swatch {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--stone-200);
+}
+
+.color-preview {
+  height: 80px;
+}
+
+.color-info {
+  padding: 0.75rem 1rem;
+  background: #fff;
+}
+
+.color-info .name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--stone-900);
+  display: block;
+}
+
+.color-info .hex {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--stone-500);
+}
+
+/* ── Type scale ── */
+.type-showcase {
+  margin: 2rem 0;
+}
+
+.type-row {
+  border-bottom: 1px solid var(--stone-200);
+  padding: 1.25rem 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2rem;
+}
+
+.type-row:first-child { border-top: 1px solid var(--stone-200); }
+
+.type-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--stone-400);
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.type-sample {
+  font-family: 'Noto Serif SC', serif;
+  color: var(--stone-900);
+}
+
+.type-sample.display-xl { font-size: 3rem; font-weight: 900; line-height: 1.1; }
+.type-sample.display-lg { font-size: 2.25rem; font-weight: 700; line-height: 1.2; }
+.type-sample.display-md { font-size: 1.5rem; font-weight: 600; line-height: 1.3; }
+.type-sample.body-lg { font-size: 1.125rem; font-weight: 400; }
+.type-sample.body-md { font-size: 0.9375rem; font-weight: 400; }
+.type-sample.body-sm { font-size: 0.8125rem; font-weight: 400; }
+.type-sample.caption { font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.04em; }
+
+/* ── Copy Showcase ── */
+.copy-block {
+  background: #fff;
+  border: 1px solid var(--stone-200);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.copy-block-header {
+  padding: 0.75rem 1.25rem;
+  background: var(--stone-50);
+  border-bottom: 1px solid var(--stone-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copy-block-header h4 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--stone-700);
+  margin: 0;
+}
+
+.copy-block-header .scene {
+  font-size: 0.7rem;
+  color: var(--stone-400);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.copy-items {
+  padding: 1.25rem;
+}
+
+.copy-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--stone-100);
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.copy-item:last-child { border-bottom: none; }
+
+.copy-item .label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--stone-400);
+  min-width: 80px;
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+}
+
+.copy-item .text {
+  font-size: 0.9rem;
+  color: var(--stone-800);
+  line-height: 1.6;
+}
+
+.copy-item .text .highlight {
+  color: var(--teal-600);
+  font-weight: 500;
+}
+
+/* ── Micro-copy table ── */
+.micro-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.85rem;
+  border: 1px solid var(--stone-200);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.micro-table thead th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stone-500);
+  padding: 1rem 1.25rem;
+  text-align: left;
+  background: var(--stone-50);
+  border-bottom: 1px solid var(--stone-200);
+}
+
+.micro-table tbody td {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--stone-100);
+  color: var(--stone-700);
+  background: #fff;
+}
+
+.micro-table tbody tr:last-child td { border-bottom: none; }
+
+.micro-table .old { color: var(--stone-400); text-decoration: line-through; }
+.micro-table .new { color: var(--teal-600); font-weight: 500; }
+
+/* ── Logo Concept ── */
+.logo-concept {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  flex-wrap: wrap;
+  margin: 2.5rem 0;
+  padding: 3rem 2rem;
+  background: #fff;
+  border: 1px solid var(--stone-200);
+  border-radius: 16px;
+}
+
+.logo-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--teal-500), #0d9488);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 2rem;
+  font-weight: 900;
+  box-shadow: 0 8px 30px rgba(13,148,136,0.2);
+}
+
+.logo-wordmark {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--stone-950);
+}
+
+.logo-subtitle {
+  font-size: 0.75rem;
+  color: var(--stone-400);
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--stone-400);
+  font-size: 0.8rem;
+  background: var(--stone-100);
+}
+
+.footer p { margin: 0; }
+
+@media (max-width: 640px) {
+  .section { padding: 3rem 1.25rem; }
+  .hero { padding: 4rem 1.25rem; }
+  .type-label { min-width: 100px; font-size: 0.6rem; }
+  .slogan-item { flex-wrap: wrap; }
+  .logo-concept { gap: 2rem; padding: 2rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <div class="hero-eyebrow">Brand Identity System</div>
+  <h1>紫微<span class="accent">知道</span></h1>
+  <p class="hero-slogan">你问，我知道</p>
+  <div class="hero-divider"></div>
+  <p class="hero-desc">
+    一个懂紫微斗数的朋友。<br>不装神弄鬼，不故弄玄虚。<br>每一句分析，都有命盘依据。
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 1. 品牌命名 ═══════════ -->
+<section class="section">
+  <div class="section-label">01 · Naming</div>
+  <h2>品牌命名解读</h2>
+
+  <div class="name-grid">
+    <div class="name-card">
+      <span class="card-icon">🔮</span>
+      <h4>「紫微」— 领域锚点</h4>
+      <p>直接锚定紫微斗数，专业感、文化感兼具。两个字的音韵沉稳，符合"冷静、精确"的品牌个性。</p>
+    </div>
+    <div class="name-card">
+      <span class="card-icon">💬</span>
+      <h4>「知道」— 对话姿态</h4>
+      <p>口语化动词，暗示平等对话。不是"大师"的居高临下，不是"神算"的神秘权威。是"你问，我知道"。</p>
+    </div>
+    <div class="name-card">
+      <span class="card-icon">✨</span>
+      <h4>「知"道"」— 暗藏双关</h4>
+      <p>"道"既是"说道"的动作，也是"天道"的哲学。暗合紫微斗数"知天命"的古老智慧，但表达得举重若轻。</p>
+    </div>
+    <div class="name-card">
+      <span class="card-icon">🎯</span>
+      <h4>语感测试</h4>
+      <p>三个字，仄平平，节奏轻快。口语中自然："我用紫微知道查了一下"、"紫微知道说……"。品牌名天然融入口语传播。</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 2. Slogan ═══════════ -->
+<section class="section">
+  <div class="section-label">02 · Slogan System</div>
+  <h2>Slogan 体系</h2>
+
+  <p>基于"紫微知道"的品牌名，构建多层 Slogan 体系，覆盖不同场景和传播需求。</p>
+
+  <div class="slogan-list">
+    <div class="slogan-item primary">
+      <span class="slogan-tier primary-tier">核心 Slogan</span>
+      <span class="slogan-text">你问，我知道</span>
+      <span class="slogan-usage">首页 Hero · SEO · 社交媒体</span>
+    </div>
+    <div class="slogan-item">
+      <span class="slogan-tier secondary-tier">价值主张</span>
+      <span class="slogan-text">每一句分析，都有命盘依据</span>
+      <span class="slogan-usage">产品介绍 · 对比页 · 信任建设</span>
+    </div>
+    <div class="slogan-item">
+      <span class="slogan-tier secondary-tier">功能描述</span>
+      <span class="slogan-text">开源、可信、零门槛的紫微斗数 AI 助手</span>
+      <span class="slogan-usage">GitHub README · 技术社区</span>
+    </div>
+    <div class="slogan-item">
+      <span class="slogan-tier secondary-tier">品牌承诺</span>
+      <span class="slogan-text">不问来路，只看命盘</span>
+      <span class="slogan-usage">隐私/匿名宣传 · 注册页</span>
+    </div>
+    <div class="slogan-item">
+      <span class="slogan-tier secondary-tier">对话开场</span>
+      <span class="slogan-text">今天想知道什么？</span>
+      <span class="slogan-usage">聊天界面 empty state</span>
+    </div>
+  </div>
+
+  <h3>「你问，我知道」为什么是最好的选择？</h3>
+  <p>
+    五个字，口语化、有记忆点、天然包含品牌名。<strong>"你问"</strong>——以用户为中心，强调对话；<strong>"我知道"</strong>——自信但不傲慢，呼应"紫微<em>知道</em>"的品牌名。整体传递的信息是：<strong>你有问题，我有答案，而且我的答案是有依据的。</strong>
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 3. 视觉系统 ═══════════ -->
+<section class="section">
+  <div class="section-label">03 · Visual Identity</div>
+  <h2>视觉设计系统</h2>
+
+  <!-- Logo -->
+  <h3>Logo 概念</h3>
+  <p>基于项目现有的产品气质（冷静、精确、陪伴感），设计方向为：<strong>极简文字标 + 抽象星图符号</strong>。避免传统算命产品的红金配色、羊皮纸纹理。</p>
+
+  <div class="logo-concept">
+    <div class="logo-mark">
+      <div class="logo-icon">知</div>
+      <span class="logo-wordmark">紫微知道</span>
+      <span class="logo-subtitle">ziwei.knows</span>
+    </div>
+    <div class="logo-mark">
+      <div class="logo-icon" style="background: linear-gradient(135deg, var(--stone-700), var(--stone-950));">✦</div>
+      <span class="logo-wordmark">紫微知道</span>
+      <span class="logo-subtitle">星图符号变体</span>
+    </div>
+    <div class="logo-mark">
+      <div class="logo-icon" style="background: #fff; border: 2.5px solid var(--teal-500); color: var(--teal-500); font-weight: 700; font-family: 'Noto Sans SC', sans-serif;">ZW</div>
+      <span class="logo-wordmark">紫微知道</span>
+      <span class="logo-subtitle">字母标变体</span>
+    </div>
+  </div>
+
+  <p style="font-size:0.8rem;color:var(--stone-400);margin-top:0.5rem;">
+    推荐方案：<strong>「知」字标</strong>——一个"知"字放在 teal 圆角方块中，极简、好记、一眼识别。同时"知"字天然呼应品牌名"紫微知道"。
+  </p>
+
+  <!-- Color -->
+  <h3>色彩系统</h3>
+  <p>延续项目现有的 teal 主色调（#0f766e → 优化为 #0d9488），构建完整的品牌色彩体系。拒绝"AI 紫色渐变"和"红金算命风"。</p>
+
+  <div class="color-grid">
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #0d9488;"></div>
+      <div class="color-info"><span class="name">Primary · 青碧</span><span class="hex">#0D9488</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #14b8a6;"></div>
+      <div class="color-info"><span class="name">Primary Light</span><span class="hex">#14B8A6</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #ccfbf1;"></div>
+      <div class="color-info"><span class="name">Primary Surface</span><span class="hex">#CCFBF1</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #f0fdfa;"></div>
+      <div class="color-info"><span class="name">Primary Subtle</span><span class="hex">#F0FDFA</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #d6a35c;"></div>
+      <div class="color-info"><span class="name">Accent · 琥珀</span><span class="hex">#D6A35C</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #faf0d7;"></div>
+      <div class="color-info"><span class="name">Accent Surface</span><span class="hex">#FAF0D7</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #0c0b09;"></div>
+      <div class="color-info"><span class="name">Ink</span><span class="hex">#0C0B09</span></div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-preview" style="background: #fafaf9;"></div>
+      <div class="color-info"><span class="name">Background</span><span class="hex">#FAFAF9</span></div>
+    </div>
+  </div>
+
+  <p>
+    <strong>色彩语义：</strong>青碧（Teal）传递"冷静、精确、可信"——这是"知道"的理性面。琥珀（Warm Gold）作为点缀色，传递"温暖、陪伴、人文"——这是"朋友"的感性面。双色体系完美对应品牌人格的"冷静 × 温暖"双面。
+  </p>
+
+  <!-- Typography -->
+  <h3>字体系统</h3>
+  <p><strong>Noto Serif SC</strong>（思源宋体）用于标题和品牌文字，<strong>Noto Sans SC</strong>（思源黑体）用于正文和界面，<strong>JetBrains Mono</strong> 用于代码和数据。</p>
+
+  <div class="type-showcase">
+    <div class="type-row">
+      <span class="type-label">Display XL</span>
+      <span class="type-sample display-xl">紫微知道</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Display LG</span>
+      <span class="type-sample display-lg">你问，我知道</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Display MD</span>
+      <span class="type-sample display-md">每一句分析，都有命盘依据</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body LG</span>
+      <span class="type-sample body-lg">我先说结论：你最近更像是在一个"想动，但还没完全看清方向"的阶段。</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body MD</span>
+      <span class="type-sample body-md">命盘依据上，我会看三个点：事业宫主星组合、当前运限的行动感、财帛迁移的外部机会信号。</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body SM</span>
+      <span class="type-sample body-sm">Beta 只保存一张主命盘，并用当前浏览器的匿名 profile 关联对话。</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Caption</span>
+      <span class="type-sample caption">ZIWEI ZHIDAO · 开源紫微斗数垂直智能体</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 4. 产品文案 ═══════════ -->
+<section class="section">
+  <div class="section-label">04 · Product Copy</div>
+  <h2>产品文案体系</h2>
+
+  <p>基于"紫微知道"品牌语调——<strong>温暖的朋友 + 领域能力</strong>，系统设计产品各场景的文案。对比当前文案和优化后文案。</p>
+
+  <!-- Empty States -->
+  <div class="copy-block">
+    <div class="copy-block-header">
+      <h4>空状态 · Empty States</h4>
+      <span class="scene">第一次打开、无消息、无命盘</span>
+    </div>
+    <div class="copy-items">
+      <div class="copy-item">
+        <span class="label">无消息时</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">可以直接问一句自然语言问题。</span><br>
+          <span class="highlight">今天想知道什么？</span> 直接问我就行，比如"最近适合换工作吗"。如果还没有命盘，我会先帮你建一张。
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">无命盘时</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">当前命盘 · 尚未创建命盘</span><br>
+          <span class="highlight">还没有命盘</span> — 填写出生信息，我帮你排一张。只需要姓名、生日和出生时间。
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">话题入口标题</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">Quick topics · 主题入口</span><br>
+          <span class="highlight">从这些话题开始</span>
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">话题标签优化</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">近期运势 / 事业工作 / 感情关系 / 财富节奏 / 性格分析</span><br>
+          <span class="highlight">近期运势</span> / <span class="highlight">事业方向</span> / <span class="highlight">感情状态</span> / <span class="highlight">财富节奏</span> / <span class="highlight">性格倾向</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error States -->
+  <div class="copy-block">
+    <div class="copy-block-header">
+      <h4>错误状态 · Error States</h4>
+      <span class="scene">API 失败、超时、空响应</span>
+    </div>
+    <div class="copy-items">
+      <div class="copy-item">
+        <span class="label">API 错误</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">（技术错误信息）</span><br>
+          <span class="highlight">分析暂时中断了</span>，可能是模型服务不稳定。你可以重试一次，或者稍等片刻再问。
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">空响应</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">（空 assistant 响应错误）</span><br>
+          <span class="highlight">这次没能生成回答</span>，换个方式再问一次试试？
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">网络错误</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">（fetch 错误）</span><br>
+          <span class="highlight">网络不太稳定</span>，检查一下连接，然后重试。
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading & Streaming -->
+  <div class="copy-block">
+    <div class="copy-block-header">
+      <h4>加载与流式响应 · Loading & Streaming</h4>
+      <span class="scene">等待分析、模型思考中</span>
+    </div>
+    <div class="copy-items">
+      <div class="copy-item">
+        <span class="label">流式标签</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">正在分析</span><br>
+          <span class="highlight">正在排盘分析…</span>
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">发送按钮</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">分析中</span><br>
+          <span class="highlight">思考中</span>
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">聊天标题</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">温和但有依据的命盘分析</span><br>
+          <span class="highlight">用命盘说话，不靠猜</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guidance -->
+  <div class="copy-block">
+    <div class="copy-block-header">
+      <h4>引导与提示 · Guidance</h4>
+      <span class="scene">首次使用、功能说明</span>
+    </div>
+    <div class="copy-items">
+      <div class="copy-item">
+        <span class="label">输入框 placeholder</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">例如：我最近想换工作，适合动吗？</span><br>
+          <span class="highlight">想问什么就直接说，比如"最近适合换工作吗？"</span>
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">命盘同步状态</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">已同步 / 未同步</span><br>
+          未同步 → <span class="highlight">命盘已就绪</span> / 已同步 → <span class="highlight">已用于当前对话</span>
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">模型设置面板</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">Provider · Base URL · API Key · Model</span><br>
+          <span class="highlight">选择模型服务商</span> / <span class="highlight">服务地址</span> / <span class="highlight">密钥</span> / <span class="highlight">模型名称</span>
+        </span>
+      </div>
+      <div class="copy-item">
+        <span class="label">删除数据确认</span>
+        <span class="text">
+          <span style="color:var(--stone-400);text-decoration:line-through;">清除匿名资料数据？这会清除当前浏览器里的匿名 profile 状态…</span><br>
+          <span class="highlight">清除所有本地数据？</span> 这会删除你的命盘、对话记录和设置。数据只存在这个浏览器里，清除后无法恢复。
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 5. 交互微文案 ═══════════ -->
+<section class="section">
+  <div class="section-label">05 · Micro-copy</div>
+  <h2>交互微文案对照表</h2>
+
+  <p>系统级替换所有产品文案，从 "Ziwei Chat" 到 "紫微知道"，同时优化语感。</p>
+
+  <table class="micro-table">
+    <thead>
+      <tr>
+        <th>位置</th>
+        <th>当前文案</th>
+        <th>优化后</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>浏览器标题</td>
+        <td class="old">Ziwei Chat</td>
+        <td class="new">紫微知道 — 你问，我知道</td>
+      </tr>
+      <tr>
+        <td>meta description</td>
+        <td class="old">Open-source Ziwei Dou Shu vertical agent MVP</td>
+        <td class="new">开源、可信的紫微斗数 AI 助手。每一句分析，都有命盘依据。</td>
+      </tr>
+      <tr>
+        <td>Header 标题</td>
+        <td class="old">Ziwei Chat</td>
+        <td class="new">紫微知道</td>
+      </tr>
+      <tr>
+        <td>Header 副标题</td>
+        <td class="old">可信命盘分析工作台</td>
+        <td class="new">你问，我知道</td>
+      </tr>
+      <tr>
+        <td>Header Badge</td>
+        <td class="old">Evidence Companion</td>
+        <td class="new">命盘依据可查</td>
+      </tr>
+      <tr>
+        <td>聊天区 Badge</td>
+        <td class="old">Ziwei Chat</td>
+        <td class="new">紫微知道</td>
+      </tr>
+      <tr>
+        <td>侧栏按钮（移动端）</td>
+        <td class="old">资料</td>
+        <td class="new">命盘</td>
+      </tr>
+      <tr>
+        <td>侧栏标题（移动端）</td>
+        <td class="old">命盘资料</td>
+        <td class="new">我的命盘</td>
+      </tr>
+      <tr>
+        <td>侧栏描述</td>
+        <td class="old">当前匿名 profile 的命盘与主题入口。</td>
+        <td class="new">你的命盘和常用话题，数据只存在当前浏览器里。</td>
+      </tr>
+      <tr>
+        <td>证据抽屉按钮</td>
+        <td class="old">依据</td>
+        <td class="new">依据</td>
+      </tr>
+      <tr>
+        <td>证据抽屉标题</td>
+        <td class="old">本次回答依据</td>
+        <td class="new">这次分析的依据</td>
+      </tr>
+      <tr>
+        <td>证据抽屉描述</td>
+        <td class="old">工具、命盘事实、知识来源和 critic 检查。</td>
+        <td class="new">命盘事实、分析工具、知识来源和可信度检查。</td>
+      </tr>
+      <tr>
+        <td>清除数据按钮</td>
+        <td class="old">清除匿名资料数据</td>
+        <td class="new">清除本地数据</td>
+      </tr>
+      <tr>
+        <td>package.json name</td>
+        <td class="old">ziwei-chat</td>
+        <td class="new">ziwei-zhidao</td>
+      </tr>
+      <tr>
+        <td>GitHub 仓库名</td>
+        <td class="old">ziwei_chat</td>
+        <td class="new">ziwei-zhidao</td>
+      </tr>
+      <tr>
+        <td>localStorage key</td>
+        <td class="old">ziwei-chat-profile-id</td>
+        <td class="new">ziwei-zhidao-profile-id</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 6. 回答语调示例 ═══════════ -->
+<section class="section">
+  <div class="section-label">06 · Voice & Tone</div>
+  <h2>回答语调示例</h2>
+
+  <p>基于"温暖的朋友 + 领域能力"的品牌人格，更新回答协议的示例，融入"紫微知道"的品牌语调。</p>
+
+  <div class="copy-block">
+    <div class="copy-block-header">
+      <h4>回答示例 · 事业话题</h4>
+      <span class="scene">用户问：我最近想换工作，适合动吗？</span>
+    </div>
+    <div class="copy-items">
+      <div class="copy-item">
+        <span class="label">回答全文</span>
+        <span class="text">
+          我先说结论：你最近更像是在一个<strong>"想动，但还没完全看清方向"</strong>的阶段。不是不能动，是动了之后可能会发现新环境和预期不太一样。<br><br>
+          命盘依据上，紫微知道会看三个点：第一是你事业宫的主星组合，目前显示你对外部机会的感知偏理想化；第二是当前运限给你的行动感不算强，更像是酝酿期；第三是财帛相关的信息没有明显的外部支持信号。<br><br>
+          翻成大白话：这不是一个"必须立刻走"的时间窗口，更像适合<strong>先试探、先整理、先观察</strong>的阶段。可以投简历感受一下水温，但不建议裸辞。<br><br>
+          建议你先做两件事：把你想去的方向写清楚，然后用两周时间验证一下市场反馈。如果反馈积极，下个季度可能是个更好的时机。<br><br>
+          你现在更纠结的是"想离开当前环境"，还是"不知道下一步去哪"？
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════ 7. 实施清单 ═══════════ -->
+<section class="section">
+  <div class="section-label">07 · Action Plan</div>
+  <h2>品牌落地实施清单</h2>
+
+  <p>按优先级排列，建议分两批落地：</p>
+
+  <h3>第一批：立即执行（V1 发布前）</h3>
+
+  <table class="micro-table">
+    <thead>
+      <tr><th>项目</th><th>文件/位置</th><th>改动内容</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>浏览器标题 + meta</td><td><code>src/app/layout.tsx</code></td><td>title → "紫微知道 — 你问，我知道"，description 更新</td></tr>
+      <tr><td>Header 标题 + 副标题</td><td><code>src/components/ziwei-chat-shell.tsx</code></td><td>"Ziwei Chat" → "紫微知道"，副标题 → "你问，我知道"</td></tr>
+      <tr><td>聊天区标题</td><td><code>src/components/chat-panel.tsx</code></td><td>"温和但有依据的命盘分析" → "用命盘说话，不靠猜"</td></tr>
+      <tr><td>聊天区 Badge</td><td><code>src/components/chat-panel.tsx</code></td><td>"Ziwei Chat" → "紫微知道"</td></tr>
+      <tr><td>空状态文案</td><td><code>src/components/chat-panel.tsx</code></td><td>替换 EmptyChatState 内容</td></tr>
+      <tr><td>输入框 placeholder</td><td><code>src/components/chat-panel.tsx</code></td><td>改为"想问什么就直接说，比如…"</td></tr>
+      <tr><td>话题入口标题</td><td><code>src/components/topic-entry.tsx</code></td><td>"Quick topics · 主题入口" → "从这些话题开始"</td></tr>
+      <tr><td>侧栏按钮文案</td><td><code>src/components/ziwei-chat-shell.tsx</code></td><td>"资料" → "命盘"</td></tr>
+      <tr><td>流式状态标签</td><td><code>src/components/chat-panel.tsx</code></td><td>"正在分析" → "正在排盘分析…"</td></tr>
+      <tr><td>package.json name</td><td><code>package.json</code></td><td>"ziwei-chat" → "ziwei-zhidao"</td></tr>
+      <tr><td>README 标题</td><td><code>README.md</code></td><td>更新产品名和 Slogan</td></tr>
+    </tbody>
+  </table>
+
+  <h3>第二批：V1→V2 迭代</h3>
+
+  <table class="micro-table">
+    <thead>
+      <tr><th>项目</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Logo 设计</td><td>找设计师或 AI 生成正式的"知"字标 Logo，输出 SVG + favicon</td></tr>
+      <tr><td>色彩系统迁移</td><td>将 CSS 变量从旧 primary 迁移到品牌青碧色系</td></tr>
+      <tr><td>字体引入</td><td>引入 Noto Serif SC 作为标题字体（当前已有 Noto Sans SC 做正文字体）</td></tr>
+      <tr><td>首页/落地页</td><td>独立的产品介绍页，展示"你问，我知道"品牌故事</td></tr>
+      <tr><td>回答协议更新</td><td>将"紫微知道"作为回答中的自称融入 prompt</td></tr>
+      <tr><td>localStorage key 迁移</td><td>更新 key 名称，注意兼容旧数据</td></tr>
+      <tr><td>域名</td><td>考虑 ziweizhidao.com 或 ziwei.knows 域名</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer class="footer">
+  <p>紫微知道 · Brand Identity System · July 2026</p>
+</footer>
+
+</body>
+</html>

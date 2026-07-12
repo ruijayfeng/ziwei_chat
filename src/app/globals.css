@@ -5,45 +5,46 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f7f7f4;
-  --foreground: #181816;
+  --background: #fafaf8;
+  --foreground: #1d2942;
   --card: #ffffff;
-  --card-foreground: #181816;
+  --card-foreground: #1d2942;
   --popover: #ffffff;
-  --popover-foreground: #181816;
+  --popover-foreground: #1d2942;
   --surface: #ffffff;
-  --surface-muted: #efefea;
-  --border: #d8d8d0;
-  --input: #d8d8d0;
-  --muted: #efefea;
-  --muted-foreground: #5f5f58;
-  --primary: #0f766e;
+  --surface-muted: #f4f5f8;
+  --border: #e6e7ee;
+  --input: #d8dbe7;
+  --muted: #f4f5f8;
+  --muted-foreground: #6f788c;
+  --primary: #5261ad;
   --primary-foreground: #ffffff;
-  --primary-strong: #0b5f59;
-  --secondary: #efefea;
-  --secondary-foreground: #181816;
-  --accent: #e7f4f1;
-  --accent-foreground: #0f766e;
-  --destructive: #a33a2b;
-  --warning: #a33a2b;
-  --warning-muted: #f8e9e5;
-  --success-muted: #e7f4f1;
-  --focus: #0f766e;
-  --ring: #0f766e;
-  --chart-1: #0f766e;
-  --chart-2: #2f5f8f;
-  --chart-3: #b7791f;
-  --chart-4: #7b6d8d;
-  --chart-5: #7a7a72;
-  --radius: 0.5rem;
+  --primary-strong: #435196;
+  --secondary: #f4f5f8;
+  --secondary-foreground: #1d2942;
+  --accent: #f0f1ff;
+  --accent-foreground: #4e5cb0;
+  --destructive: #b65b52;
+  --warning: #b65b52;
+  --warning-muted: #fff0ee;
+  --success: #4d9b7b;
+  --success-muted: #eff8f3;
+  --focus: #5261ad;
+  --ring: #5261ad;
+  --chart-1: #5261ad;
+  --chart-2: #6083b6;
+  --chart-3: #c28a51;
+  --chart-4: #887caa;
+  --chart-5: #7f8797;
+  --radius: 0.75rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #181816;
-  --sidebar-primary: #0f766e;
+  --sidebar-foreground: #1d2942;
+  --sidebar-primary: #5261ad;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e7f4f1;
-  --sidebar-accent-foreground: #0f766e;
-  --sidebar-border: #d8d8d0;
-  --sidebar-ring: #0f766e;
+  --sidebar-accent: #f0f1ff;
+  --sidebar-accent-foreground: #4e5cb0;
+  --sidebar-border: #e6e7ee;
+  --sidebar-ring: #5261ad;
 }
 
 @theme inline {
@@ -57,6 +58,7 @@
   --color-primary-strong: var(--primary-strong);
   --color-warning: var(--warning);
   --color-warning-muted: var(--warning-muted);
+  --color-success: var(--success);
   --color-success-muted: var(--success-muted);
   --font-sans: var(--font-noto-sans-sc), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -104,6 +106,59 @@ body {
     "Microsoft YaHei",
     system-ui,
     sans-serif;
+}
+
+.workspace-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.answer-orb-active {
+  animation: answer-orb-pulse 1.8s ease-out infinite;
+}
+
+.answer-status-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: answer-status-pulse 1.25s ease-out infinite;
+}
+
+.answer-skeleton {
+  display: block;
+  height: 0.6rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--surface-muted), color-mix(in srgb, var(--primary) 10%, white), var(--surface-muted));
+  background-size: 200% 100%;
+  animation: answer-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes answer-orb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent); }
+  45% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary) 12%, transparent); }
+}
+
+@keyframes answer-status-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes answer-skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (min-width: 64rem) {
+  .workspace-grid {
+    grid-template-columns: 296px minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 80rem) {
+  .workspace-grid {
+    grid-template-columns: 296px minmax(0, 1fr) 360px;
+  }
 }
 
 ::selection {

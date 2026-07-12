@@ -64,6 +64,16 @@ export function ChartOnboarding({
 
   const profile = formatChartProfile(chartInput);
   const syncLabel = getChartSyncLabel(chartSynced, profile.hasChart);
+  const formKey = chartInput
+    ? [
+        chartInput.name,
+        chartInput.gender,
+        chartInput.birthDate,
+        chartInput.birthTime,
+        chartInput.calendarType,
+        chartInput.birthPlace ?? "",
+      ].join("|")
+    : "empty-chart";
 
   return (
     <Card className="border-border/90 bg-card shadow-none ring-0" size="sm">
@@ -107,7 +117,7 @@ export function ChartOnboarding({
           </>
         ) : null}
 
-        <form action={handleSubmit} className="grid gap-3">
+        <form action={handleSubmit} className="grid gap-3" key={formKey}>
           <div>
             <h3 className="text-sm font-semibold text-foreground">命盘资料</h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">

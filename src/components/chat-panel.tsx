@@ -1,142 +1,80 @@
 "use client";
 
 /**
- * [INPUT]: Depends on message state, shadcn UI primitives, prompt callbacks, streaming state, and chat error UI state
- * [OUTPUT]: Provides chat transcript, input controls, loading, retry, and evidence affordance
- * [POS]: Main conversation component coordinated by ziwei-chat-shell
+ * [INPUT]: Depends on message state, topic controls, report rendering, and chat callbacks
+ * [OUTPUT]: Provides the central conversation workspace
+ * [POS]: Chat-first main panel coordinated by ziwei-chat-shell
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
+import { useEffect, useState } from "react";
+import { AlertCircle, Loader2, Paperclip, RotateCcw, Send, Sparkles, UserRound } from "lucide-react";
+
 import type { ChatErrorState } from "@/lib/ui/chat-errors";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Loader2, RotateCcw, Send } from "lucide-react";
+import { nextRevealLength, sliceByCharacters } from "@/lib/ui/streaming-reveal";
+import { ReportMessage } from "./report-message";
+import { TopicEntry } from "./topic-entry";
 
-export type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
+export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 type ChatPanelProps = {
   messages: ChatMessage[];
   draft: string;
   isStreaming: boolean;
   error: ChatErrorState | null;
+  greeting: string;
   onRetry: () => void;
   onDraftChange: (value: string) => void;
   onSubmit: () => void;
+  onTopicSelect: (prompt: string) => void;
 };
 
-export function ChatPanel({
-  messages,
-  draft,
-  isStreaming,
-  error,
-  onRetry,
-  onDraftChange,
-  onSubmit,
-}: ChatPanelProps) {
-  return (
-    <section className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 sm:px-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Badge className="bg-accent text-primary" variant="secondary">
-              Ziwei Chat
-            </Badge>
-            {isStreaming ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" />
-                正在分析
-              </span>
-            ) : null}
-          </div>
-          <h2 className="mt-1 truncate text-base font-semibold text-foreground sm:text-lg">
-            温和但有依据的命盘分析
-          </h2>
-        </div>
+export function ChatPanel({ messages, draft, isStreaming, error, greeting, onRetry, onDraftChange, onSubmit, onTopicSelect }: ChatPanelProps) {
+  const empty = messages.length === 0;
+  return <section className="flex h-full min-h-0 flex-col bg-background">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:px-10 lg:px-12">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-7">
+        <header className={empty ? "pt-1" : "border-b border-border pb-5"}>
+          <div className="flex items-start justify-between gap-4"><div><h2 className="font-serif text-3xl font-medium text-foreground sm:text-4xl">{greeting}</h2><p className="mt-3 text-base text-muted-foreground">{empty ? "今天想从哪里开始了解自己？" : "继续围绕命盘与现实问题展开。"}</p></div>{empty ? <OrbitMotif /> : null}</div>
+        </header>
+        {empty ? <section><p className="mb-3 text-sm font-medium text-foreground">你可以试着问</p><TopicEntry onSelect={onTopicSelect} /></section> : null}
+        {messages.map((message, index) => message.role === "user" ? <UserQuestion content={message.content} key={`user-${index}`} /> : <AssistantAnswer content={message.content} key={`assistant-${index}`} streaming={isStreaming && index === messages.length - 1} />)}
       </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          {messages.length === 0 ? <EmptyChatState /> : null}
-          {messages.map((message, index) => (
-            <MessageBubble key={`${message.role}-${index}`} message={message} />
-          ))}
-        </div>
-      </div>
-
-      {error ? (
-        <div className="border-t border-border bg-warning-muted px-4 py-3">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-            <div className="flex items-start gap-2 text-sm text-warning">
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
-              <span>{error.message}</span>
-            </div>
-            {error.canRetry ? (
-              <Button onClick={onRetry} size="sm" type="button" variant="outline">
-                <RotateCcw data-icon="inline-start" />
-                重试
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="border-t border-border bg-card px-4 py-3 sm:px-5">
-        <div className="mx-auto grid max-w-3xl gap-2 sm:grid-cols-[1fr_auto]">
-          <Textarea
-            className="max-h-40 min-h-20 resize-none bg-background text-sm leading-6"
-            onChange={(event) => onDraftChange(event.target.value)}
-            placeholder="例如：我最近想换工作，适合动吗？"
-            value={draft}
-          />
-          <Button
-            className="h-10 bg-foreground text-white hover:bg-black sm:h-full sm:min-h-20 sm:w-24"
-            disabled={isStreaming || draft.trim().length === 0}
-            onClick={onSubmit}
-            type="button"
-          >
-            {isStreaming ? (
-              <>
-                <Loader2 className="animate-spin" data-icon="inline-start" />
-                分析中
-              </>
-            ) : (
-              <>
-                <Send data-icon="inline-start" />
-                发送
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function EmptyChatState() {
-  return (
-    <div className="rounded-lg border border-dashed border-border bg-card p-5 text-sm leading-6 text-muted-foreground">
-      <p className="font-medium text-foreground">可以直接问一句自然语言问题。</p>
-      <p className="mt-2">
-        例如：我最近适合换工作吗？如果还没有命盘，系统会先提示你保存出生信息。
-      </p>
     </div>
-  );
+    {error ? <div className="border-t border-warning/25 bg-warning-muted px-5 py-3"><div className="mx-auto flex max-w-4xl items-center justify-between gap-3"><p className="flex items-center gap-2 text-sm text-warning"><AlertCircle className="size-4" />{error.message}</p>{error.canRetry ? <Button onClick={onRetry} size="sm" type="button" variant="outline"><RotateCcw data-icon="inline-start" />重试</Button> : null}</div></div> : null}
+    <div className="border-t border-border bg-background px-5 py-4 sm:px-10"><div className="mx-auto max-w-4xl"><div className="rounded-xl border border-primary/40 bg-card p-3 shadow-[0_5px_14px_rgba(39,50,90,0.05)]"><Textarea className="min-h-16 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" onChange={(event) => onDraftChange(event.target.value)} placeholder="继续提问，例如：今年感情会有进展吗？" value={draft} /><div className="mt-2 flex items-center justify-between"><Button className="text-muted-foreground" size="icon-sm" title="附件功能暂未开放" type="button" variant="ghost"><Paperclip /></Button><Button className="size-10 rounded-full" disabled={isStreaming || !draft.trim()} onClick={onSubmit} size="icon" title="发送" type="button">{isStreaming ? <Loader2 className="animate-spin" /> : <Send />}</Button></div></div><p className="mt-2 text-center text-xs text-muted-foreground">回答仅供参考，不构成决策依据</p></div></div>
+  </section>;
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
-  return (
-    <div
-      className={
-        message.role === "user"
-          ? "ml-auto max-w-[82%] rounded-lg bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground"
-          : "max-w-[92%] whitespace-pre-wrap rounded-lg border border-border bg-card px-4 py-3 text-sm leading-6 text-foreground"
-      }
-    >
-      {message.content}
-    </div>
-  );
+function UserQuestion({ content }: { content: string }) { return <div className="flex items-start gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><UserRound className="size-5" /></div><div className="flex-1 rounded-xl border border-primary/25 bg-accent/45 px-5 py-4 text-sm leading-6 text-foreground">{content}</div></div>; }
+function AssistantAnswer({ content, streaming }: { content: string; streaming: boolean }) {
+  const { visibleContent, revealing } = useProgressiveReveal(content, streaming);
+  const active = streaming || revealing;
+
+  return <div className="flex items-start gap-3"><div className={`flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-white ${active ? "answer-orb-active" : ""}`}><Sparkles className="size-5 fill-current" /></div><div className="min-w-0 flex-1">{visibleContent ? <ReportMessage content={visibleContent} streaming={active} /> : <AnalysisPending />}{active ? <p aria-live="polite" className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><span className="answer-status-dot" /><span>{streaming && !content ? "正在核对命盘依据与知识来源" : "正在呈现分析内容"}</span></p> : null}</div></div>;
 }
+
+function AnalysisPending() {
+  return <div className="overflow-hidden rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground"><div className="flex items-center gap-2"><Loader2 className="size-4 animate-spin text-primary" />正在分析</div><div aria-hidden="true" className="mt-4 grid gap-2"><span className="answer-skeleton w-4/5" /><span className="answer-skeleton w-full" /><span className="answer-skeleton w-3/5" /></div></div>;
+}
+
+function useProgressiveReveal(content: string, streaming: boolean) {
+  const [visibleLength, setVisibleLength] = useState(0);
+  const contentLength = Array.from(content).length;
+
+  useEffect(() => {
+    if (visibleLength >= contentLength) return;
+    const timer = window.setTimeout(() => {
+      setVisibleLength((current) => nextRevealLength(content, current));
+    }, 24);
+    return () => window.clearTimeout(timer);
+  }, [content, contentLength, visibleLength]);
+
+  return {
+    visibleContent: sliceByCharacters(content, visibleLength),
+    revealing: visibleLength < contentLength && !streaming,
+  };
+}
+function OrbitMotif() { return <div className="relative hidden size-36 shrink-0 items-center justify-center text-primary/45 md:flex"><div className="absolute inset-0 rounded-full border border-primary/10" /><div className="absolute inset-4 rounded-full border border-primary/15" /><div className="absolute inset-9 rounded-full bg-accent" /><Sparkles className="relative size-8 fill-current" /></div>; }

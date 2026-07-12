@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Menu, ShieldCheck, Trash2 } from "lucide-react";
+import { Menu, PanelRightOpen, Trash2 } from "lucide-react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
 import { chatStreamHeader, readChatStreamEvents } from "@/lib/agent/evidence-events";
@@ -47,7 +47,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -57,11 +56,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ChartOnboarding } from "./chart-onboarding";
+import { AppSidebar } from "./app-sidebar";
+import { ChartWorkspace } from "./chart-workspace";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { EvidenceDrawer } from "./evidence-drawer";
-import { ModelSettingsPanel } from "./model-settings-panel";
-import { TopicEntry } from "./topic-entry";
+import { RecordsWorkspace } from "./records-workspace";
+import { SettingsWorkspace } from "./settings-workspace";
+import { TopicsWorkspace } from "./topics-workspace";
+import { greetingForChart, type WorkspaceView } from "@/lib/ui/workspace-navigation";
+import { chartInputForChatRequest } from "@/lib/ui/chat-request";
 
 export function ZiweiChatShell() {
   const [profileId] = useState(() => {
@@ -87,32 +90,23 @@ export function ZiweiChatShell() {
   const [error, setError] = useState<ChatErrorState | null>(null);
   const [evidence, setEvidence] = useState(initialEvidence);
   const [chartSynced, setChartSynced] = useState(false);
-  const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(() => {
-    if (typeof window === "undefined") return defaultModelSettingsDraft;
-    return modelSettingsDraftFromStorage(window.localStorage.getItem(modelSettingsStorageKey));
-  });
+  const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(defaultModelSettingsDraft);
+  const [modelSettingsLoaded, setModelSettingsLoaded] = useState(false);
+  const [activeView, setActiveView] = useState<WorkspaceView>("chat");
 
   useEffect(() => {
-    window.localStorage.setItem(modelSettingsStorageKey, modelSettingsStorageValue(modelSettings));
-  }, [modelSettings]);
+    const task = window.setTimeout(() => {
+      setModelSettings(modelSettingsDraftFromStorage(window.localStorage.getItem(modelSettingsStorageKey)));
+      setModelSettingsLoaded(true);
+    }, 0);
 
-  const workspace = (
-    <WorkspacePanel
-      chartInput={chartInput}
-      chartSynced={chartSynced}
-      onChartReady={(nextChart) => {
-        setChartInput(nextChart);
-        setChartSynced(false);
-        setError(null);
-      }}
-      onClear={deleteLocalData}
-      onModelSettingsChange={setModelSettings}
-      onResetChart={resetChartDraft}
-      onTopicSelect={setDraft}
-      modelSettings={modelSettings}
-      profileId={profileId}
-    />
-  );
+    return () => window.clearTimeout(task);
+  }, []);
+
+  useEffect(() => {
+    if (!modelSettingsLoaded) return;
+    window.localStorage.setItem(modelSettingsStorageKey, modelSettingsStorageValue(modelSettings));
+  }, [modelSettings, modelSettingsLoaded]);
 
   async function sendMessage(contentOverride?: string) {
     const content = (contentOverride ?? draft).trim();
@@ -139,7 +133,7 @@ export function ZiweiChatShell() {
         body: JSON.stringify({
           profileId,
           conversationId,
-          chartInput: chartSynced ? undefined : chartInput,
+          chartInput: chartInputForChatRequest(chartInput),
           evidenceRunId,
           messages: nextMessages,
           modelSettings: modelSettingsRequestFromDraft(modelSettings),
@@ -147,6 +141,7 @@ export function ZiweiChatShell() {
       });
       const responseError = chatErrorFromResponse(response);
       if (responseError) {
+        setEvidence((current) => failEvidenceRun(current, evidenceRunId));
         setError(responseError);
         setLastFailedContent(content);
         return;
@@ -158,6 +153,7 @@ export function ZiweiChatShell() {
       const decoder = new TextDecoder();
       let assistantContent = "";
       let eventBuffer = "";
+      let streamError: ChatErrorState | null = null;
       const usesEventStream = response.headers.get("X-Ziwei-Stream") === chatStreamHeader;
 
       setMessages((current) => [...current, { role: "assistant", content: "" }]);
@@ -178,6 +174,13 @@ export function ZiweiChatShell() {
               if (event.event === "token") {
                 assistantContent += event.data;
               }
+              if (event.event === "error") {
+                streamError = {
+                  kind: "server",
+                  message: event.data.message,
+                  canRetry: event.data.canRetry,
+                };
+              }
             }
           } else {
             assistantContent += chunk;
@@ -192,8 +195,17 @@ export function ZiweiChatShell() {
         }
       }
 
+      if (streamError) {
+        setMessages((current) => current.slice(0, -1));
+        setEvidence((current) => failEvidenceRun(current, evidenceRunId));
+        setError(streamError);
+        setLastFailedContent(content);
+        return;
+      }
+
       if (isEmptyAssistantResponse(assistantContent)) {
         setMessages((current) => current.slice(0, -1));
+        setEvidence((current) => failEvidenceRun(current, evidenceRunId));
         setError(emptyAssistantResponseError());
         setLastFailedContent(content);
         return;
@@ -204,6 +216,7 @@ export function ZiweiChatShell() {
       }
       setLastFailedContent(null);
     } catch (caught) {
+      setEvidence((current) => failEvidenceRun(current, evidenceRunId));
       setError(classifyChatError(caught));
       setLastFailedContent(content);
     } finally {
@@ -239,127 +252,86 @@ export function ZiweiChatShell() {
     setError(null);
     setEvidence(initialEvidence);
     setModelSettings(defaultModelSettingsDraft);
+    setActiveView("chat");
   }
+
+  function handleChartReady(nextChart: CreateChartInput) {
+    setChartInput(nextChart);
+    setChartSynced(false);
+    setError(null);
+  }
+
+  function selectTopic(prompt: string) {
+    setActiveView("chat");
+    setDraft(prompt);
+  }
+
+  const localDataActions = <ClearDataDialog onConfirm={deleteLocalData} />;
+  const evidencePanel = <EvidenceDrawer evidence={evidence} modelSettings={modelSettings} localDataActions={localDataActions} />;
+  const mainWorkspace = (() => {
+    switch (activeView) {
+      case "chart":
+        return <ChartWorkspace chartInput={chartInput} chartSynced={chartSynced} onChartReady={handleChartReady} onResetChart={resetChartDraft} profileId={profileId} />;
+      case "topics":
+        return <TopicsWorkspace onSelect={selectTopic} />;
+      case "records":
+        return <RecordsWorkspace messages={messages} />;
+      case "settings":
+        return <SettingsWorkspace loaded={modelSettingsLoaded} localDataActions={localDataActions} onChange={setModelSettings} value={modelSettings} />;
+      default:
+        return <ChatPanel draft={draft} error={error} greeting={greetingForChart(chartInput)} isStreaming={isStreaming} messages={messages} onDraftChange={setDraft} onRetry={retryLastMessage} onSubmit={() => void sendMessage()} onTopicSelect={selectTopic} />;
+    }
+  })();
 
   return (
     <main className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
-            <ShieldCheck size={17} strokeWidth={1.8} />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-sm font-semibold sm:text-base">Ziwei Chat</h1>
-              <Badge className="hidden bg-accent text-primary sm:inline-flex" variant="secondary">
-                Evidence Companion
-              </Badge>
-            </div>
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              可信命盘分析工作台
-            </p>
-          </div>
-        </div>
-
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-3 lg:hidden">
+        <p className="font-semibold">紫微知道</p>
         <div className="flex items-center gap-2">
           <Sheet>
             <SheetTrigger
               render={
-                <Button className="lg:hidden" size="sm" type="button" variant="outline" />
+                <Button aria-label="打开导航与命盘资料" className="lg:hidden" size="sm" title="导航与命盘资料" type="button" variant="outline" />
               }
             >
               <Menu data-icon="inline-start" />
-              资料
             </SheetTrigger>
             <SheetContent className="w-[340px] max-w-[calc(100vw-24px)] p-0" side="left">
               <SheetHeader className="border-b border-border">
-                <SheetTitle>命盘资料</SheetTitle>
-                <SheetDescription>当前匿名 profile 的命盘与主题入口。</SheetDescription>
+                <SheetTitle>紫微知道</SheetTitle>
+                <SheetDescription>命盘资料、主题与本地设置。</SheetDescription>
               </SheetHeader>
-              <div className="min-h-0 overflow-y-auto p-3">{workspace}</div>
+              <div className="h-[calc(100dvh-88px)]"><AppSidebar activeView={activeView} chartInput={chartInput} chartSynced={chartSynced} localDataActions={localDataActions} onEditChart={() => setActiveView("chart")} onSelectView={setActiveView} /></div>
             </SheetContent>
           </Sheet>
 
           <Sheet>
             <SheetTrigger
               render={
-                <Button className="xl:hidden" size="sm" type="button" variant="outline" />
+                <Button aria-label="打开分析依据" className="xl:hidden" size="sm" title="分析依据" type="button" variant="outline" />
               }
             >
-              依据
+              <PanelRightOpen data-icon="inline-start" />
             </SheetTrigger>
             <SheetContent className="w-[360px] max-w-[calc(100vw-24px)] p-0" side="right">
               <SheetHeader className="border-b border-border">
-                <SheetTitle>本次回答依据</SheetTitle>
-                <SheetDescription>工具、命盘事实、知识来源和 critic 检查。</SheetDescription>
+                <SheetTitle>分析依据</SheetTitle>
+                <SheetDescription>分析过程、命盘事实与运行状态。</SheetDescription>
               </SheetHeader>
               <div className="min-h-0 overflow-y-auto p-3">
-                <EvidenceDrawer compact evidence={evidence} />
+                <EvidenceDrawer compact evidence={evidence} localDataActions={localDataActions} modelSettings={modelSettings} />
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </header>
 
-      <section className="grid min-h-0 flex-1 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-        <aside className="hidden min-h-0 border-r border-border bg-card lg:flex lg:flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">{workspace}</div>
-        </aside>
-
-        <div className="min-h-0">
-          <ChatPanel
-            draft={draft}
-            error={error}
-            isStreaming={isStreaming}
-            messages={messages}
-            onDraftChange={setDraft}
-            onRetry={retryLastMessage}
-            onSubmit={() => void sendMessage()}
-          />
-        </div>
-
-        <aside className="hidden min-h-0 border-l border-border bg-card xl:flex xl:flex-col">
-          <EvidenceDrawer evidence={evidence} />
-        </aside>
+      <section className="workspace-grid grid min-h-0 flex-1">
+        <aside className="hidden min-h-0 border-r border-border bg-card lg:flex lg:flex-col"><AppSidebar activeView={activeView} chartInput={chartInput} chartSynced={chartSynced} localDataActions={localDataActions} onEditChart={() => setActiveView("chart")} onSelectView={setActiveView} /></aside>
+        <div className="min-h-0">{mainWorkspace}</div>
+        <aside className="hidden min-h-0 border-l border-border bg-card xl:flex xl:flex-col">{evidencePanel}</aside>
       </section>
     </main>
-  );
-}
-
-function WorkspacePanel({
-  profileId,
-  chartInput,
-  chartSynced,
-  onChartReady,
-  onModelSettingsChange,
-  onResetChart,
-  onTopicSelect,
-  onClear,
-  modelSettings,
-}: {
-  profileId: string;
-  chartInput: CreateChartInput | null;
-  chartSynced: boolean;
-  modelSettings: ModelSettingsDraft;
-  onChartReady: (chart: CreateChartInput) => void;
-  onModelSettingsChange: (value: ModelSettingsDraft) => void;
-  onResetChart: () => void;
-  onTopicSelect: (prompt: string) => void;
-  onClear: () => void;
-}) {
-  return (
-    <div className="grid gap-4">
-      <ChartOnboarding
-        chartInput={chartInput}
-        chartSynced={chartSynced}
-        onChartReady={onChartReady}
-        onResetChart={onResetChart}
-        profileId={profileId}
-      />
-      <ModelSettingsPanel value={modelSettings} onChange={onModelSettingsChange} />
-      <TopicEntry onSelect={onTopicSelect} />
-      <ClearDataDialog onConfirm={onClear} />
-    </div>
   );
 }
 
@@ -454,12 +426,24 @@ function createPendingEvidenceRun(runId: string, content: string): EvidenceRun {
   };
 }
 
+function failEvidenceRun(current: EvidenceState, runId: string): EvidenceState {
+  return {
+    ...current,
+    runs: current.runs.map((run) =>
+      run.runId === runId ? { ...run, status: "failed", completedAt: new Date().toISOString() } : run,
+    ),
+  };
+}
+
 function mergeEvidenceState(current: EvidenceState, next: EvidenceState): EvidenceState {
-  return next.runs.reduce(
-    (merged, run) => mergeEvidenceRun(merged, run),
-    {
-      ...next,
-      runs: current.runs,
-    },
-  );
+  const merged: EvidenceState = {
+    toolsUsed: next.toolsUsed.length > 0 ? next.toolsUsed : current.toolsUsed,
+    chartFacts: next.chartFacts.length > 0 ? next.chartFacts : current.chartFacts,
+    knowledgeSources: next.knowledgeSources.length > 0 ? next.knowledgeSources : current.knowledgeSources,
+    generation: next.generation.mode !== "not_applicable" ? next.generation : current.generation,
+    // "not_run" means "no critic update in this snapshot" — the server never sends not_run to intentionally reset
+    critic: next.critic.status !== "not_run" ? next.critic : current.critic,
+    runs: current.runs,
+  };
+  return next.runs.reduce((acc, run) => mergeEvidenceRun(acc, run), merged);
 }

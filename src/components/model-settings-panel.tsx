@@ -33,13 +33,22 @@ import {
 
 type ModelSettingsPanelProps = {
   value: ModelSettingsDraft;
+  loaded: boolean;
   onChange: (value: ModelSettingsDraft) => void;
 };
 
-export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps) {
+export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPanelProps) {
   const chatEnabled = value.provider !== "deterministic-local";
   const embeddingEnabled = value.embedding.provider !== "disabled";
-  const status = modelSettingsStatus(value);
+  const status = loaded
+    ? modelSettingsStatus(value)
+    : {
+        label: "读取中",
+        description: "正在读取当前浏览器保存的模型设置。",
+        missingFields: [],
+        ready: false,
+        embeddingReady: false,
+      };
 
   function update(partial: Partial<ModelSettingsDraft>) {
     onChange({ ...value, ...partial });
@@ -91,10 +100,11 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
           </div>
           <Field label="提供商">
             <Select
-              defaultValue={value.provider}
+              disabled={!loaded}
               items={providerItems}
               name="modelProvider"
               onValueChange={(nextValue) => applyProvider(nextValue as ModelProviderOption)}
+              value={value.provider}
             >
               <SelectTrigger className="w-full bg-background">
                 <SelectValue />
@@ -113,6 +123,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
             <>
               <Field label="Base URL">
                 <Input
+                  disabled={!loaded}
                   name="modelBaseUrl"
                   onChange={(event) => update({ baseUrl: event.target.value })}
                   placeholder={providerPlaceholder(value.provider, "baseUrl")}
@@ -121,6 +132,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
               </Field>
               <Field label="API Key">
                 <Input
+                  disabled={!loaded}
                   name="modelApiKey"
                   onChange={(event) => update({ apiKey: event.target.value })}
                   placeholder="sk-..."
@@ -130,6 +142,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
               </Field>
               <Field label="Model">
                 <Input
+                  disabled={!loaded}
                   name="modelName"
                   onChange={(event) => update({ model: event.target.value })}
                   placeholder={providerPlaceholder(value.provider, "model")}
@@ -141,6 +154,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
 
           {chatEnabled && value.apiKey ? (
             <Button
+              disabled={!loaded}
               onClick={() => onChange({ ...value, apiKey: "" })}
               size="sm"
               type="button"
@@ -164,12 +178,13 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
 
           <Field label="提供商">
             <Select
-              defaultValue={value.embedding.provider}
+              disabled={!loaded}
               items={embeddingProviderItems}
               name="embeddingProvider"
               onValueChange={(nextValue) =>
                 applyEmbeddingProvider(nextValue as EmbeddingSettingsDraft["provider"])
               }
+              value={value.embedding.provider}
             >
               <SelectTrigger className="w-full bg-background">
                 <SelectValue />
@@ -191,6 +206,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
             <>
               <Field label="Embedding Base URL">
                 <Input
+                  disabled={!loaded}
                   name="embeddingBaseUrl"
                   onChange={(event) => updateEmbedding({ baseUrl: event.target.value })}
                   placeholder={embeddingPlaceholder(value.embedding.provider, "baseUrl")}
@@ -199,6 +215,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
               </Field>
               <Field label="Embedding API Key">
                 <Input
+                  disabled={!loaded}
                   name="embeddingApiKey"
                   onChange={(event) => updateEmbedding({ apiKey: event.target.value })}
                   placeholder="sk-..."
@@ -208,6 +225,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
               </Field>
               <Field label="Embedding Model">
                 <Input
+                  disabled={!loaded}
                   name="embeddingModel"
                   onChange={(event) => updateEmbedding({ model: event.target.value })}
                   placeholder={embeddingPlaceholder(value.embedding.provider, "embeddingModel")}
@@ -223,6 +241,7 @@ export function ModelSettingsPanel({ value, onChange }: ModelSettingsPanelProps)
 
           {embeddingEnabled && value.embedding.apiKey ? (
             <Button
+              disabled={!loaded}
               onClick={() => updateEmbedding({ apiKey: "" })}
               size="sm"
               type="button"

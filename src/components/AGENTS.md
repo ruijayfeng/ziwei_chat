@@ -2,12 +2,19 @@
 > L2 | Parent: AGENTS.md
 
 Member List
-chart-onboarding.tsx: Client chart/profile management panel with summary, sync state, edit form, save, and reset controls.
-chat-panel.tsx: Client chat surface with transcript, prompt input, streaming, error, retry, and mobile evidence affordance.
-evidence-drawer.tsx: Evidence panel showing tool calls, chart facts, knowledge sources, critic status, and compact mobile rendering.
+app-sidebar.tsx: Persistent desktop/mobile rail with product identity, workspace navigation, compact chart identity, and local-data actions.
+chart-onboarding.tsx: Client chart/profile management form with summary, sync state, save, and reset controls.
+chart-workspace.tsx: Chart workspace that hosts the current chart editor and honest visual placeholder.
+chat-panel.tsx: Central dialogue workspace with greeting, topic controls, report-style answers, prompt input, streaming, error, and retry states.
+evidence-drawer.tsx: Right context panel showing evidence-driven analysis progress, facts, real generation mode, runtime state, privacy, and compact mobile rendering.
+records-workspace.tsx: Truthful current-browser-session transcript view with a non-persistent empty state.
+report-message.tsx: Structured response-protocol renderer with ordinary-prose fallback.
+markdown-message.tsx: HTML-free Markdown renderer for ordinary and progressively revealed model answers.
+settings-workspace.tsx: Main workspace for browser-local model settings and anonymous-data management.
+topics-workspace.tsx: Dedicated topic selection workspace that returns selected prompts to chat.
 model-settings-panel.tsx: Browser-local OpenAI-compatible model provider settings panel for Base URL, API key, and model name.
 topic-entry.tsx: Topic shortcut control for the five MVP Ziwei analysis flows with icon-assisted quick actions.
 ui/: shadcn/Base UI component primitives owned by the project, used for buttons, cards, inputs, sheets, badges, separators, textareas, selects, and alert dialogs.
-ziwei-chat-shell.tsx: Client application shell coordinating anonymous profile, chart state, model settings, chat errors/retry, clear-data confirmation, mobile evidence, and evidence state.
+ziwei-chat-shell.tsx: Client application shell coordinating anonymous profile, client-side workspace views, chart/model state, streamed retryable model errors, clear-data confirmation, mobile sheets, and evidence state.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

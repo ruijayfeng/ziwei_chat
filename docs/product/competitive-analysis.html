@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ziwei Chat 竞品调研分析报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink-900: #0d0f12;
+  --ink-800: #1a1d23;
+  --ink-700: #2a2e36;
+  --ink-600: #3d424d;
+  --ink-500: #6b7280;
+  --ink-400: #9ca3af;
+  --ink-300: #d1d5db;
+  --ink-200: #e5e7eb;
+  --ink-100: #f3f4f6;
+  --ink-50: #fafafa;
+  --jade-500: #0ea67a;
+  --jade-400: #34d399;
+  --jade-300: #6ee7b7;
+  --jade-100: #d1fae5;
+  --jade-50: #ecfdf5;
+  --amber-500: #d97706;
+  --amber-400: #f59e0b;
+  --amber-300: #fcd34d;
+  --amber-100: #fef3c7;
+  --amber-50: #fffbeb;
+  --rose-500: #e11d48;
+  --rose-400: #fb7185;
+  --rose-100: #ffe4e6;
+  --rose-50: #fff1f2;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-100: #f1f5f9;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--ink-900);
+  color: var(--ink-300);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6rem 2rem;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse 80% 60% at 50% 35%, rgba(14, 166, 122, 0.08) 0%, transparent 60%),
+              linear-gradient(180deg, var(--ink-900) 0%, var(--ink-800) 100%);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Ccircle cx='30' cy='30' r='1.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.hero-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--jade-400);
+  margin-bottom: 1.5rem;
+}
+
+.hero h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+}
+
+.hero h1 em {
+  font-style: normal;
+  color: var(--jade-400);
+  background: linear-gradient(135deg, var(--jade-400), var(--jade-300));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  color: var(--ink-400);
+  max-width: 640px;
+  line-height: 1.75;
+  margin-bottom: 2.5rem;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hero-stat-number {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.hero-stat-label {
+  font-size: 0.8rem;
+  color: var(--ink-500);
+  font-weight: 500;
+}
+
+/* Sections */
+.section {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 5rem 2rem;
+}
+
+.section-header {
+  margin-bottom: 3rem;
+}
+
+.section-number {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--jade-400);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.section h2 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.section h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--ink-200);
+  margin: 2.5rem 0 1rem;
+}
+
+.section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-300);
+  margin: 1.5rem 0 0.75rem;
+}
+
+.section p {
+  margin-bottom: 1rem;
+  color: var(--ink-400);
+}
+
+/* Divider */
+.divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ink-700) 20%, var(--ink-700) 80%, transparent);
+  margin: 0;
+}
+
+/* Market size bar */
+.market-bar {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-700);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+}
+
+.market-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2rem;
+}
+
+.market-bar-item h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-500);
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+}
+
+.market-bar-item .value {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.market-bar-item .sub {
+  font-size: 0.8rem;
+  color: var(--jade-400);
+}
+
+/* Competitor Cards */
+.competitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.competitor-card {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-700);
+  border-radius: 12px;
+  padding: 1.75rem;
+  transition: border-color 0.2s;
+}
+
+.competitor-card:hover {
+  border-color: var(--ink-600);
+}
+
+.competitor-card .tier {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.2em 0.75em;
+  border-radius: 100px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.tier-direct { background: var(--rose-100); color: var(--rose-500); }
+.tier-adjacent { background: var(--amber-100); color: var(--amber-500); }
+.tier-indirect { background: var(--slate-100); color: var(--slate-500); }
+
+.competitor-card h4 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.5rem;
+}
+
+.competitor-card .url {
+  font-size: 0.75rem;
+  color: var(--ink-500);
+  margin-bottom: 1rem;
+  word-break: break-all;
+}
+
+.competitor-card .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.competitor-card .tag {
+  font-size: 0.7rem;
+  padding: 0.2em 0.6em;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.tag-closed { background: rgba(225,29,72,0.12); color: var(--rose-400); }
+.tag-open { background: rgba(14,166,122,0.12); color: var(--jade-400); }
+.tag-commercial { background: rgba(217,119,6,0.12); color: var(--amber-400); }
+.tag-tech { background: rgba(100,116,139,0.15); color: var(--slate-400); }
+
+.competitor-card .desc {
+  font-size: 0.875rem;
+  color: var(--ink-400);
+  line-height: 1.65;
+}
+
+/* SWOT */
+.swot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--ink-700);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+.swot-cell {
+  background: var(--ink-800);
+  padding: 2rem;
+}
+
+.swot-cell h4 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0 0 1rem;
+}
+
+.swot-cell.s-green h4 { color: var(--jade-400); }
+.swot-cell.s-amber h4 { color: var(--amber-400); }
+.swot-cell.s-red h4 { color: var(--rose-400); }
+.swot-cell.s-slate h4 { color: var(--slate-400); }
+
+.swot-cell ul {
+  list-style: none;
+  padding: 0;
+}
+
+.swot-cell li {
+  font-size: 0.875rem;
+  color: var(--ink-300);
+  padding: 0.4rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+  line-height: 1.55;
+}
+
+.swot-cell li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.75rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.s-green li::before { background: var(--jade-400); }
+.s-amber li::before { background: var(--amber-400); }
+.s-red li::before { background: var(--rose-400); }
+.s-slate li::before { background: var(--slate-400); }
+
+/* Comparison Table */
+.table-wrap {
+  overflow-x: auto;
+  margin: 2rem 0;
+  border: 1px solid var(--ink-700);
+  border-radius: 12px;
+  background: var(--ink-800);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+}
+
+thead th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  padding: 1rem 1.25rem;
+  text-align: left;
+  border-bottom: 1px solid var(--ink-700);
+  white-space: nowrap;
+}
+
+thead th:first-child {
+  color: var(--ink-300);
+}
+
+tbody td {
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--ink-700);
+  color: var(--ink-400);
+  vertical-align: top;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody td:first-child {
+  font-weight: 600;
+  color: var(--ink-300);
+  white-space: nowrap;
+}
+
+.check { color: var(--jade-400); font-weight: 700; }
+.cross { color: var(--ink-600); }
+.partial { color: var(--amber-400); }
+
+/* Positioning */
+.pos-box {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-700);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.pos-box::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle at 100% 0%, rgba(14,166,122,0.06), transparent 70%);
+  pointer-events: none;
+}
+
+.pos-box h4 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.15rem;
+  color: #fff;
+  margin: 0 0 1rem;
+}
+
+.pos-box p {
+  font-size: 0.9rem;
+  color: var(--ink-400);
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+}
+
+/* Callout */
+.callout {
+  border-left: 3px solid var(--jade-400);
+  background: rgba(14,166,122,0.06);
+  padding: 1.25rem 1.5rem;
+  margin: 2rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.callout p {
+  font-size: 0.9rem;
+  color: var(--jade-300);
+  margin: 0;
+  line-height: 1.7;
+}
+
+.callout.warn {
+  border-left-color: var(--amber-400);
+  background: rgba(217,119,6,0.06);
+}
+
+.callout.warn p { color: var(--amber-300); }
+
+/* Strategic */
+.strategic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin: 2rem 0;
+}
+
+.strategic-card {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-700);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.strategic-card h4 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.75rem;
+}
+
+.strategic-card p {
+  font-size: 0.825rem;
+  color: var(--ink-400);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ink-600);
+  font-size: 0.8rem;
+}
+
+.footer p { margin: 0; }
+
+@media (max-width: 640px) {
+  .section { padding: 3rem 1.25rem; }
+  .hero { padding: 4rem 1.25rem; min-height: auto; }
+  .swot-grid { grid-template-columns: 1fr; }
+  .hero-meta { gap: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Competitive Intelligence Report · July 2026</div>
+    <h1>Ziwei Chat <em>竞品调研</em>与战略定位分析</h1>
+    <p class="hero-subtitle">
+      站在 10 年产品经理的视角，深度扫描 AI 命理赛道格局，剖析 Ziwei Chat 在技术架构、产品定位、商业模式三个维度的真实优劣势。
+    </p>
+    <div class="hero-meta">
+      <div class="hero-stat">
+        <span class="hero-stat-number">$851M</span>
+        <span class="hero-stat-label">2024 全球 AI 占星 App 市场规模</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-number">26.4%</span>
+        <span class="hero-stat-label">年复合增长率 (CAGR)</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-number">$3.97B</span>
+        <span class="hero-stat-label">2031 年预计市场规模</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 1. Market Overview -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">01</div>
+    <h2>赛道全景：AI 命理正从"玩具"走向"工具"</h2>
+  </div>
+
+  <p>
+    2024–2026 年是 AI 命理赛道的爆发窗口。全球 AI 占星 App 市场在 2024 年达到 <strong style="color:#fff;">8.51 亿美元</strong>，预计 2031 年将增长至 <strong style="color:#fff;">39.72 亿美元</strong>，年复合增长率 26.4%。中国市场更是呈现"井喷"态势——仅参天 AI 一家就在 2025 年宣布全球用户突破 500 万、日均查询量超 10 万次。头部产品的付费转化率达到 18%，远超知识付费行业平均水平。
+  </p>
+
+  <div class="market-bar">
+    <div class="market-bar-grid">
+      <div class="market-bar-item">
+        <h4>全球灵性产品市场</h4>
+        <div class="value">$1,801.8亿</div>
+        <div class="sub">2024 年 · 预计 2032 年达 $2,490 亿</div>
+      </div>
+      <div class="market-bar-item">
+        <h4>AI 占星 App 市场</h4>
+        <div class="value">$8.51亿</div>
+        <div class="sub">2024 年 · CAGR 26.4%</div>
+      </div>
+      <div class="market-bar-item">
+        <h4>头部付费转化率</h4>
+        <div class="value">18%</div>
+        <div class="sub">远超知识付费行业均值</div>
+      </div>
+      <div class="market-bar-item">
+        <h4>参天 AI 用户规模</h4>
+        <div class="value">500万+</div>
+        <div class="sub">2025 年全球用户 · 12 种语言</div>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    但这波浪潮有一个根本性的结构问题：<strong style="color: var(--amber-300);">90% 以上的所谓"AI 命理产品"本质上是 Prompt Wrapper</strong>——在通用大模型（DeepSeek、GPT-4、Claude）外面包了一层命理提示词。这导致了两个致命缺陷：(1) 干支历法数学幻觉——LLM 排盘错误率极高；(2) 解读缺乏确定性和可复现性——同一个命盘、同一个问题，两次回答可能完全矛盾。
+  </p>
+
+  <div class="callout">
+    <p><strong>产品经理洞察：</strong>市场正在经历从"能用 AI 算命吗？"到"哪个 AI 算得准？"的认知升级。用户已经开始意识到通用大模型做命理的不可靠性。这意味着<strong>确定性排盘引擎 + 结构化分析流程</strong>将成为下一阶段的竞争壁垒。Ziwei Chat 的架构决策恰好踩在了这个趋势的前沿。</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 2. Competitor Landscape -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">02</div>
+    <h2>竞品矩阵：四层竞争格局</h2>
+  </div>
+
+  <p>我将竞品按照"与 Ziwei Chat 的竞争关系强度"分为四个层级：</p>
+
+  <h3>第一层：直接竞品（同赛道、同技术路线）</h3>
+  <div class="competitor-grid">
+    <div class="competitor-card">
+      <span class="tier tier-direct">直接竞品</span>
+      <h4>天府 Agent (Tianfu Agent)</h4>
+      <div class="url">tianfuagent.com</div>
+      <div class="tags">
+        <span class="tag tag-commercial">商业化</span>
+        <span class="tag tag-tech">多 Agent 架构</span>
+        <span class="tag tag-closed">闭源</span>
+      </div>
+      <p class="desc">
+        <strong>最值得关注的直接竞品。</strong>自称"全球首个多智能体协作命理推演引擎"，内置 250+ 定制化命盘工具，覆盖紫微斗数、子平八字、奇门遁甲三大体系。强调"多流派交叉验证"和"可溯源推演过程"。定位偏专业/从业者，UI 和交互复杂度较高。商业模式为 SaaS 订阅 + 按次付费。
+      </p>
+    </div>
+
+    <div class="competitor-card">
+      <span class="tier tier-direct">直接竞品</span>
+      <h4>紫微AI (ziweiai.chat)</h4>
+      <div class="url">ziweiai.chat · ziweiai.com.cn</div>
+      <div class="tags">
+        <span class="tag tag-commercial">商业化</span>
+        <span class="tag tag-tech">同用 iztro 引擎</span>
+        <span class="tag tag-closed">闭源</span>
+      </div>
+      <p class="desc">
+        <strong>技术栈最接近的竞品。</strong>同样基于 iztro 排盘引擎，同样使用大模型做白话解读。提供多类报告（一生命盘、流年趋势、财富报告等），定位"决策操作系统"而非传统算命。问题是：iztro 是开源基础设施，谁都能用，仅靠 iztro 排盘无法构成护城河。
+      </p>
+    </div>
+  </div>
+
+  <h3>第二层：相邻竞品（同赛道、不同技术路线）</h3>
+  <div class="competitor-grid">
+    <div class="competitor-card">
+      <span class="tier tier-adjacent">相邻竞品</span>
+      <h4>参天AI (Cantian AI)</h4>
+      <div class="url">cantian.ai</div>
+      <div class="tags">
+        <span class="tag tag-commercial">强商业化</span>
+        <span class="tag tag-open">12 种语言</span>
+        <span class="tag tag-closed">闭源</span>
+      </div>
+      <p class="desc">
+        <strong>用户量最大、国际化最成功的命理 AI 产品。</strong>脱胎于 ChatGPT 爆款应用 "Chinese Bazi Fortune Teller"，2025 年全球上线，首月日均查询 10 万+，全球用户 500 万+，覆盖 12 种语言。主攻八字命理（非紫微斗数），构建了"天机"命理知识图谱。有 iOS App。但核心仍是 Prompt + 知识库架构，非确定性排盘引擎。
+      </p>
+    </div>
+
+    <div class="competitor-card">
+      <span class="tier tier-adjacent">相邻竞品</span>
+      <h4>FateMaster</h4>
+      <div class="url">fatemaster.ai</div>
+      <div class="tags">
+        <span class="tag tag-commercial">商业化</span>
+        <span class="tag tag-tech">多术数</span>
+        <span class="tag tag-closed">闭源</span>
+      </div>
+      <p class="desc">
+        <strong>多术数聚合平台。</strong>融合八字、紫微斗数、六爻、梅花易数、塔罗、黄历六大术数，强调"一个对话获得全面命理分析"。提供 AI 命理师 Agent 工作空间。定位偏"瑞士军刀"式的一站式命理工具，但每个术数的深度有限。
+      </p>
+    </div>
+
+    <div class="competitor-card">
+      <span class="tier tier-adjacent">相邻竞品</span>
+      <h4>爱算-紫微同好</h4>
+      <div class="url">aisuan.net.cn</div>
+      <div class="tags">
+        <span class="tag tag-commercial">商业化</span>
+        <span class="tag tag-tech">学习平台</span>
+        <span class="tag tag-closed">闭源</span>
+      </div>
+      <p class="desc">
+        <strong>定位为"AI 紫微斗数学习平台"而非算命工具。</strong>提供智能命盘分析、人生规划，但侧重教育属性——帮助用户理解紫微斗数而非替代命理师。差异化在于学习场景，但用户基数相对较小。
+      </p>
+    </div>
+  </div>
+
+  <h3>第三层：间接竞品（通用 AI 聊天产品）</h3>
+  <div class="competitor-grid">
+    <div class="competitor-card">
+      <span class="tier tier-indirect">间接竞品</span>
+      <h4>DeepSeek / 豆包 / Kimi 等通用大模型</h4>
+      <div class="url">各大模型平台</div>
+      <div class="tags">
+        <span class="tag tag-tech">通用 AI</span>
+        <span class="tag tag-open">部分开源</span>
+      </div>
+      <p class="desc">
+        <strong>用户最容易接触到的"免费 AI 算命"。</strong>多项评测表明，通用大模型在紫微斗数排盘上存在严重的干支历法幻觉——排错命宫位置、星曜位置、四化飞星是常态。但它们的优势在于零门槛、零成本、用户基数巨大。对普通用户来说，"用 DeepSeek 算一卦"是心智捷径。Ziwei Chat 需要让用户理解"专业工具 vs 通用聊天"的差异。
+      </p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 3. Feature Comparison -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">03</div>
+    <h2>核心能力对比：Ziwei Chat 到底领先在哪里</h2>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>Ziwei Chat</th>
+          <th>天府 Agent</th>
+          <th>紫微AI</th>
+          <th>参天AI</th>
+          <th>通用大模型</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>确定性排盘引擎</td>
+          <td class="check">✓ iztro</td>
+          <td class="check">✓ 自研</td>
+          <td class="check">✓ iztro</td>
+          <td class="cross">✗ 八字为主</td>
+          <td class="cross">✗ LLM 推算</td>
+        </tr>
+        <tr>
+          <td>多 Agent 协作管道</td>
+          <td class="check">✓ 9 步管道</td>
+          <td class="check">✓ 多 Agent</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>意图路由 + 规划器</td>
+          <td class="check">✓</td>
+          <td class="partial">部分</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>回答审查器 (Critic)</td>
+          <td class="check">✓ 三级安全</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>证据透明抽屉</td>
+          <td class="check">✓</td>
+          <td class="partial">部分</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>技能工作流 (Skills)</td>
+          <td class="check">✓ 6 主题</td>
+          <td class="check">✓ 250+ 工具</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>本地知识检索</td>
+          <td class="check">✓ 无需嵌入服务</td>
+          <td class="partial">云端</td>
+          <td class="partial">云端</td>
+          <td class="partial">云端</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>开源</td>
+          <td class="check">✓ MIT 友好</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="partial">部分</td>
+        </tr>
+        <tr>
+          <td>零注册使用</td>
+          <td class="check">✓ 匿名 profile</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td>Vercel 一键部署</td>
+          <td class="check">✓</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+        </tr>
+        <tr>
+          <td>多语言</td>
+          <td class="cross">仅中文</td>
+          <td class="check">中/英</td>
+          <td class="check">中/英</td>
+          <td class="check">12 种语言</td>
+          <td class="check">多语言</td>
+        </tr>
+        <tr>
+          <td>移动端 App</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="cross">✗</td>
+          <td class="check">iOS App</td>
+          <td class="check">✓</td>
+        </tr>
+        <tr>
+          <td>商业化成熟度</td>
+          <td class="cross">✗ 未启动</td>
+          <td class="check">SaaS 订阅</td>
+          <td class="check">报告付费</td>
+          <td class="check">订阅+报告</td>
+          <td class="partial">免费/API</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>关键发现：</strong>在"Agent 架构完整性"这个维度上，Ziwei Chat 和天府 Agent 是唯二具备完整管道的产品。但 Ziwei Chat 在<strong>安全审查、证据透明、开源、零注册</strong>四个维度建立了独特优势。天府 Agent 则在<strong>工具丰富度（250+）和多流派覆盖</strong>上领先。</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 4. SWOT -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">04</div>
+    <h2>SWOT 分析：Ziwei Chat 的真实处境</h2>
+  </div>
+
+  <div class="swot-grid">
+    <div class="swot-cell s-green">
+      <h4>Strengths · 优势</h4>
+      <ul>
+        <li><strong>架构护城河最深：</strong>9 步 Agent 管道（意图路由→规划→工具→知识→审查）是真正的垂直 Agent，非 Prompt Wrapper</li>
+        <li><strong>准确性链完整：</strong>出生数据→确定性排盘→命盘事实→分析工作流→审查→回答，每步可审计</li>
+        <li><strong>安全设计行业唯一：</strong>三级安全边界 + 内置审查器，在命理赛道是独一无二的责任设计</li>
+        <li><strong>证据透明：</strong>Evidence Companion 让用户看到"系统用了什么数据"，建立信任</li>
+        <li><strong>开源 + 零门槛：</strong>无需注册、无需付费、无需嵌入服务即可运行，降低获客摩擦</li>
+        <li><strong>Vercel 部署友好：</strong>一键部署是开源项目的分发杠杆</li>
+        <li><strong>产品语调差异化：</strong>"温暖朋友 + 领域能力"定位独特，不神秘不权威</li>
+      </ul>
+    </div>
+    <div class="swot-cell s-amber">
+      <h4>Weaknesses · 劣势</h4>
+      <ul>
+        <li><strong>功能覆盖面窄：</strong>仅紫微斗数单一术数，无法满足用户"八字+紫微+风水"一站式需求</li>
+        <li><strong>内容深度不足：</strong>14 星曜×12 宫位矩阵未完整覆盖，四化×宫位矩阵缺失</li>
+        <li><strong>无商业化路径：</strong>纯开源、零注册、零付费，缺乏可持续的商业模式</li>
+        <li><strong>仅中文：</strong>无法触达海外华人或对东方命理好奇的国际用户</li>
+        <li><strong>无移动端：</strong>仅 Web 端，在移动优先的中国市场是明显短板</li>
+        <li><strong>社区/生态为零：</strong>无开发者社区、无插件生态、无第三方内容贡献</li>
+        <li><strong>品牌认知度为零：</strong>无市场推广、无 SEO、无社交媒体存在</li>
+      </ul>
+    </div>
+    <div class="swot-cell s-slate">
+      <h4>Opportunities · 机会</h4>
+      <ul>
+        <li><strong>确定性 AI 命理是蓝海：</strong>90% 竞品是 Prompt Wrapper，真正确定性排盘+Agent 管道是稀缺能力</li>
+        <li><strong>开源社区杠杆：</strong>iztro 生态 + Vercel 部署 = 技术圈传播的天然路径</li>
+        <li><strong>AI 算命信任危机：</strong>用户正在觉醒——"DeepSeek 排盘老出错"是 Ziwei Chat 的天然获客场景</li>
+        <li><strong>知识贡献 UGC：</strong>命理爱好者/从业者可以贡献内容，形成护城河</li>
+        <li><strong>企业/B2B 场景：</strong>命理 SaaS API 供其他产品集成</li>
+        <li><strong>全球化潜力：</strong>紫微斗数在东南亚（台湾、香港、马来西亚、新加坡）有深厚文化基础</li>
+        <li><strong>多术数扩展：</strong>架构可扩展至八字、风水等其他术数</li>
+      </ul>
+    </div>
+    <div class="swot-cell s-red">
+      <h4>Threats · 威胁</h4>
+      <ul>
+        <li><strong>通用大模型的快速进化：</strong>如果 GPT-5/Claude 4 内置了干支历法函数调用能力，Prompt Wrapper 也能变准</li>
+        <li><strong>天府 Agent 的先发优势：</strong>250+ 工具、多流派、商业化成熟，可能形成网络效应</li>
+        <li><strong>参天 AI 的规模碾压：</strong>500 万用户 + 12 种语言 + iOS App + 资本加持</li>
+        <li><strong>政策风险：</strong>中国对"算命"类内容的监管可能收紧</li>
+        <li><strong>iztro 依赖风险：</strong>核心排盘引擎依赖第三方开源项目，项目停更或方向变更会影响产品</li>
+        <li><strong>开源被"借鉴"：</strong>竞品可以直接 fork 你的 Agent 管道和知识内容</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 5. Strategic Positioning -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">05</div>
+    <h2>战略定位：Ziwei Chat 的"唯一真解"</h2>
+  </div>
+
+  <div class="pos-box">
+    <h4>定位宣言</h4>
+    <p>
+      Ziwei Chat 不是"又一个 AI 算命工具"。它是<strong>全球唯一一个开源、确定性、可审计的紫微斗数垂直 Agent</strong>。它的竞品不是天府 Agent 或参天 AI，而是"用 DeepSeek 算命的用户习惯"——它要做的不是抢存量用户，而是<strong>定义"专业 AI 命理"这个新品类</strong>。
+    </p>
+  </div>
+
+  <h3>差异化定位矩阵</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>准确可靠</th>
+          <th>快速方便</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>专业深度</strong></td>
+          <td style="background: rgba(14,166,122,0.08);"><strong style="color: var(--jade-400);">Ziwei Chat</strong><br><span style="font-size:0.75rem;color:var(--ink-500);">天府 Agent</span></td>
+          <td style="background: rgba(217,119,6,0.05);"><span style="color: var(--amber-300);">紫微AI</span><br><span style="font-size:0.75rem;color:var(--ink-500);">FateMaster</span></td>
+        </tr>
+        <tr>
+          <td><strong>浅层娱乐</strong></td>
+          <td style="background: rgba(100,116,139,0.05);"><span style="color: var(--slate-400);">传统命理师</span></td>
+          <td style="background: rgba(225,29,72,0.05);"><span style="color: var(--rose-400);">参天AI</span><br><span style="font-size:0.75rem;color:var(--ink-500);">通用大模型</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    <strong>Ziwei Chat 占据的是"专业深度 × 准确可靠"象限</strong>——这是当前市场最大的空白地带。天府 Agent 也在这个方向，但它偏"从业者工具"，而 Ziwei Chat 偏"消费者产品"。两者的关键差异在于：天府 Agent 追求"功能多"（250+ 工具、三流派），Ziwei Chat 追求"体验好"（温暖语调、证据透明、零门槛）。
+  </p>
+
+  <h3>核心差异化策略</h3>
+  <div class="strategic-grid">
+    <div class="strategic-card">
+      <h4>🎯 策略一：定义品类</h4>
+      <p>不跟参天 AI 比用户量，不跟天府 Agent 比工具数。而是定义一个新品类——"可审计的 AI 命理"。让用户形成认知："真正准的 AI 算命，是能看到每一步推理过程的。"</p>
+    </div>
+    <div class="strategic-card">
+      <h4>🔓 策略二：开源即获客</h4>
+      <p>开源不是情怀，是获客策略。每一个在 GitHub 上 star 项目的开发者，都是一个潜在的高质量传播节点。Vercel 一键部署让技术用户可以"自部署一个自己的算命 Agent"。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>🛡️ 策略三：安全即信任</h4>
+      <p>在"AI 算命乱象"中，三级安全边界 + 审查器是 Ziwei Chat 最强的品牌资产。当竞品在追求"说得更玄"时，Ziwei Chat 在追求"说得更负责任"——这是长期信任的根基。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>📚 策略四：内容社区化</h4>
+      <p>知识内容（content/ 目录）可以成为 UGC 入口。命理爱好者/从业者可以贡献 curated 知识块。高质量内容贡献者 = 高质量传播者 = 自然增长飞轮。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 6. Actionable Recommendations -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">06</div>
+    <h2>产品建议：从现在到 V2 的关键动作</h2>
+  </div>
+
+  <h3>短期（V1 发布前 · 1–2 个月）</h3>
+  <div class="strategic-grid">
+    <div class="strategic-card">
+      <h4>补齐内容缺口</h4>
+      <p>14 星曜×12 宫位矩阵和四化×宫位矩阵是回答质量的根基。没有这些，Agent 在具体分析时会"言之无物"。这是最高优先级的内容工作。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>打磨证据体验</h4>
+      <p>Evidence Companion 是 Ziwei Chat 的"签名特征"。让证据抽屉不仅展示工具调用，还要展示"为什么选择这个工具"和"知识来源的可信度评分"。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>差异化首页</h4>
+      <p>首页要讲清楚"为什么 Ziwei Chat 比通用 AI 算得准"。用对比示例（同一命盘、同一问题，Ziwei Chat vs 通用大模型的回答差异）建立信任。</p>
+    </div>
+  </div>
+
+  <h3>中期（V1→V2 · 3–6 个月）</h3>
+  <div class="strategic-grid">
+    <div class="strategic-card">
+      <h4>移动端 PWA</h4>
+      <p>不需要原生 App，但必须做好 PWA（离线可用、添加到主屏幕、推送通知）。中国市场的移动 Web 体验直接决定留存率。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>知识贡献机制</h4>
+      <p>开放 content/knowledge/ 的贡献流程（GitHub PR + 审核）。让命理爱好者可以提交 curated 知识块。贡献者 = 传播者。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>SEO + 内容营销</h4>
+      <p>围绕"AI 算命哪个准""紫微斗数排盘工具""DeepSeek 算命准吗"等关键词做 SEO 内容。这是零成本获客的核心渠道。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>多语言 MVP（繁体中文）</h4>
+      <p>优先支持繁体中文，直接触达台湾、香港、马来西亚、新加坡市场。紫微斗数在这些地区的文化基础远深于大陆。</p>
+    </div>
+  </div>
+
+  <h3>长期（V2+ · 6–12 个月）</h3>
+  <div class="strategic-grid">
+    <div class="strategic-card">
+      <h4>商业化探索</h4>
+      <p>开源核心 + 托管服务付费（类似 Supabase/Next.js 模式）。自部署免费，官方托管按月订阅。企业 API 供第三方集成。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>多术数扩展</h4>
+      <p>架构已支持 Skills 插件化。可逐步添加八字、风水、奇门遁甲等术数的分析工作流，但每个术数必须遵循相同的"确定性引擎+审查"原则。</p>
+    </div>
+    <div class="strategic-card">
+      <h4>社区生态</h4>
+      <p>建立 Discord/微信群社区，培育开发者 + 命理爱好者双社区。开发者贡献代码和工具，命理爱好者贡献知识和反馈。</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <p><strong>风险提醒：</strong>Ziwei Chat 当前最大的风险不是竞品，而是"完成度"。一个功能 80% 完成的开源项目和功能 100% 完成的商业产品，用户会选择后者。V1 发布前必须确保：五大话题可用、证据抽屉完整、回答质量稳定。宁可功能少，不能体验差。</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 7. Final Verdict -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-number">07</div>
+    <h2>最终判断：Ziwei Chat 能赢吗？</h2>
+  </div>
+
+  <p>
+    从 10 年产品经理的视角来看，<strong style="color: var(--jade-400);">Ziwei Chat 的产品基因是优秀的</strong>——它踩准了三个关键趋势：
+  </p>
+
+  <ol style="list-style: none; padding: 0; margin: 1.5rem 0; display: flex; flex-direction: column; gap: 1rem;">
+    <li style="background: var(--ink-800); border: 1px solid var(--ink-700); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 1.5rem; font-weight: 700; color: var(--jade-400); line-height: 1; flex-shrink: 0;">01</span>
+      <div>
+        <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">从"Prompt Wrapper"到"确定性 Agent"的范式转换</strong>
+        <span style="font-size: 0.85rem; color: var(--ink-400);">用户已经受够了 AI 算命胡说八道。确定性排盘 + 结构化分析是下一阶段的入场券。</span>
+      </div>
+    </li>
+    <li style="background: var(--ink-800); border: 1px solid var(--ink-700); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 1.5rem; font-weight: 700; color: var(--jade-400); line-height: 1; flex-shrink: 0;">02</span>
+      <div>
+        <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">从"黑箱算命"到"透明推理"的信任升级</strong>
+        <span style="font-size: 0.85rem; color: var(--ink-400);">证据抽屉 + 审查器 = 可审计的 AI。这在命理赛道是独一无二的信任资产。</span>
+      </div>
+    </li>
+    <li style="background: var(--ink-800); border: 1px solid var(--ink-700); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 1.5rem; font-weight: 700; color: var(--jade-400); line-height: 1; flex-shrink: 0;">03</span>
+      <div>
+        <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">从"封闭 SaaS"到"开放生态"的分发革命</strong>
+        <span style="font-size: 0.85rem; color: var(--ink-400);">开源 + Vercel 部署是开发者传播的天然杠杆。参天 AI 花几百万买量，Ziwei Chat 靠 GitHub star 获客。</span>
+      </div>
+    </li>
+  </ol>
+
+  <p>
+    但<strong style="color: var(--amber-300);">基因好不等于能赢</strong>。Ziwei Chat 面临三个生死问题：
+  </p>
+
+  <ol style="list-style: none; padding: 0; margin: 1.5rem 0; display: flex; flex-direction: column; gap: 1rem;">
+    <li style="background: var(--ink-800); border: 1px solid var(--ink-700); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 1.5rem; font-weight: 700; color: var(--rose-400); line-height: 1; flex-shrink: 0;">⚠</span>
+      <div>
+        <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">完成度 vs 时间窗口</strong>
+        <span style="font-size: 0.85rem; color: var(--ink-400);">天府 Agent 和参天 AI 不会停下来等你。V1 必须在 2 个月内达到"可自豪地推荐给朋友"的质量水平。</span>
+      </div>
+    </li>
+    <li style="background: var(--ink-800); border: 1px solid var(--ink-700); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 1.5rem; font-weight: 700; color: var(--rose-400); line-height: 1; flex-shrink: 0;">⚠</span>
+      <div>
+        <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">获客：谁来用？怎么知道？</strong>
+        <span style="font-size: 0.85rem; color: var(--ink-400);">好产品不等于有人用。需要明确的 GTM 策略——SEO、技术社区、命理社区、社交媒体——至少选一个打透。</span>
+      </div>
+    </li>
+    <li style="background: var(--ink-800); border: 1px solid var(--ink-700); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+      <span style="font-family: 'Noto Serif SC', serif; font-size: 1.5rem; font-weight: 700; color: var(--rose-400); line-height: 1; flex-shrink: 0;">⚠</span>
+      <div>
+        <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">可持续性：谁来维护？怎么赚钱？</strong>
+        <span style="font-size: 0.85rem; color: var(--ink-400);">纯开源 + 零商业化的模式在长期不可持续。需要在 V2 阶段探索托管服务或 API 付费模式。</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="callout" style="margin-top: 2.5rem;">
+    <p>
+      <strong>最终结论：</strong>Ziwei Chat 是目前市场上<strong>架构最完整、理念最先进</strong>的 AI 紫微斗数产品。它定义了一个正确的方向——确定性排盘 + Agent 管道 + 可审计推理。但<strong>正确的方向不等于商业成功</strong>。接下来的 6 个月，团队需要在"产品完成度"和"用户获取"两个维度上全力冲刺。如果能在 V2 之前积累 1000 个活跃用户和 500 个 GitHub star，Ziwei Chat 将在这个 400 亿美元的赛道中占据一个难以撼动的位置。
+    </p>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>Ziwei Chat Competitive Analysis · July 2026 · Confidential</p>
+</footer>
+
+</body>
+</html>

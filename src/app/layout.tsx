@@ -20,8 +20,8 @@ const notoSansSc = Noto_Sans_SC({
 });
 
 export const metadata: Metadata = {
-  title: "Ziwei Chat",
-  description: "Open-source Ziwei Dou Shu vertical agent MVP",
+  title: "紫微知道",
+  description: "可信的命盘分析助手",
 };
 
 export default function RootLayout({
