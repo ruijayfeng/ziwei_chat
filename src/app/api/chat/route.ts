@@ -13,21 +13,25 @@ import {
   encodeChatStreamEvent,
 } from "../../../lib/agent/evidence-events";
 import {
+  createRequestStores,
   deleteProfileRuntimeData,
-  getChatRuntimeStores,
+  getChartPersistence,
+  mergeRequestStoresToSnapshot,
   persistChatMessage,
-  recordRouteToolEvent,
+  recordRouteToolEventToStores,
 } from "../../../lib/agent/chat-runtime";
 import { routeIntent } from "../../../lib/agent/intent-router";
 import { generateLlmAnalysis, reviseLlmAnalysis } from "../../../lib/agent/llm-analyst";
+import type { LlmResponseMode } from "../../../lib/agent/llm-analyst";
 import { createLlmAnalysisPlan } from "../../../lib/agent/llm-planner";
+import { buildConversationContext } from "../../../lib/agent/conversation-context";
 import {
   normalizeModelSettings,
   type IncomingModelSettings,
 } from "../../../lib/agent/model-provider";
 import { buildAnalysisPlan } from "../../../lib/agent/planner";
 import { composeResponse } from "../../../lib/agent/response-composer";
-import { createAgentTools } from "../../../lib/agent/tools";
+import { createAgentTools, type InMemoryToolStores } from "../../../lib/agent/tools";
 import type { CritiqueResult, Intent } from "../../../lib/domain/analysis";
 import type { ChartFact, ChartTopic, CreateChartInput } from "../../../lib/domain/chart";
 import { getDatabaseClient } from "../../../lib/db/client";
@@ -35,6 +39,7 @@ import { createPostgresKnowledgeRetriever } from "../../../lib/db/knowledge-retr
 import { checkRateLimit } from "../../../lib/http/rate-limit";
 import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
 import { searchKnowledge, type KnowledgeSource } from "../../../lib/knowledge/search";
+import type { EvidenceGeneration } from "../../../lib/ui/chat-evidence";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
@@ -59,6 +64,7 @@ type ChatEvidence = {
     status: "not_run" | "passed" | "needs_review";
     issues: string[];
   };
+  generation: EvidenceGeneration;
   runs: Array<{
     runId: string;
     title: string;
@@ -93,6 +99,9 @@ type StreamingChartAnswer = {
     knowledgeSources: string[];
     criticStatus: "not_run" | "passed" | "needs_review";
     criticIssues: string[];
+    conversationContext: string;
+    responseMode: LlmResponseMode;
+    hasChart?: boolean;
   };
   modelSettings: ReturnType<typeof normalizeModelSettings>;
   postCriticContext: {
@@ -122,9 +131,10 @@ export async function POST(request: Request) {
   const profileId = toUuid(body.profileId) ?? randomUUID();
   const conversationId = toUuid(body.conversationId) ?? randomUUID();
   const userContent = readLatestUserContent(body);
-  const stores = getChatRuntimeStores();
-  const toolEventStartIndex = stores.toolEvents.length;
-  const tools = createAgentTools({ stores });
+  const conversationContext = buildConversationContext(body.messages ?? []);
+  const stores = createRequestStores();
+  const toolEventStartIndex = 0; // always 0 for request-scoped stores
+  const tools = createAgentTools({ stores, chartPersistence: getChartPersistence() });
   const evidenceRunId = body.evidenceRunId ?? randomUUID();
 
   await persistChatMessage({
@@ -140,17 +150,21 @@ export async function POST(request: Request) {
 
   const route = routeIntent(userContent);
   const plan = buildAnalysisPlan(route);
+  const modelSettings = normalizeModelSettings(body.modelSettings);
+  const hasChart = stores.primaryChartByProfileId.has(profileId);
 
   if (route.requiresChart) {
     const currentChart = await tools.getCurrentChart({ profileId, conversationId });
     if (!currentChart.ok) {
       return await streamAndPersist({
+        stores,
         profileId,
         conversationId,
         content:
           "请先创建一张命盘，我才能基于确定性排盘给你分析。你可以提供出生日期、出生时间、性别和历法类型。",
         metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
     evidence: buildEvidence({
+      stores,
       runId: evidenceRunId,
       toolEventStartIndex,
       chartFacts: [],
@@ -162,6 +176,7 @@ export async function POST(request: Request) {
 
     if (chartTopics.has(route.intent)) {
       const answer = await answerWithChartContext({
+        stores,
         tools,
         profileId,
         intent: route.intent,
@@ -170,7 +185,8 @@ export async function POST(request: Request) {
         conversationId,
         toolEventStartIndex,
         userContent,
-        modelSettings: normalizeModelSettings(body.modelSettings),
+        conversationContext,
+        modelSettings: modelSettings,
         evidenceRunId,
       });
 
@@ -178,9 +194,9 @@ export async function POST(request: Request) {
 
       return answer.kind === "model_stream"
         ? streamModelAndPersist({
+            stores,
             profileId,
             conversationId,
-            deterministicContent: answer.deterministicContent,
             evidence: answer.evidence,
             analysisContext: answer.analysisContext,
             postCriticContext: answer.postCriticContext,
@@ -188,6 +204,7 @@ export async function POST(request: Request) {
             modelSettings: answer.modelSettings,
           })
         : await streamAndPersist({
+            stores,
             profileId,
             conversationId,
             content: answer.content,
@@ -197,23 +214,63 @@ export async function POST(request: Request) {
     }
   }
 
-  const fallback =
-    route.intent === "out_of_scope"
-      ? "Ziwei Chat 首版只处理紫微斗数相关问题，暂不做八字、塔罗、风水或其他体系。你可以问我事业、感情、财富、性格或近期运势。"
-      : "我可以陪你聊，但如果要做紫微斗数分析，需要先有命盘和具体问题。你现在想先看事业、感情、财富、性格，还是近期运势？";
+  // Hard refusals stay as-is regardless of model settings
+  if (route.intent === "out_of_scope" || route.intent === "safety_sensitive") {
+    const refusal =
+      route.intent === "out_of_scope"
+        ? "Ziwei Chat 首版只处理紫微斗数相关问题，暂不做八字、塔罗、风水或其他体系。你可以问我事业、感情、财富、性格或近期运势。"
+        : "这个问题涉及高风险领域，我不适合给出具体建议。";
+    return await streamAndPersist({
+      stores,
+      profileId,
+      conversationId,
+      content: refusal,
+      metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
+      evidence: buildEvidence({ stores, runId: evidenceRunId, toolEventStartIndex, chartFacts: [], knowledgeSources: [], critique: null }),
+    });
+  }
+
+  // For general chat: if model is configured, answer directly with LLM (like a normal chatbot).
+  // The fallback stays neutral because chart availability is explicit request state.
+  if (modelSettings.enabled) {
+    const generalChatFallback = "我在。你想聊什么？";
+    return streamModelAndPersist({
+      stores,
+      profileId,
+      conversationId,
+      metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
+      evidence: buildEvidence({ stores, runId: evidenceRunId, toolEventStartIndex, chartFacts: [], knowledgeSources: [], critique: null }),
+      modelSettings,
+      analysisContext: {
+        userContent,
+        deterministicDraft: generalChatFallback,
+        chartFacts: [],
+        skillSteps: [],
+        knowledgeSources: [],
+        criticStatus: "not_run",
+        criticIssues: [],
+        conversationContext,
+        responseMode: "conversation",
+        hasChart,
+      },
+      postCriticContext: {
+        intent: route.intent as Intent,
+        chartFacts: [],
+        knowledgeSources: [],
+        safetyLevel: route.safetyLevel,
+      },
+    });
+  }
+
+  const fallback = "我在。你想聊什么？";
 
   return await streamAndPersist({
+    stores,
     profileId,
     conversationId,
     content: fallback,
     metadata: { intent: route.intent, safetyLevel: route.safetyLevel },
-        evidence: buildEvidence({
-          runId: evidenceRunId,
-          toolEventStartIndex,
-          chartFacts: [],
-      knowledgeSources: [],
-      critique: null,
-    }),
+    evidence: buildEvidence({ stores, runId: evidenceRunId, toolEventStartIndex, chartFacts: [], knowledgeSources: [], critique: null }),
   });
 }
 
@@ -234,6 +291,7 @@ export async function DELETE(request: Request) {
 }
 
 async function answerWithChartContext({
+  stores,
   tools,
   profileId,
   intent,
@@ -242,9 +300,11 @@ async function answerWithChartContext({
   conversationId,
   toolEventStartIndex,
   userContent,
+  conversationContext,
   modelSettings,
   evidenceRunId,
 }: {
+  stores: InMemoryToolStores;
   tools: ReturnType<typeof createAgentTools>;
   profileId: string;
   intent: Intent;
@@ -253,6 +313,7 @@ async function answerWithChartContext({
   conversationId: string;
   toolEventStartIndex: number;
   userContent: string;
+  conversationContext: string;
   modelSettings: ReturnType<typeof normalizeModelSettings>;
   evidenceRunId: string;
 }): Promise<ChartAnswer> {
@@ -275,8 +336,10 @@ async function answerWithChartContext({
     },
     deterministicPlan: plan,
     chartFacts,
+    conversationContext,
   });
-  await recordRouteToolEvent(
+  await recordRouteToolEventToStores(
+    stores,
     profileId,
     conversationId,
     "createAnalysisPlan",
@@ -295,7 +358,8 @@ async function answerWithChartContext({
     modelSettings,
   );
 
-  await recordRouteToolEvent(
+  await recordRouteToolEventToStores(
+    stores,
     profileId,
     conversationId,
     "loadSkill",
@@ -303,7 +367,8 @@ async function answerWithChartContext({
     skill,
     skill !== null,
   );
-  await recordRouteToolEvent(
+  await recordRouteToolEventToStores(
+    stores,
     profileId,
     conversationId,
     "searchKnowledge",
@@ -324,9 +389,7 @@ async function answerWithChartContext({
     analysisSteps: skill?.analysisSteps,
     knowledgeSources: knowledgeSources.map((source) => source.title),
   });
-  const toolsUsed = getChatRuntimeStores()
-    .toolEvents.slice(toolEventStartIndex)
-    .map((event) => event.toolName);
+  const toolsUsed = stores.toolEvents.slice(toolEventStartIndex).map((event) => event.toolName);
   const critique = runResponseCritic({
     intent,
     draft,
@@ -335,7 +398,8 @@ async function answerWithChartContext({
     knowledgeSources,
     safetyLevel: agentPlan.safetyLevel,
   });
-  await recordRouteToolEvent(
+  await recordRouteToolEventToStores(
+    stores,
     profileId,
     conversationId,
     "runResponseCritic",
@@ -355,7 +419,8 @@ async function answerWithChartContext({
         followUp: "你愿意先补充一下当前现实处境吗？",
       });
   if (modelSettings.enabled) {
-    await recordRouteToolEvent(
+    await recordRouteToolEventToStores(
+      stores,
       profileId,
       conversationId,
       "generateModelResponse",
@@ -379,13 +444,17 @@ async function answerWithChartContext({
         knowledgeSources: knowledgeSources.map(formatKnowledgeSource),
         criticStatus: critique.passed ? "passed" : "needs_review",
         criticIssues: critique.issues,
+        conversationContext,
+        responseMode: "analysis",
       },
       evidence: buildEvidence({
+        stores,
         runId: evidenceRunId,
         toolEventStartIndex,
         chartFacts,
         knowledgeSources,
         critique,
+        generation: { mode: "model_pending", detail: "等待回答模型完成分析" },
       }),
       modelSettings,
       postCriticContext: {
@@ -399,13 +468,16 @@ async function answerWithChartContext({
 
   return {
     kind: "static",
-    content: deterministicContent,
+    content:
+      "我已读取这次问题所需的命盘事实，但当前没有可用的回答模型。请先在设置中配置回答模型；模型就绪后，我会基于这些事实、skill 和知识库完成分析。",
     evidence: buildEvidence({
+      stores,
       runId: evidenceRunId,
       toolEventStartIndex,
       chartFacts,
       knowledgeSources,
       critique,
+      generation: { mode: "model_required", detail: "未配置可用的回答模型" },
     }),
   };
 }
@@ -489,12 +561,14 @@ async function searchRouteKnowledge(
 }
 
 async function streamAndPersist({
+  stores,
   profileId,
   conversationId,
   content,
   metadata,
   evidence,
 }: {
+  stores: InMemoryToolStores;
   profileId: string;
   conversationId: string;
   content: string;
@@ -508,6 +582,7 @@ async function streamAndPersist({
     content,
     metadata,
   });
+  mergeRequestStoresToSnapshot(stores);
 
   return new Response(textToStream(content), {
     headers: {
@@ -518,18 +593,18 @@ async function streamAndPersist({
 }
 
 function streamModelAndPersist({
+  stores,
   profileId,
   conversationId,
-  deterministicContent,
   metadata,
   evidence,
   modelSettings,
   analysisContext,
   postCriticContext,
 }: {
+  stores: InMemoryToolStores;
   profileId: string;
   conversationId: string;
-  deterministicContent: string;
   metadata: Record<string, unknown>;
   evidence: ChatEvidence;
   modelSettings: ReturnType<typeof normalizeModelSettings>;
@@ -540,15 +615,32 @@ function streamModelAndPersist({
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      try {
       enqueueEvent(controller, encoder, {
         event: "evidence",
         data: updateEvidenceRunStep(evidence, "model", "running", "模型正在综合命盘、skill 和 RAG。"),
       });
+      // Buffer model output fully so critic can gate before any token reaches client
       const modelResult = await generateLlmAnalysis({
         settings: modelSettings,
         ...analysisContext,
       });
-      const modelContent = modelResult.ok ? modelResult.content : deterministicContent;
+      if (!modelResult.ok) {
+        const finalEvidence = updateEvidenceAfterModelCritic({
+          evidence,
+          critique: { passed: false, issues: [modelResult.error], requiredRevision: false },
+          usedFallback: true,
+          modelError: modelResult.error,
+          revisionAttempted: false,
+        });
+        enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
+        mergeRequestStoresToSnapshot(stores);
+        enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
+        enqueueEvent(controller, encoder, { event: "done", data: null });
+        controller.close();
+        return;
+      }
+      const modelContent = modelResult.content;
       enqueueEvent(controller, encoder, {
         event: "evidence",
         data: updateEvidenceRunStep(evidence, "critic", "running", "正在检查模型回答的事实边界。"),
@@ -589,30 +681,38 @@ function streamModelAndPersist({
           });
         }
       }
-      await recordRouteToolEvent(
+      await recordRouteToolEventToStores(
+        stores,
         profileId,
         conversationId,
         "runModelResponseCritic",
         {
           intent: postCriticContext.intent,
           draft: candidateContent,
-          modelError: modelResult.ok ? null : modelResult.error,
+          modelError: null,
           revisionAttempted,
         },
         postCritique,
         postCritique.passed,
       );
-      const content = modelResult.ok && postCritique.passed ? candidateContent : deterministicContent;
+      const usedFallback = !postCritique.passed;
       const finalEvidence = updateEvidenceAfterModelCritic({
         evidence,
         critique: postCritique,
-        usedFallback: !modelResult.ok || !postCritique.passed,
-        modelError: modelResult.ok ? null : modelResult.error,
+        usedFallback,
+        modelError: null,
         revisionAttempted,
       });
 
       enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
-      for (const chunk of chunkText(content, 32)) {
+      if (usedFallback) {
+        mergeRequestStoresToSnapshot(stores);
+        enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
+        enqueueEvent(controller, encoder, { event: "done", data: null });
+        controller.close();
+        return;
+      }
+      for (const chunk of chunkText(candidateContent, 32)) {
         enqueueEvent(controller, encoder, { event: "token", data: chunk });
       }
 
@@ -620,11 +720,31 @@ function streamModelAndPersist({
         conversationId,
         profileId,
         role: "assistant",
-        content,
+        content: candidateContent,
         metadata,
       });
+      mergeRequestStoresToSnapshot(stores);
       enqueueEvent(controller, encoder, { event: "done", data: null });
       controller.close();
+      } catch (error) {
+        // Ensure stream always closes so client doesn't hang indefinitely
+        const errorEvidence = updateEvidenceAfterModelCritic({
+          evidence,
+          critique: { passed: false, issues: [error instanceof Error ? error.message : "未知错误"], requiredRevision: false },
+          usedFallback: true,
+          modelError: error instanceof Error ? error.message : "未知错误",
+          revisionAttempted: false,
+        });
+        try {
+          enqueueEvent(controller, encoder, { event: "evidence", data: errorEvidence });
+          mergeRequestStoresToSnapshot(stores);
+          enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
+          enqueueEvent(controller, encoder, { event: "done", data: null });
+        } catch {
+          // ignore enqueue errors if controller is already closed
+        }
+        controller.close();
+      }
     },
   });
 
@@ -635,6 +755,13 @@ function streamModelAndPersist({
       "X-Ziwei-Evidence": encodeURIComponent(JSON.stringify(evidence)),
     },
   });
+}
+
+function modelFailureEvent() {
+  return {
+    message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。",
+    canRetry: true,
+  };
 }
 
 function enqueueEvent(
@@ -690,6 +817,9 @@ function updateEvidenceAfterModelCritic({
 
   return {
     ...evidence,
+    generation: usedFallback
+      ? { mode: "model_failed", detail: fallbackReason }
+      : { mode: "model", detail: "已通过最终事实与安全检查" },
     critic: {
       status: critique.passed ? "passed" : "needs_review",
       issues: modelError ? [fallbackReason, ...critique.issues] : critique.issues,
@@ -725,21 +855,23 @@ function updateEvidenceAfterModelCritic({
 }
 
 function buildEvidence({
+  stores,
   runId,
   toolEventStartIndex,
   chartFacts,
   knowledgeSources,
   critique,
+  generation = { mode: "not_applicable" },
 }: {
+  stores: InMemoryToolStores;
   runId: string;
   toolEventStartIndex: number;
   chartFacts: ChartFact[];
   knowledgeSources: KnowledgeSource[];
   critique: CritiqueResult | null;
+  generation?: EvidenceGeneration;
 }): ChatEvidence {
-  const toolsUsed = getChatRuntimeStores()
-    .toolEvents.slice(toolEventStartIndex)
-    .map((event) => event.toolName);
+  const toolsUsed = stores.toolEvents.slice(toolEventStartIndex).map((event) => event.toolName);
   const critic = {
     status: critique === null ? ("not_run" as const) : critique.passed ? ("passed" as const) : ("needs_review" as const),
     issues: critique?.issues ?? [],
@@ -760,15 +892,19 @@ function buildEvidence({
     })),
     knowledgeSources,
     critic,
+    generation,
     runs: [
       {
         runId,
         title: "本次分析",
         summary: `调用 ${toolsUsed.length} 个工具，读取 ${chartFacts.length} 条命盘事实，检索 ${knowledgeSources.length} 条知识。`,
-        status: critic.status === "needs_review" ? "failed" : "completed",
+        status:
+          generation.mode === "model_required" || generation.mode === "model_failed" || critic.status === "needs_review"
+            ? "failed"
+            : "completed",
         startedAt: "",
         completedAt,
-        steps: buildEvidenceSteps({ toolsUsed, chartFacts, knowledgeSources, critic }),
+        steps: buildEvidenceSteps({ toolsUsed, chartFacts, knowledgeSources, critic, generation }),
       },
     ],
   };
@@ -779,7 +915,8 @@ function buildEvidenceSteps({
   chartFacts,
   knowledgeSources,
   critic,
-}: Pick<ChatEvidence, "toolsUsed" | "knowledgeSources" | "critic"> & {
+  generation,
+}: Pick<ChatEvidence, "toolsUsed" | "knowledgeSources" | "critic" | "generation"> & {
   chartFacts: ChartFact[];
 }): ChatEvidence["runs"][number]["steps"] {
   return [
@@ -832,10 +969,22 @@ function buildEvidenceSteps({
     {
       id: "model",
       label: "模型分析",
-      detail: toolsUsed.includes("generateModelResponse")
-        ? "已交给配置模型生成分析"
-        : "使用本地确定性回答",
-      status: toolsUsed.includes("generateModelResponse") ? "completed" : "pending",
+      detail:
+        generation.mode === "model_required"
+          ? "未配置可用的回答模型"
+          : generation.mode === "model_failed"
+            ? generation.detail ?? "模型生成未完成"
+            : toolsUsed.includes("generateModelResponse")
+              ? "已交给配置模型生成分析"
+              : "尚未进入模型生成",
+      status:
+        generation.mode === "model_failed"
+          ? "failed"
+          : generation.mode === "model_required"
+            ? "pending"
+            : toolsUsed.includes("generateModelResponse")
+              ? "completed"
+              : "pending",
     },
     {
       id: "critic",
