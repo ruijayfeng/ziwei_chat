@@ -1,4 +1,4 @@
-/**
+﻿/**
  * [INPUT]: Depends on draft response text, tools used, chart facts, knowledge sources, and safety level
  * [OUTPUT]: Provides deterministic critique result before final user-facing response
  * [POS]: Agent quality gate after response composition and before persistence
@@ -35,11 +35,6 @@ const overconfidentTerms = [
   "必须",
   "必为",
   "必主",
-  "涓€瀹?",
-  "蹇呯劧",
-  "娉ㄥ畾",
-  "缁濆",
-  "蹇呴』",
 ];
 
 const prohibitedAdviceTerms = [
@@ -51,10 +46,6 @@ const prohibitedAdviceTerms = [
   "离婚",
   "治疗",
   "诊断",
-  "涔板叆",
-  "鍗栧嚭",
-  "娌荤枟",
-  "璇婃柇",
 ];
 
 const palaceTerms = [
@@ -123,7 +114,7 @@ export function runResponseCritic({
   }
 
   const followUpCount = countVisibleQuestions(draft);
-  if (followUpCount !== 1) {
+  if (seriousIntents.has(intent) && followUpCount !== 1) {
     issues.push("Response must include exactly one useful follow-up question.");
   }
 
@@ -177,11 +168,11 @@ function mentionsUnknownChartFact(draft: string, chartFacts: ChartFact[]) {
 }
 
 function readChartBasisSection(draft: string) {
-  const start = draft.search(/命盘依据|鍛界洏渚濇嵁/);
+  const start = draft.search(/命盘依据/);
   if (start === -1) return draft;
 
   const rest = draft.slice(start);
-  const end = rest.search(/\n\n(?:现实解释|鐜板疄瑙ｉ噴|建议|寤鸿)/);
+  const end = rest.search(/\n\n(?:现实解释|建议)/);
 
   return end === -1 ? rest : rest.slice(0, end);
 }

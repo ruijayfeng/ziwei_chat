@@ -102,6 +102,11 @@ This keeps optional pgvector columns compatible with the documented enhanced ret
 
 ## Knowledge Ingestion
 
+The checked-in pgvector schema uses `vector(1024)`, matching
+`BAAI/bge-large-zh-v1.5`. Knowledge ingestion and runtime query embeddings must
+use the same model and vector dimension. Changing embedding models requires a
+dimension migration and full knowledge re-embedding before runtime retrieval.
+
 No-database semantic RAG:
 
 ```bash

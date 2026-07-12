@@ -40,16 +40,16 @@ The API key is stored only in this browser's `localStorage`; it is sent to `/api
 
 If settings are incomplete, Ziwei Chat stays in deterministic-local mode.
 
-The Embedding section is optional. When it is not configured, Ziwei Chat uses local Markdown keyword RAG. When it is configured and a knowledge embedding index exists, the app can use hybrid semantic retrieval.
+The Embedding section is optional. When it is not configured, Ziwei Chat uses local Markdown keyword RAG. With `DATABASE_URL`, a configured embedding provider, and ingested knowledge, the app uses Neon/pgvector first and falls back to local retrieval when needed.
 
 ## Optional Knowledge Embeddings
 
 Build a local no-database semantic RAG index:
 
 ```bash
-EMBEDDING_BASE_URL="https://api.openai.com/v1" \
+EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1" \
 EMBEDDING_API_KEY="sk-..." \
-EMBEDDING_MODEL="text-embedding-3-small" \
+EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \
 npm run build:knowledge-embeddings
 ```
 
@@ -60,15 +60,19 @@ knowledge into Postgres:
 
 ```bash
 npx drizzle-kit migrate
-EMBEDDING_BASE_URL="https://api.openai.com/v1" \
+EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1" \
 EMBEDDING_API_KEY="sk-..." \
-EMBEDDING_MODEL="text-embedding-3-small" \
+EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \
 npm run ingest:knowledge-postgres
 ```
 
 When `DATABASE_URL` and browser Embedding settings are both present, runtime RAG
 tries Postgres/pgvector first, then falls back to the local JSON embedding index,
 then to Markdown keyword search.
+
+The checked-in Neon schema uses `vector(1024)`, matching
+`BAAI/bge-large-zh-v1.5`. If you choose another embedding model, migrate the
+vector dimension and re-embed all knowledge before querying it.
 
 ## Verification
 

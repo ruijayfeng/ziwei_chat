@@ -482,7 +482,7 @@
         },
         "embedding": {
           "name": "embedding",
-          "type": "vector(1536)",
+          "type": "vector(1024)",
           "primaryKey": false,
           "notNull": false
         },

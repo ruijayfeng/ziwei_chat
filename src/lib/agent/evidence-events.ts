@@ -8,6 +8,7 @@
 export type ChatStreamEvent =
   | { event: "evidence"; data: unknown }
   | { event: "token"; data: string }
+  | { event: "error"; data: { message: string; canRetry: boolean } }
   | { event: "done"; data: null };
 
 export const chatStreamHeader = "events";
@@ -31,6 +32,13 @@ export function readChatStreamEvent(line: string): ChatStreamEvent | null {
     const value = JSON.parse(line) as ChatStreamEvent;
     if (value.event === "evidence") return value;
     if (value.event === "token" && typeof value.data === "string") return value;
+    if (
+      value.event === "error" &&
+      typeof value.data?.message === "string" &&
+      typeof value.data?.canRetry === "boolean"
+    ) {
+      return value;
+    }
     if (value.event === "done" && value.data === null) return value;
     return null;
   } catch {

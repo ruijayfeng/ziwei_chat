@@ -7,6 +7,59 @@ import { describe, expect, test, vi } from "vitest";
 import { searchKnowledge } from "../../src/lib/knowledge/search";
 
 describe("hybrid knowledge search", () => {
+  test("labels keyword fallback as local when vector retrieval has no results", async () => {
+    const root = path.join(os.tmpdir(), `ziwei-hybrid-fallback-${Date.now()}`);
+    const knowledgeDir = path.join(root, "content", "knowledge");
+    await mkdir(knowledgeDir, { recursive: true });
+    await writeFile(
+      path.join(knowledgeDir, "career.md"),
+      [
+        "---",
+        "title: 事业基础",
+        "topic: career",
+        "terms:",
+        "  - 官禄",
+        "source: curated",
+        "school: default",
+        "confidence: high",
+        "---",
+        "官禄宫用于观察事业发展。",
+      ].join("\n"),
+      "utf8",
+    );
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ data: [{ embedding: [1, 0] }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(
+      searchKnowledge({
+        query: "事业发展",
+        topic: "career",
+        chartTerms: ["官禄"],
+        limit: 3,
+        retrievalMode: "hybrid",
+        contentRoot: root,
+        embeddingSettings: {
+          provider: "openai-compatible",
+          enabled: true,
+          baseUrl: "https://example.test/v1",
+          apiKey: "sk-test",
+          model: "test-embedding",
+        },
+        fetchImplementation: fetchMock,
+        vectorSearch: vi.fn(async () => []),
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        chunkId: "career",
+        retrievalMode: "local",
+      }),
+    ]);
+  });
+
   test("uses an embedding index when embedding settings are configured", async () => {
     const root = path.join(os.tmpdir(), `ziwei-hybrid-search-${Date.now()}`);
     const indexDir = path.join(root, "content", "knowledge-index");

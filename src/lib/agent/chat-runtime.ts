@@ -12,10 +12,12 @@ import {
 } from "./chat-persistence";
 import { createInMemoryToolStores, type InMemoryToolStores } from "./tools";
 import { createPostgresChatPersistence } from "../db/chat-persistence";
+import { createPostgresChartPersistence, type ChartPersistence } from "../db/chart-persistence";
 import { getDatabaseClient } from "../db/client";
 
 let stores = createInMemoryToolStores();
 let persistence = createRuntimePersistence();
+let chartPersistence = createRuntimeChartPersistence();
 
 export function getChatRuntimeStores() {
   return stores;
@@ -44,6 +46,66 @@ export async function recordRouteToolEvent(
   };
 
   stores.toolEvents.push(event);
+  await persistence.saveToolEvent(event);
+}
+
+export function createRequestStores(): InMemoryToolStores {
+  const requestStores = createInMemoryToolStores();
+
+  // Charts are deterministic profile state. Copy only chart ownership into a new
+  // request store so evidence and tool events remain scoped to this request.
+  for (const [chartId, chart] of stores.charts.entries()) {
+    requestStores.charts.set(chartId, chart);
+  }
+  for (const [profileId, chartId] of stores.primaryChartByProfileId.entries()) {
+    requestStores.primaryChartByProfileId.set(profileId, chartId);
+  }
+
+  return requestStores;
+}
+
+export function getChartPersistence(): ChartPersistence | null {
+  return chartPersistence;
+}
+
+export function mergeRequestStoresToSnapshot(requestStores: InMemoryToolStores) {
+  for (const [chartId, chart] of requestStores.charts.entries()) {
+    stores.charts.set(chartId, chart);
+  }
+  for (const [profileId, chartId] of requestStores.primaryChartByProfileId.entries()) {
+    stores.primaryChartByProfileId.set(profileId, chartId);
+  }
+  for (const event of requestStores.toolEvents) {
+    stores.toolEvents.push(event);
+  }
+  for (const summary of requestStores.conversationSummaries) {
+    stores.conversationSummaries.push(summary);
+  }
+  for (const memory of requestStores.memories) {
+    stores.memories.push(memory);
+  }
+}
+
+export async function recordRouteToolEventToStores(
+  requestStores: InMemoryToolStores,
+  profileId: string,
+  conversationId: string,
+  toolName: string,
+  input: unknown,
+  output: unknown,
+  success: boolean,
+) {
+  const event: PersistedToolEvent = {
+    profileId,
+    conversationId,
+    toolName,
+    input,
+    output,
+    success,
+    latencyMs: 0,
+  };
+
+  requestStores.toolEvents.push(event);
   await persistence.saveToolEvent(event);
 }
 
@@ -84,6 +146,7 @@ export async function deleteProfileRuntimeData(profileId: string) {
 export function resetChatRuntime() {
   stores = createInMemoryToolStores();
   persistence = createRuntimePersistence();
+  chartPersistence = createRuntimeChartPersistence();
 }
 
 export function replaceChatRuntimeStores(nextStores: InMemoryToolStores) {
@@ -96,6 +159,12 @@ function createRuntimePersistence() {
   }
 
   return createInMemoryChatPersistence();
+}
+
+function createRuntimeChartPersistence(): ChartPersistence | null {
+  if (!process.env.DATABASE_URL) return null;
+
+  return createPostgresChartPersistence(getDatabaseClient());
 }
 
 function removeProfileOwnedItems<TItem extends { profileId: string }>(

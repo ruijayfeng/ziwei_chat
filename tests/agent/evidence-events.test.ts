@@ -7,10 +7,11 @@ import {
 } from "../../src/lib/agent/evidence-events";
 
 describe("chat evidence stream events", () => {
-  test("round-trips evidence, token, and done events", () => {
+  test("round-trips evidence, token, error, and done events", () => {
     const text = [
       encodeChatStreamEvent({ event: "evidence", data: { step: "模型分析" } }),
       encodeChatStreamEvent({ event: "token", data: "hello" }),
+      encodeChatStreamEvent({ event: "error", data: { message: "分析没有完成", canRetry: true } }),
       encodeChatStreamEvent({ event: "done", data: null }),
     ].join("");
 
@@ -18,6 +19,7 @@ describe("chat evidence stream events", () => {
       events: [
         { event: "evidence", data: { step: "模型分析" } },
         { event: "token", data: "hello" },
+        { event: "error", data: { message: "分析没有完成", canRetry: true } },
         { event: "done", data: null },
       ],
       rest: "",
@@ -33,5 +35,6 @@ describe("chat evidence stream events", () => {
 
   test("ignores invalid event shapes", () => {
     expect(readChatStreamEvent('{"event":"token","data":1}')).toBeNull();
+    expect(readChatStreamEvent('{"event":"error","data":{"message":1}}')).toBeNull();
   });
 });

@@ -150,6 +150,18 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
       };
 }
 
+export function runtimeLabel(draft: ModelSettingsDraft) {
+  const normalized = normalizeDraft(draft);
+  return normalized.provider === "deterministic-local"
+    ? "本地规则"
+    : normalized.model || "模型待补全";
+}
+
+export function retrievalLabel(draft: ModelSettingsDraft) {
+  const normalized = normalizeDraft(draft);
+  return normalized.embedding.provider === "disabled" ? "本地关键词检索" : "Embedding 已配置";
+}
+
 export function modelSettingsDraftForProvider(
   current: ModelSettingsDraft,
   provider: ModelProviderOption,

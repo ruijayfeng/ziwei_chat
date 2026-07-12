@@ -4,6 +4,7 @@ import {
   createAgentTools,
   createInMemoryToolStores,
 } from "../../src/lib/agent/tools";
+import type { CreateChartOutput } from "../../src/lib/domain/chart";
 
 describe("agent tools", () => {
   test("chart tools create, load, and summarize charts with structured results", async () => {
@@ -200,5 +201,37 @@ describe("agent tools", () => {
         recoverable: true,
       },
     });
+  });
+
+  test("restores a primary chart through the persistence boundary after an in-memory reset", async () => {
+    const persisted = new Map<string, CreateChartOutput>();
+    const chartPersistence = {
+      async savePrimaryChart(input: { profileId: string }, chart: CreateChartOutput) {
+        persisted.set(input.profileId, chart);
+      },
+      async getPrimaryChart(profileId: string) {
+        return persisted.get(profileId) ?? null;
+      },
+    };
+    const profileId = "profile-persisted";
+    const firstTools = createAgentTools({ stores: createInMemoryToolStores(), chartPersistence });
+
+    const created = await firstTools.createChart({
+      profileId,
+      name: "Primary chart",
+      gender: "male",
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar",
+      isPrimary: true,
+    });
+    if (!created.ok) throw new Error(created.error.message);
+
+    const restored = await createAgentTools({
+      stores: createInMemoryToolStores(),
+      chartPersistence,
+    }).getCurrentChart({ profileId });
+
+    expect(restored).toMatchObject({ ok: true, data: { chartId: created.data.chartId } });
   });
 });

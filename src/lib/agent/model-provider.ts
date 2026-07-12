@@ -107,6 +107,7 @@ export function buildModelPrompt({
   return [
     "你是 Ziwei Chat 的紫微斗数分析 Agent。你要基于服务端已经完成的工具调用、命盘事实、skill 流程和 RAG 知识，给用户做综合分析。",
     "边界：不能自行排盘，不能编造宫位、星曜、四化或格局；没有出现在命盘事实和知识来源中的内容，只能作为现实建议或追问，不能当成命盘依据。",
+    "命盘依据是封闭引用区：只能逐条引用或保守改写下面“命盘事实”中的信息。不得在命盘依据里出现任何未列出的宫位、星曜、四化或格局。RAG 中出现的术语仅用于解释通用含义，绝不能转写成用户的命盘事实。",
     "表达：中文自然、具体、有判断，但不要绝对化。把“命盘倾向”和“现实决策建议”分开。",
     "",
     `用户问题：${userContent}`,
@@ -125,7 +126,7 @@ export function buildModelPrompt({
     "本地确定性草稿：",
     deterministicDraft,
     "",
-    "请输出最终给用户看的回答，保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”的结构。追问只保留一个问号。",
+    "请输出最终给用户看的回答，保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”的结构。命盘依据只使用上述封闭引用区允许的事实；追问只保留一个问号。",
   ].join("\n");
 }
 
@@ -141,14 +142,21 @@ export async function generateModelResponse({
   }
 
   try {
-    const requestInit = buildChatCompletionRequest(settings, systemPrompt, prompt);
+    const timeoutMs = 60_000;
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+    const requestInit = buildChatCompletionRequest(settings, systemPrompt, prompt, abortController.signal);
     const attempted: string[] = [];
     let response: Response | null = null;
 
-    for (const endpoint of chatCompletionEndpoints(settings.baseUrl)) {
-      attempted.push(endpoint);
-      response = await fetchImplementation(endpoint, requestInit);
-      if (response.ok || response.status !== 404) break;
+    try {
+      for (const endpoint of chatCompletionEndpoints(settings.baseUrl)) {
+        attempted.push(endpoint);
+        response = await fetchImplementation(endpoint, requestInit);
+        if (response.ok || response.status !== 404) break;
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (!response) {
@@ -179,9 +187,11 @@ function buildChatCompletionRequest(
   settings: ResolvedModelSettings,
   systemPrompt: string,
   prompt: string,
+  signal?: AbortSignal,
 ): RequestInit {
   return {
     method: "POST",
+    signal,
     headers: {
       Authorization: `Bearer ${settings.apiKey}`,
       "Content-Type": "application/json",
@@ -189,7 +199,7 @@ function buildChatCompletionRequest(
     body: JSON.stringify({
       model: settings.model,
       stream: true,
-      temperature: 0.4,
+      ...(settings.provider === "moonshot" ? {} : { temperature: 0.4 }),
       messages: [
         {
           role: "system",
@@ -337,13 +347,16 @@ function readStreamEventToken(event: string) {
     return null;
   }
 
-  const json = JSON.parse(data) as {
-    choices?: Array<{
-      delta?: { content?: unknown };
-      message?: { content?: unknown };
-    }>;
-  };
-  const content = json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.message?.content;
-
-  return typeof content === "string" ? content : null;
+  try {
+    const json = JSON.parse(data) as {
+      choices?: Array<{
+        delta?: { content?: unknown };
+        message?: { content?: unknown };
+      }>;
+    };
+    const content = json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.message?.content;
+    return typeof content === "string" ? content : null;
+  } catch {
+    return null;
+  }
 }

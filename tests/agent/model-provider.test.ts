@@ -174,4 +174,29 @@ describe("generateModelResponse", () => {
       "https://integrate.api.nvidia.com/v1/chat/completions",
     ]);
   });
+
+  test("omits the incompatible temperature parameter for Moonshot chat models", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "moonshot answer" } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    await generateModelResponse({
+      settings: {
+        provider: "moonshot",
+        enabled: true,
+        baseUrl: "https://api.moonshot.cn/v1",
+        apiKey: "sk-test",
+        model: "kimi-k2.6",
+        embedding: disabledEmbedding,
+      },
+      prompt: "hello",
+      fetchImplementation: fetchMock,
+    });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(JSON.parse(String(requestInit?.body))).not.toHaveProperty("temperature");
+  });
 });

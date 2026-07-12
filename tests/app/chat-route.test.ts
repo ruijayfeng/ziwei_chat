@@ -99,7 +99,7 @@ describe("POST /api/chat", () => {
     await expect(limited.text()).resolves.toBe("rate limit exceeded");
   });
 
-  test("streams a readable grounded answer and exposes evidence metadata", async () => {
+  test("does not present a deterministic template as a completed chart analysis when no LLM is configured", async () => {
     const response = await POST(
       new Request("http://localhost/api/chat", {
         method: "POST",
@@ -121,10 +121,8 @@ describe("POST /api/chat", () => {
     );
 
     const text = await response.text();
-    expect(text).toContain("结论：");
-    expect(text).toContain("命盘依据：");
-    expect(text).toContain("追问：");
-    expect(text).not.toMatch(/缁撹|鍛界洏|杩介棶|锛�/);
+    expect(text).toContain("请先在设置中配置回答模型");
+    expect(text).not.toContain("命盘依据：");
 
     const evidence = readEvidenceHeader(response);
     expect(evidence).toMatchObject({
@@ -139,9 +137,8 @@ describe("POST /api/chat", () => {
         "searchKnowledge",
         "runResponseCritic",
       ],
-      critic: {
-        status: "passed",
-        issues: [],
+      generation: {
+        mode: "model_required",
       },
     });
     expect(evidence.chartFacts.length).toBeGreaterThan(0);
@@ -173,6 +170,97 @@ describe("POST /api/chat", () => {
       conversationId,
       conversationId,
     ]);
+  });
+
+  test("never substitutes a deterministic chart answer when a configured model request fails", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response("upstream unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: careerQuestion }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    const events = parseStreamEvents(await response.text());
+    const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
+    const finalEvidence = events
+      .filter((event) => event.event === "evidence")
+      .at(-1)?.data as { generation?: { mode?: string } } | undefined;
+
+    expect(answer).toBe("");
+    expect(answer).not.toContain("你最近更适合先观察机会");
+    expect(events).toContainEqual({
+      event: "error",
+      data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
+    });
+    expect(finalEvidence?.generation?.mode).toBe("model_failed");
+  });
+
+  test("restores the active chart for a follow-up request in the same anonymous workspace", async () => {
+    const chartInput = {
+      profileId,
+      name: "Primary chart",
+      gender: "male" as const,
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar" as const,
+      isPrimary: true,
+    };
+
+    await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput,
+          messages: [{ role: "user", content: "请解释一下我的命盘重点。" }],
+        }),
+      }),
+    );
+
+    const followUp = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          messages: [
+            { role: "user", content: "请解释一下我的命盘重点。" },
+            { role: "assistant", content: "已完成命盘解释。" },
+            { role: "user", content: "我今年财运" },
+          ],
+        }),
+      }),
+    );
+
+    const answer = await followUp.text();
+    expect(answer).toContain("请先在设置中配置回答模型");
+    expect(answer).not.toContain("请先创建一张命盘");
+    const evidence = readEvidenceHeader(followUp);
+    expect(evidence.chartFacts.length).toBeGreaterThan(0);
+    expect(evidence.runs[0].summary).toContain(`读取 ${evidence.chartFacts.length} 条命盘事实`);
   });
 
   test("uses page-supplied OpenAI-compatible model settings after tools and critic run", async () => {
@@ -224,6 +312,88 @@ describe("POST /api/chat", () => {
 
     const evidence = readEvidenceHeader(response);
     expect(evidence.toolsUsed).toContain("generateModelResponse");
+  });
+
+  test("keeps general conversation natural instead of asking for birth data", async () => {
+    const modelAnswer = "当然可以。你今天想聊点什么？";
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: modelAnswer } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: "你好，今天过得怎么样？" }],
+          modelSettings: {
+            provider: "moonshot",
+            baseUrl: "https://api.moonshot.cn/v1",
+            apiKey: "sk-user",
+            model: "kimi-k2.6",
+          },
+        }),
+      }),
+    );
+
+    const events = parseStreamEvents(await response.text());
+    expect(events.filter((event) => event.event === "token").map((event) => event.data).join("")).toBe(
+      modelAnswer,
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
+    expect(payload.messages[1]?.content).toContain("当前命盘状态：已设置。");
+    expect(payload.messages[1]?.content).toContain("当前不是命盘分析");
+    expect(payload.messages[1]?.content).not.toContain("先告诉我你的出生日期");
+  });
+
+  test("keeps general conversation direct when no chart is set", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "当然可以。你今天想聊点什么？" } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          messages: [{ role: "user", content: "你好，今天过得怎么样？" }],
+          modelSettings: {
+            provider: "moonshot",
+            baseUrl: "https://api.moonshot.cn/v1",
+            apiKey: "sk-user",
+            model: "kimi-k2.6",
+          },
+        }),
+      }),
+    );
+
+    await response.text();
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
+    expect(payload.messages[1]?.content).toContain("当前命盘状态：未设置。");
+    expect(payload.messages[1]?.content).toContain("请自然、直接地回应用户当前消息");
   });
 
   test("streams model answers as evidence and token events after final critic", async () => {
@@ -316,7 +486,7 @@ describe("POST /api/chat", () => {
 
     const events = parseStreamEvents(await response.text());
     const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
-    expect(answer).toContain("追问");
+    expect(answer).toBe("");
     expect(answer).not.toContain("unsafe model answer");
     expect(events.some((event) => event.event === "evidence" && JSON.stringify(event.data).includes("降级"))).toBe(
       true,
@@ -401,6 +571,11 @@ describe("POST /api/chat", () => {
     const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
     expect(answer).toBe(revisedAnswer);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    const revisionRequest = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
+    const revisionPayload = JSON.parse(String(revisionRequest?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    expect(revisionPayload.messages[1]?.content).toContain("封闭引用区");
   });
 
   test("returns a response body that can be fully consumed by Web Response readers", async () => {

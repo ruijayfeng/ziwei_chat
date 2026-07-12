@@ -1,10 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm";
 
 import { createPostgresKnowledgeRetriever } from "../../src/lib/db/knowledge-retrieval";
 
 describe("postgres knowledge retrieval", () => {
   test("maps pgvector search rows to knowledge sources", async () => {
-    const execute = vi.fn(async () => ({
+    let capturedQuery: unknown;
+    const execute = vi.fn(async (query: unknown) => {
+      capturedQuery = query;
+      return {
       rows: [
         {
           chunkId: "chunk-1",
@@ -18,7 +23,8 @@ describe("postgres knowledge retrieval", () => {
           excerpt: "官禄宫用于观察事业。",
         },
       ],
-    }));
+      };
+    });
 
     const retriever = createPostgresKnowledgeRetriever({ execute });
 
@@ -44,6 +50,9 @@ describe("postgres knowledge retrieval", () => {
       },
     ]);
     expect(execute).toHaveBeenCalledOnce();
+    const query = new PgDialect().sqlToQuery(capturedQuery as SQL);
+    expect(query.sql).toContain("terms && array[");
+    expect(query.sql).toContain("content ilike any(array[");
   });
 
   test("does not query the database when the query embedding is empty", async () => {

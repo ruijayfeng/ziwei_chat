@@ -5,6 +5,8 @@ import {
   evidenceKnowledgeSourceLabel,
   initialEvidence,
 } from "../../src/lib/ui/chat-evidence";
+import { evidenceStepLabel } from "../../src/lib/ui/chat-evidence";
+import { defaultModelSettingsDraft, runtimeLabel } from "../../src/lib/ui/model-settings";
 
 describe("chat evidence UI helpers", () => {
   test("uses the empty evidence state when the response has no evidence header", () => {
@@ -72,6 +74,7 @@ describe("chat evidence UI helpers", () => {
       chartFacts: [],
       knowledgeSources: [],
       critic: { status: "not_run", issues: [] },
+      generation: { mode: "not_applicable" },
       runs: [
         {
           runId: "run-1",
@@ -100,6 +103,28 @@ describe("chat evidence UI helpers", () => {
     expect(evidenceFromResponse(response)).toEqual(evidence);
   });
 
+  test("preserves the actual generation mode reported by the API", () => {
+    const response = new Response("ok", {
+      headers: {
+        "X-Ziwei-Evidence": encodeURIComponent(
+          JSON.stringify({
+            toolsUsed: [],
+            chartFacts: [],
+            knowledgeSources: [],
+            critic: { status: "not_run", issues: [] },
+            generation: { mode: "model_failed", detail: "请求失败" },
+            runs: [],
+          }),
+        ),
+      },
+    });
+
+    expect(evidenceFromResponse(response).generation).toEqual({
+      mode: "model_failed",
+      detail: "请求失败",
+    });
+  });
+
   test("formats knowledge source metadata for ordinary readers", () => {
     expect(
       evidenceKnowledgeSourceLabel({
@@ -115,5 +140,10 @@ describe("chat evidence UI helpers", () => {
         retrievalMode: "local",
       }),
     ).toBe("开源资料 · MIT · 本地检索");
+  });
+
+  test("uses truthful runtime and failed-step labels", () => {
+    expect(runtimeLabel(defaultModelSettingsDraft)).toBe("本地规则");
+    expect(evidenceStepLabel({ status: "failed" })).toBe("失败");
   });
 });

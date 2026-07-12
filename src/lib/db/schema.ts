@@ -134,7 +134,7 @@ export const knowledgeChunks = pgTable(
     license: text("license"),
     school: text("school").notNull().default("default"),
     confidence: text("confidence").notNull(),
-    embedding: vector("embedding", { dimensions: 1536 }),
+    embedding: vector("embedding", { dimensions: 1024 }),
     ...timestamps,
   },
   (table) => [

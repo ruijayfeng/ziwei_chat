@@ -15,6 +15,13 @@
       "when": 1783520000000,
       "tag": "0001_knowledge_chunk_source_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783785600000,
+      "tag": "0002_resize_knowledge_embeddings",
+      "breakpoints": true
     }
   ]
 }

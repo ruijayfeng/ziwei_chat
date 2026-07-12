@@ -94,6 +94,22 @@ const topicPlans: Partial<Record<AnalysisPlan["topic"], Omit<AnalysisPlan, "safe
     knowledgeQueries: ["recent fortune timing", "运限"],
     expectedResponseShape: responseShape,
   },
+  chart_explanation: {
+    topic: "chart_explanation",
+    requiredChartFacts: ["life palace", "major stars", "key palaces"],
+    requiredTools: [
+      "getCurrentChart",
+      "summarizeChartFacts",
+      "getPalaceAnalysis",
+      "getStarAnalysis",
+      "loadSkill",
+      "searchKnowledge",
+      "runResponseCritic",
+    ],
+    requiredSkills: ["general"],
+    knowledgeQueries: ["命宫", "宫位"],
+    expectedResponseShape: responseShape,
+  },
 };
 
 export function buildAnalysisPlan(route: IntentRoute): AnalysisPlan {

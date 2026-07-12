@@ -102,7 +102,7 @@ export async function searchKnowledge({
       school: chunk.school,
       confidence: chunk.confidence,
       excerpt: chunk.excerpt,
-      retrievalMode,
+      retrievalMode: "local" as const,
     }));
 }
 
@@ -208,7 +208,7 @@ function readOptionalString(data: Record<string, unknown>, field: string) {
 }
 
 function scoreChunk(chunk: KnowledgeChunk, query: string, chartTerms: string[]) {
-  let score = chunk.topic === query ? 2 : 0;
+  let score = 0;
   const lowerQuery = query.toLowerCase();
 
   if (chunk.title.toLowerCase().includes(lowerQuery)) score += 2;

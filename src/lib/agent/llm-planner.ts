@@ -15,6 +15,7 @@ export type LlmPlannerInput = {
   route: IntentRoute;
   deterministicPlan: AnalysisPlan;
   chartFacts: ChartFact[];
+  conversationContext?: string;
 };
 
 const allowedTools = new Set([
@@ -35,6 +36,7 @@ export async function createLlmAnalysisPlan({
   route,
   deterministicPlan,
   chartFacts,
+  conversationContext = "",
 }: LlmPlannerInput): Promise<AnalysisPlan> {
   if (!settings.enabled) return deterministicPlan;
 
@@ -42,7 +44,7 @@ export async function createLlmAnalysisPlan({
     settings,
     systemPrompt:
       "你是 Ziwei Chat 的 Agent planner。只输出 JSON 计划，不输出用户最终回答。不能自行排盘，不能编造命盘事实。",
-    prompt: buildPlannerPrompt({ userContent, route, deterministicPlan, chartFacts }),
+    prompt: buildPlannerPrompt({ userContent, route, deterministicPlan, chartFacts, conversationContext }),
   });
   if (!result.ok) return deterministicPlan;
 
@@ -54,6 +56,7 @@ function buildPlannerPrompt({
   route,
   deterministicPlan,
   chartFacts,
+  conversationContext,
 }: Omit<LlmPlannerInput, "settings">) {
   return [
     "请基于用户问题、已识别 intent、确定性 fallback 计划和命盘事实，选择需要执行的工具、skill 和知识检索词。",
@@ -62,6 +65,7 @@ function buildPlannerPrompt({
     `用户问题：${userContent}`,
     `已识别 intent：${route.intent}`,
     `安全级别：${route.safetyLevel}`,
+    conversationContext ? `最近对话：\n${conversationContext}` : "",
     "",
     "已知命盘事实：",
     chartFacts.length > 0

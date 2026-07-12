@@ -14,6 +14,7 @@ import type {
   CreateChartInput,
   CreateChartOutput,
 } from "../domain/chart";
+import type { ChartPersistence } from "../db/chart-persistence";
 import { createChart as createChartWithIztro } from "../chart/create-chart";
 import { summarizeChart } from "../chart/summarize-chart";
 import { toolError, toolOk, type ToolResult } from "./tool-result";
@@ -136,6 +137,7 @@ type CreateStoresInput = {
 
 type CreateAgentToolsInput = {
   stores?: InMemoryToolStores;
+  chartPersistence?: ChartPersistence | null;
 };
 
 export function createInMemoryToolStores(
@@ -154,6 +156,7 @@ export function createInMemoryToolStores(
 
 export function createAgentTools({
   stores = createInMemoryToolStores(),
+  chartPersistence = null,
 }: CreateAgentToolsInput = {}) {
   return {
     createChart: withToolEvent(stores, "createChart", async (input: CreateChartInput) => {
@@ -169,6 +172,13 @@ export function createAgentTools({
       });
       if (input.isPrimary) {
         stores.primaryChartByProfileId.set(input.profileId, result.data.chartId);
+        if (chartPersistence) {
+          try {
+            await chartPersistence.savePrimaryChart(input, result.data);
+          } catch {
+            return toolError("PERSISTENCE_FAILED", "The primary chart could not be saved.");
+          }
+        }
       }
 
       return result;
@@ -179,19 +189,25 @@ export function createAgentTools({
       "getCurrentChart",
       async (input: GetCurrentChartInput): Promise<ToolResult<CreateChartOutput>> => {
         const chartId = stores.primaryChartByProfileId.get(input.profileId);
-        if (!chartId) {
-          return toolError(
-            "NO_ACTIVE_CHART",
-            "No active chart exists for this profile.",
-          );
+        const chart = chartId ? stores.charts.get(chartId) : undefined;
+        if (chart) {
+          return toolOk(toChartOutput(chart));
         }
 
-        const chart = stores.charts.get(chartId);
-        if (!chart) {
-          return toolError("CHART_NOT_FOUND", "The active chart was not found.");
+        if (chartPersistence) {
+          const restored = await chartPersistence.getPrimaryChart(input.profileId);
+          if (restored) {
+            stores.charts.set(restored.chartId, {
+              ...restored,
+              profileId: input.profileId,
+              isPrimary: true,
+            });
+            stores.primaryChartByProfileId.set(input.profileId, restored.chartId);
+            return toolOk(restored);
+          }
         }
 
-        return toolOk(toChartOutput(chart));
+        return toolError("NO_ACTIVE_CHART", "No active chart exists for this profile.");
       },
     ),
 

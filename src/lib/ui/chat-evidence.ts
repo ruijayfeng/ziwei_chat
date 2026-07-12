@@ -36,6 +36,16 @@ export type EvidenceStep = {
   status: "pending" | "running" | "completed" | "failed";
 };
 
+export function evidenceStepLabel(step: Pick<EvidenceStep, "status">) {
+  return step.status === "completed"
+    ? "已完成"
+    : step.status === "running"
+      ? "进行中"
+      : step.status === "failed"
+        ? "失败"
+        : "等待中";
+}
+
 export type EvidenceRun = {
   runId: string;
   title: string;
@@ -46,6 +56,11 @@ export type EvidenceRun = {
   steps: EvidenceStep[];
 };
 
+export type EvidenceGeneration = {
+  mode: "not_applicable" | "model_pending" | "model" | "model_required" | "model_failed" | "deterministic_fallback";
+  detail?: string;
+};
+
 export type EvidenceState = {
   toolsUsed: string[];
   chartFacts: EvidenceChartFact[];
@@ -54,6 +69,7 @@ export type EvidenceState = {
     status: "not_run" | "passed" | "needs_review";
     issues: string[];
   };
+  generation: EvidenceGeneration;
   runs: EvidenceRun[];
 };
 
@@ -64,6 +80,9 @@ export const initialEvidence: EvidenceState = {
   critic: {
     status: "not_run",
     issues: [],
+  },
+  generation: {
+    mode: "not_applicable",
   },
   runs: [],
 };
@@ -121,6 +140,7 @@ function normalizeEvidence(value: unknown): EvidenceState {
     ? value.knowledgeSources.map(readKnowledgeSource).filter(isEvidenceKnowledgeSource)
     : [];
   const critic = readCritic(value.critic);
+  const generation = readGeneration(value.generation);
   const explicitRuns = Array.isArray(value.runs)
     ? value.runs.map(readEvidenceRun).filter(isEvidenceRun)
     : [];
@@ -130,11 +150,30 @@ function normalizeEvidence(value: unknown): EvidenceState {
     chartFacts,
     knowledgeSources,
     critic,
+    generation,
     runs:
       explicitRuns.length > 0
         ? explicitRuns
         : buildLegacyRun({ toolsUsed, chartFacts, knowledgeSources, critic }),
   };
+}
+
+function readGeneration(value: unknown): EvidenceGeneration {
+  if (!isRecord(value)) return initialEvidence.generation;
+  const mode = value.mode;
+  if (
+    mode !== "not_applicable" &&
+    mode !== "model_pending" &&
+    mode !== "model" &&
+    mode !== "model_required" &&
+    mode !== "model_failed" &&
+    mode !== "deterministic_fallback"
+  ) {
+    return initialEvidence.generation;
+  }
+
+  const detail = readString(value.detail);
+  return detail ? { mode, detail } : { mode };
 }
 
 function readChartFact(value: unknown): EvidenceChartFact | null {

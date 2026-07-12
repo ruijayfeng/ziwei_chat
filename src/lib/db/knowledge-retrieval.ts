@@ -5,7 +5,7 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 
 import type { KnowledgeSource } from "../knowledge/search";
 
@@ -24,6 +24,8 @@ export function createPostgresKnowledgeRetriever(database: ExecuteDatabase) {
   return {
     async search(input: PostgresKnowledgeSearchInput): Promise<KnowledgeSource[]> {
       if (input.queryEmbedding.length === 0) return [];
+      const chartTerms = toTextArray(input.chartTerms);
+      const contentPatterns = toTextArray(input.chartTerms.map((term) => `%${term}%`));
 
       const result = await database.execute(
         sql`
@@ -43,8 +45,8 @@ export function createPostgresKnowledgeRetriever(database: ExecuteDatabase) {
             and embedding is not null
             and (
               ${input.chartTerms.length} = 0
-              or terms && ${input.chartTerms}
-              or content ilike any(${input.chartTerms.map((term) => `%${term}%`)})
+              or terms && ${chartTerms}
+              or content ilike any(${contentPatterns})
             )
           order by similarity desc
           limit ${input.limit}
@@ -58,6 +60,12 @@ export function createPostgresKnowledgeRetriever(database: ExecuteDatabase) {
 
 function toVectorLiteral(values: number[]) {
   return `[${values.join(",")}]`;
+}
+
+function toTextArray(values: string[]): SQL {
+  if (values.length === 0) return sql`array[]::text[]`;
+
+  return sql`array[${sql.join(values.map((value) => sql`${value}`), sql`, `)}]::text[]`;
 }
 
 function readRows(value: unknown) {
