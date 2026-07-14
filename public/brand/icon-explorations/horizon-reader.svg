@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#F5F1E9"/>
+  <path d="M106 329C106 190 183 104 303 104C372 104 415 150 415 220V390H191C137 390 106 362 106 329Z" fill="#182131"/>
+  <path d="M245 150C295 150 333 191 333 243V277C333 337 291 376 234 376C191 376 161 347 161 305V246C161 194 198 150 245 150Z" fill="#F5F1E9"/>
+  <path d="M158 251C178 207 213 180 260 173C303 167 342 182 372 210" stroke="#182131" stroke-width="20" stroke-linecap="round"/>
+  <path d="M230 274C239 259 259 257 270 272C259 286 242 287 230 274Z" fill="#182131"/>
+  <path d="M276 313C290 320 303 318 314 308" stroke="#182131" stroke-width="8" stroke-linecap="round"/>
+  <path d="M205 343C221 359 241 367 264 367" stroke="#94A89C" stroke-width="11" stroke-linecap="round"/>
+  <path d="M157 382C202 342 248 327 296 337C336 345 366 366 393 396" stroke="#94A89C" stroke-width="18" stroke-linecap="round"/>
+  <path d="M135 383C177 353 218 340 261 343C315 347 356 367 392 400" stroke="#182131" stroke-width="8" stroke-linecap="round"/>
+  <path d="M357 144L365 164L385 172L365 180L357 200L349 180L329 172L349 164L357 144Z" fill="#94A89C"/>
+  <path d="M111 284C129 267 145 259 162 258" stroke="#94A89C" stroke-width="9" stroke-linecap="round"/>
+</svg>

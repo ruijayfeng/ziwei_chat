@@ -92,6 +92,86 @@ describe("runResponseCritic", () => {
     expect(result.issues).toContain("Response mentions chart facts that tools did not return.");
   });
 
+  test("limits the chart-fact whitelist to a markdown chart-basis section", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: [
+        "## \u7ed3\u8bba",
+        "\u5148\u89c2\u5bdf\u673a\u4f1a\u3002",
+        "",
+        "## \u547d\u76d8\u4f9d\u636e",
+        "- \u5b98\u7984\u5bab\u6709\u5929\u540c\u3002",
+        "",
+        "## \u73b0\u5b9e\u5c42\u9762\u7684\u89e3\u91ca",
+        "\u7d2b\u5fae\u3001\u5929\u673a\u7b49\u672f\u8bed\u53ea\u662f\u4e00\u822c\u77e5\u8bc6\u793a\u4f8b\uff0c\u4e0d\u662f\u4f60\u7684\u547d\u76d8\u4e8b\u5b9e\u3002",
+        "",
+        "## \u5efa\u8bae",
+        "\u5148\u6574\u7406\u73b0\u5b9e\u9009\u9879\u3002",
+        "",
+        "## \u8ffd\u95ee",
+        "\u4f60\u73b0\u5728\u66f4\u60f3\u6362\u73af\u5883\uff0c\u8fd8\u662f\u6362\u5185\u5bb9\uff1f",
+      ].join("\n"),
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [
+        {
+          ...chartFact,
+          palace: "\u5b98\u7984",
+          stars: ["\u5929\u540c"],
+          rawText: "\u5b98\u7984\u5bab\u4e3b\u661f\u4e3a\u5929\u540c\u3002",
+        },
+      ],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result).toEqual({
+      passed: true,
+      issues: [],
+      requiredRevision: false,
+    });
+  });
+
+  test.each([
+    ["Chinese numeral", "三、现实层面的解释"],
+    ["Arabic numeral", "3. 现实层面的解释"],
+    ["parenthesized numeral", "（三）现实层面的解释"],
+    ["bullet", "- 现实层面的解释"],
+  ])("stops the chart-basis section at a %s heading", (_label, explanationHeading) => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: [
+        "结论：先观察机会。",
+        "",
+        "命盘依据：",
+        "- 官禄宫有天同。",
+        "",
+        explanationHeading,
+        "紫微、天机等术语只是一般知识示例，不是你的命盘事实。",
+        "",
+        "建议：先整理现实选项。",
+        "",
+        "追问：你现在更想换环境，还是换内容？",
+      ].join("\n"),
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [
+        {
+          ...chartFact,
+          palace: "官禄",
+          stars: ["天同"],
+          rawText: "官禄宫主星为天同。",
+        },
+      ],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result).toEqual({
+      passed: true,
+      issues: [],
+      requiredRevision: false,
+    });
+  });
+
   test("fails dangerous advice and missing follow-up questions", () => {
     const result = runResponseCritic({
       intent: "wealth",

@@ -35,6 +35,39 @@ describe("chat error UI helpers", () => {
     });
   });
 
+  test("uses the server-reported stage for actionable preparation failures", () => {
+    const response = new Response("internal error", {
+      status: 500,
+      headers: {
+        "X-Ziwei-Error-Code": "AGENT_REQUEST_FAILED",
+        "X-Ziwei-Error-Stage": "analysis_preparation",
+      },
+    });
+
+    expect(chatErrorFromResponse(response)).toEqual({
+      kind: "server",
+      message: "分析准备阶段失败，请重试；右侧过程可查看失败阶段。",
+      canRetry: true,
+    });
+  });
+
+  test("shows a precise Agent stage and request id for diagnosis", () => {
+    const response = new Response("internal error", {
+      status: 500,
+      headers: {
+        "X-Ziwei-Error-Code": "AGENT_REQUEST_FAILED",
+        "X-Ziwei-Error-Stage": "rag",
+        "X-Ziwei-Request-Id": "request-123",
+      },
+    });
+
+    expect(chatErrorFromResponse(response)).toEqual({
+      kind: "server",
+      message: "\u77e5\u8bc6\u68c0\u7d22\u9636\u6bb5\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5\u3002\uff08\u8bf7\u6c42 request-123\uff09",
+      canRetry: true,
+    });
+  });
+
   test("does not create an error for successful responses", () => {
     const response = new Response("ok", { status: 200 });
 

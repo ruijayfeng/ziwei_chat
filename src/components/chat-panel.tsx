@@ -13,9 +13,11 @@ import { AlertCircle, Loader2, Paperclip, RotateCcw, Send, Sparkles, UserRound }
 import type { ChatErrorState } from "@/lib/ui/chat-errors";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { nextRevealLength, sliceByCharacters } from "@/lib/ui/streaming-reveal";
+import { nextRevealLength, revealStepForContent, sliceByCharacters } from "@/lib/ui/streaming-reveal";
 import { ReportMessage } from "./report-message";
 import { TopicEntry } from "./topic-entry";
+import type { ChartDiscMotionPhase } from "./chart-disc-motion";
+import type { ChartVisualModel } from "@/lib/ui/chart-visual";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -29,15 +31,17 @@ type ChatPanelProps = {
   onDraftChange: (value: string) => void;
   onSubmit: () => void;
   onTopicSelect: (prompt: string) => void;
+  chartVisualModel: ChartVisualModel | null;
+  chartMotionPhase: ChartDiscMotionPhase;
 };
 
-export function ChatPanel({ messages, draft, isStreaming, error, greeting, onRetry, onDraftChange, onSubmit, onTopicSelect }: ChatPanelProps) {
+export function ChatPanel({ messages, draft, isStreaming, error, greeting, onRetry, onDraftChange, onSubmit, onTopicSelect, chartVisualModel, chartMotionPhase }: ChatPanelProps) {
   const empty = messages.length === 0;
   return <section className="flex h-full min-h-0 flex-col bg-background">
     <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:px-10 lg:px-12">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-7">
         <header className={empty ? "pt-1" : "border-b border-border pb-5"}>
-          <div className="flex items-start justify-between gap-4"><div><h2 className="font-serif text-3xl font-medium text-foreground sm:text-4xl">{greeting}</h2><p className="mt-3 text-base text-muted-foreground">{empty ? "今天想从哪里开始了解自己？" : "继续围绕命盘与现实问题展开。"}</p></div>{empty ? <OrbitMotif /> : null}</div>
+          <div className="max-w-xl"><h2 className="font-serif text-3xl font-medium text-foreground sm:text-4xl">{greeting}</h2><p className="mt-3 text-base text-muted-foreground">{empty ? "今天想从哪里开始了解自己？" : "继续围绕命盘与现实问题展开。"}</p>{empty && chartVisualModel ? <p className="mt-5 max-w-md text-sm leading-6 text-muted-foreground">当前命盘已经就绪。选择一个现实问题，分析会沿着实际使用的宫位逐步展开。</p> : null}</div>
         </header>
         {empty ? <section><p className="mb-3 text-sm font-medium text-foreground">你可以试着问</p><TopicEntry onSelect={onTopicSelect} /></section> : null}
         {messages.map((message, index) => message.role === "user" ? <UserQuestion content={message.content} key={`user-${index}`} /> : <AssistantAnswer content={message.content} key={`assistant-${index}`} streaming={isStreaming && index === messages.length - 1} />)}
@@ -67,7 +71,7 @@ function useProgressiveReveal(content: string, streaming: boolean) {
   useEffect(() => {
     if (visibleLength >= contentLength) return;
     const timer = window.setTimeout(() => {
-      setVisibleLength((current) => nextRevealLength(content, current));
+      setVisibleLength((current) => nextRevealLength(content, current, revealStepForContent(contentLength)));
     }, 24);
     return () => window.clearTimeout(timer);
   }, [content, contentLength, visibleLength]);
@@ -77,4 +81,3 @@ function useProgressiveReveal(content: string, streaming: boolean) {
     revealing: visibleLength < contentLength && !streaming,
   };
 }
-function OrbitMotif() { return <div className="relative hidden size-36 shrink-0 items-center justify-center text-primary/45 md:flex"><div className="absolute inset-0 rounded-full border border-primary/10" /><div className="absolute inset-4 rounded-full border border-primary/15" /><div className="absolute inset-9 rounded-full bg-accent" /><Sparkles className="relative size-8 fill-current" /></div>; }

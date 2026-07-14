@@ -23,8 +23,17 @@ export function getChatRuntimeStores() {
   return stores;
 }
 
-export async function persistChatMessage(message: PersistedChatMessage) {
-  await persistence.saveMessage(message);
+export async function persistChatMessage(message: PersistedChatMessage, timeoutMs = 3_000) {
+  try {
+    await withTimeout(persistence.saveMessage(message), timeoutMs);
+  } catch (error) {
+    console.warn("Chat message persistence failed", {
+      code: error instanceof PersistenceTimeoutError
+        ? "CHAT_MESSAGE_PERSISTENCE_TIMEOUT"
+        : "CHAT_MESSAGE_PERSISTENCE_FAILED",
+      role: message.role,
+    });
+  }
 }
 
 export async function recordRouteToolEvent(
@@ -34,6 +43,7 @@ export async function recordRouteToolEvent(
   input: unknown,
   output: unknown,
   success: boolean,
+  latencyMs = 0,
 ) {
   const event: PersistedToolEvent = {
     profileId,
@@ -42,11 +52,11 @@ export async function recordRouteToolEvent(
     input,
     output,
     success,
-    latencyMs: 0,
+    latencyMs,
   };
 
   stores.toolEvents.push(event);
-  await persistence.saveToolEvent(event);
+  persistToolEventBestEffort(event);
 }
 
 export function createRequestStores(): InMemoryToolStores {
@@ -94,6 +104,7 @@ export async function recordRouteToolEventToStores(
   input: unknown,
   output: unknown,
   success: boolean,
+  latencyMs = 0,
 ) {
   const event: PersistedToolEvent = {
     profileId,
@@ -102,11 +113,44 @@ export async function recordRouteToolEventToStores(
     input,
     output,
     success,
-    latencyMs: 0,
+    latencyMs,
   };
 
   requestStores.toolEvents.push(event);
-  await persistence.saveToolEvent(event);
+  persistToolEventBestEffort(event);
+}
+
+function persistToolEventBestEffort(event: PersistedToolEvent) {
+  try {
+    void Promise.resolve(persistence.saveToolEvent(event)).catch(() => {
+      reportToolEventPersistenceFailure(event.toolName);
+    });
+  } catch {
+    reportToolEventPersistenceFailure(event.toolName);
+  }
+}
+
+function reportToolEventPersistenceFailure(toolName: string) {
+  console.warn("Agent telemetry persistence failed", {
+    code: "TOOL_EVENT_PERSISTENCE_FAILED",
+    toolName,
+  });
+}
+
+class PersistenceTimeoutError extends Error {}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new PersistenceTimeoutError()), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 }
 
 export function getChatRuntimeSnapshot() {

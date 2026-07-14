@@ -19,6 +19,11 @@ export type ChartProfileView = {
   hasChart: boolean;
 };
 
+/** Fixed orientation labels only; star data remains server-derived chart evidence. */
+export const chartPalaceLabels = [
+  "命宫", "兄弟", "夫妻", "子女", "财帛", "疾厄", "迁移", "仆役", "官禄", "田宅", "福德", "父母",
+] as const;
+
 const genderLabels: Record<CreateChartInput["gender"], string> = {
   male: "男",
   female: "女",

@@ -47,4 +47,16 @@ describe("buildAnalysisPlan", () => {
     expect(plan.requiredTools).not.toContain("summarizeChartFacts");
     expect(plan.safetyLevel).toBe("refusal");
   });
+
+  test("uses the existing chart explanation skill for chart explanation intent", () => {
+    const plan = buildAnalysisPlan({
+      intent: "chart_explanation",
+      confidence: 0.9,
+      requiresChart: true,
+      safetyLevel: "caution",
+      rationale: "chart explanation keyword matched",
+    });
+
+    expect(plan.requiredSkills).toEqual(["chart_explanation"]);
+  });
 });

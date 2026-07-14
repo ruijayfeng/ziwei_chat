@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import {
   createAgentTools,
@@ -233,5 +233,67 @@ describe("agent tools", () => {
     }).getCurrentChart({ profileId });
 
     expect(restored).toMatchObject({ ok: true, data: { chartId: created.data.chartId } });
+  });
+
+  test("bounds primary chart persistence when the database stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      const tools = createAgentTools({
+        stores: createInMemoryToolStores(),
+        persistenceTimeoutMs: 25,
+        chartPersistence: {
+          async savePrimaryChart() {
+            return new Promise<void>(() => {});
+          },
+          async getPrimaryChart() {
+            return null;
+          },
+        },
+      });
+      const created = tools.createChart({
+        profileId: "profile-timeout",
+        name: "Primary chart",
+        gender: "male",
+        birthDate: "1990-05-17",
+        birthTime: "12:00",
+        calendarType: "solar",
+        isPrimary: true,
+      });
+
+      await vi.advanceTimersByTimeAsync(25);
+
+      await expect(created).resolves.toMatchObject({
+        ok: false,
+        error: { code: "PERSISTENCE_FAILED", recoverable: true },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("bounds primary chart restoration when the database stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      const tools = createAgentTools({
+        stores: createInMemoryToolStores(),
+        persistenceTimeoutMs: 25,
+        chartPersistence: {
+          async savePrimaryChart() {},
+          async getPrimaryChart() {
+            return new Promise<CreateChartOutput | null>(() => {});
+          },
+        },
+      });
+      const restored = tools.getCurrentChart({ profileId: "profile-timeout" });
+
+      await vi.advanceTimersByTimeAsync(25);
+
+      await expect(restored).resolves.toMatchObject({
+        ok: false,
+        error: { code: "PERSISTENCE_FAILED", recoverable: true },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -49,6 +49,7 @@ export async function generateLlmAnalysis({
       systemPrompt: "你是紫微知道的中文对话助手。自然、直接地回应用户，不把普通聊天伪装成命盘分析。",
       prompt: buildConversationPrompt({ userContent, conversationContext, hasChart }),
       onToken,
+      maxTokens: 800,
     });
   }
 
@@ -70,8 +71,10 @@ export async function generateLlmAnalysis({
       conversationContext ? `最近对话：\n${conversationContext}` : "",
       "",
       "请把上面的命盘事实、skill、RAG 来源作为分析材料，给出综合判断；不要只改写本地草稿。",
+      "正文控制在 500 至 700 个中文字符，完整保留结论、命盘依据、现实解释、建议和一个追问。",
     ].join("\n"),
     onToken,
+    maxTokens: 1_200,
   });
 }
 
@@ -103,6 +106,9 @@ export async function reviseLlmAnalysis({
         "上一版回复：",
         failedContent,
       ].join("\n"),
+      timeoutMs: 20_000,
+      idleTimeoutMs: 10_000,
+      maxTokens: 800,
     });
   }
 
@@ -132,6 +138,9 @@ export async function reviseLlmAnalysis({
       "",
       "请输出修订后的最终回答，仍保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”，并且只保留一个问号。",
     ].join("\n"),
+    timeoutMs: 20_000,
+    idleTimeoutMs: 10_000,
+    maxTokens: 800,
   });
 }
 

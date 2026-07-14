@@ -3,9 +3,11 @@
 
 Member List
 app-sidebar.tsx: Persistent desktop/mobile rail with product identity, workspace navigation, compact chart identity, and local-data actions.
+chart-disc.tsx: Shared compact/full SVG chart disc that renders only deterministic palace, star, and transform facts.
+chart-disc-motion.ts: Scoped GSAP timeline controller for chart calculation, analysis, critic, completion, and reduced-motion states.
 chart-onboarding.tsx: Client chart/profile management form with summary, sync state, save, and reset controls.
-chart-workspace.tsx: Chart workspace that hosts the current chart editor and honest visual placeholder.
-chat-panel.tsx: Central dialogue workspace with greeting, topic controls, report-style answers, prompt input, streaming, error, and retry states.
+chart-workspace.tsx: Chart workspace that hosts the current chart editor and the full truthful chart-disc visual.
+chat-panel.tsx: Central dialogue workspace with greeting, topic controls, roughly three-second Unicode-safe approved-answer reveal, report rendering, prompt input, streaming, error, and retry states.
 evidence-drawer.tsx: Right context panel showing evidence-driven analysis progress, facts, real generation mode, runtime state, privacy, and compact mobile rendering.
 records-workspace.tsx: Truthful current-browser-session transcript view with a non-persistent empty state.
 report-message.tsx: Structured response-protocol renderer with ordinary-prose fallback.

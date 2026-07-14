@@ -28,6 +28,11 @@ type ChartPersistenceDatabase = {
 type StoredChartRow = {
   id: string;
   displayName: string;
+  gender: string;
+  birthDate: string;
+  birthTime: string;
+  calendarType: string;
+  birthPlace: string | null;
   chartJson: unknown;
   chartSummary: unknown;
 };
@@ -35,6 +40,9 @@ type StoredChartRow = {
 export type ChartPersistence = {
   savePrimaryChart(input: CreateChartInput, chart: CreateChartOutput): Promise<void>;
   getPrimaryChart(profileId: string): Promise<CreateChartOutput | null>;
+  getPrimaryChartRecord?: (
+    profileId: string,
+  ) => Promise<{ input: CreateChartInput; output: CreateChartOutput } | null>;
 };
 
 export function createPostgresChartPersistence(database: ChartPersistenceDatabase): ChartPersistence {
@@ -60,6 +68,7 @@ export function createPostgresChartPersistence(database: ChartPersistenceDatabas
         target: charts.profileId,
         targetWhere: eq(charts.isPrimary, true),
         set: {
+          id: chart.chartId,
           displayName: chart.displayName,
           gender: input.gender,
           birthDate: input.birthDate,
@@ -67,24 +76,48 @@ export function createPostgresChartPersistence(database: ChartPersistenceDatabas
           calendarType: input.calendarType,
           birthPlace: input.birthPlace,
           chartJson: chart.chartJson,
-          chartSummary: chart.summary,
+          chartSummary: { ...chart.summary, chartId: chart.chartId },
           isPrimary: input.isPrimary,
         },
       });
     },
 
     async getPrimaryChart(profileId) {
-      const row = await database.query.charts.findFirst({
-        where: and(eq(charts.profileId, profileId), eq(charts.isPrimary, true)),
-      });
-      if (!row) return null;
+      const record = await readPrimaryChartRecord(database, profileId);
+      return record?.output ?? null;
+    },
 
-      return {
-        chartId: row.id,
-        displayName: row.displayName,
-        chartJson: row.chartJson,
-        summary: row.chartSummary as CreateChartOutput["summary"],
-      };
+    async getPrimaryChartRecord(profileId) {
+      return readPrimaryChartRecord(database, profileId);
     },
   };
+}
+
+async function readPrimaryChartRecord(
+  database: ChartPersistenceDatabase,
+  profileId: string,
+) {
+  const row = await database.query.charts.findFirst({
+    where: and(eq(charts.profileId, profileId), eq(charts.isPrimary, true)),
+  });
+  if (!row) return null;
+
+  const input: CreateChartInput = {
+      profileId,
+      name: row.displayName,
+      gender: row.gender === "female" ? "female" : "male",
+      birthDate: row.birthDate,
+      birthTime: row.birthTime,
+      calendarType: row.calendarType === "lunar" ? "lunar" : "solar",
+      birthPlace: row.birthPlace ?? undefined,
+      isPrimary: true,
+  };
+  const output: CreateChartOutput = {
+      chartId: row.id,
+      displayName: row.displayName,
+      chartJson: row.chartJson,
+      summary: row.chartSummary as CreateChartOutput["summary"],
+  };
+
+  return { input, output };
 }

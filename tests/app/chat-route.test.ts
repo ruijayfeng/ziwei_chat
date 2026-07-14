@@ -147,6 +147,14 @@ describe("POST /api/chat", () => {
       palace: expect.any(String),
       rawText: expect.any(String),
     });
+    expect(evidence.runs[0].steps.find((step: { id: string }) => step.id === "plan")?.detail).toContain(
+      "确定性计划",
+    );
+    for (const stepId of ["plan", "skill", "rag", "critic"]) {
+      expect(evidence.runs[0].steps.find((step: { id: string }) => step.id === stepId)?.detail).toMatch(
+        /\d+(?:\.\d+)?(?:ms|s)/,
+      );
+    }
 
     const snapshot = getChatRuntimeSnapshot();
     expect(snapshot.messages.map((message) => message.role)).toEqual([
@@ -206,7 +214,10 @@ describe("POST /api/chat", () => {
     const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
     const finalEvidence = events
       .filter((event) => event.event === "evidence")
-      .at(-1)?.data as { generation?: { mode?: string } } | undefined;
+      .at(-1)?.data as {
+        generation?: { mode?: string };
+        runs: Array<{ steps: Array<{ id: string; detail: string }> }>;
+      } | undefined;
 
     expect(answer).toBe("");
     expect(answer).not.toContain("你最近更适合先观察机会");
@@ -215,6 +226,104 @@ describe("POST /api/chat", () => {
       data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
     });
     expect(finalEvidence?.generation?.mode).toBe("model_failed");
+    expect(finalEvidence?.runs[0].steps.find((step: { id: string }) => step.id === "plan")?.detail).toContain(
+      "模型规划失败，已使用确定性计划",
+    );
+    expect(getChatRuntimeSnapshot().toolEvents).toContainEqual(
+      expect.objectContaining({
+        toolName: "createAnalysisPlan",
+        success: false,
+        output: expect.objectContaining({
+          source: "fallback",
+          errorCode: "MODEL_REQUEST_FAILED",
+        }),
+      }),
+    );
+    expect(getChatRuntimeSnapshot().toolEvents).toContainEqual(
+      expect.objectContaining({
+        toolName: "completeModelResponse",
+        success: false,
+        output: expect.objectContaining({
+          errorCode: "MODEL_REQUEST_FAILED",
+          telemetry: expect.objectContaining({ completionMs: expect.any(Number) }),
+        }),
+      }),
+    );
+  });
+
+  test("surfaces the revision provider error in final evidence", async () => {
+    let callCount = 0;
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      if (callCount === 2) {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: [
+                    "\u7ed3\u8bba\uff1a\u4e00\u5b9a\u3002",
+                    "",
+                    "\u547d\u76d8\u4f9d\u636e\uff1a\u5b98\u7984\u5bab\u6709\u5929\u540c\u3002",
+                    "",
+                    "\u73b0\u5b9e\u89e3\u91ca\uff1a\u5148\u628a\u9009\u62e9\u62c6\u6210\u51e0\u6b65\u3002",
+                    "",
+                    "\u5efa\u8bae\uff1a\u5148\u505a\u4e00\u6b21\u5c0f\u8303\u56f4\u9a8c\u8bc1\u3002",
+                    "",
+                    "\u8ffd\u95ee\uff1a\u4f60\u66f4\u60f3\u5148\u770b\u4e8b\u4e1a\u8fd8\u662f\u5173\u7cfb\uff1f",
+                  ].join("\n"),
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      return new Response("revision unavailable", { status: 503 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: careerQuestion }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    const events = parseStreamEvents(await response.text());
+    const finalEvidence = events
+      .filter((event) => event.event === "evidence")
+      .at(-1)?.data as { generation?: { detail?: string } } | undefined;
+
+    expect(callCount).toBe(3);
+    expect(finalEvidence?.generation?.detail).toContain("model request failed with status 503");
   });
 
   test("restores the active chart for a follow-up request in the same anonymous workspace", async () => {
@@ -444,12 +553,16 @@ describe("POST /api/chat", () => {
       modelAnswer,
     );
     expect(events.at(-1)).toEqual({ event: "done", data: null });
+    const finalEvidence = events
+      .filter((event) => event.event === "evidence")
+      .at(-1)?.data as { generation?: { detail?: string } } | undefined;
+    expect(finalEvidence?.generation?.detail).toMatch(/首字 .*，完成 .*/);
     const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
     expect(JSON.parse(String(requestInit?.body))).toMatchObject({ stream: true });
     expect(readEvidenceHeader(response).toolsUsed).toContain("generateModelResponse");
   });
 
-  test("falls back when the model answer fails the final critic", async () => {
+  test("reports a retryable failure when the model answer fails the final critic", async () => {
     const fetchMock = vi.fn<typeof fetch>(async () =>
       new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
         status: 200,
@@ -488,8 +601,12 @@ describe("POST /api/chat", () => {
     const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
     expect(answer).toBe("");
     expect(answer).not.toContain("unsafe model answer");
+    expect(events).toContainEqual({
+      event: "error",
+      data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
+    });
     expect(events.some((event) => event.event === "evidence" && JSON.stringify(event.data).includes("降级"))).toBe(
-      true,
+      false,
     );
   });
 

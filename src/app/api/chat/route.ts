@@ -28,6 +28,7 @@ import { buildConversationContext } from "../../../lib/agent/conversation-contex
 import {
   normalizeModelSettings,
   type IncomingModelSettings,
+  type ModelResponseTelemetry,
 } from "../../../lib/agent/model-provider";
 import { buildAnalysisPlan } from "../../../lib/agent/planner";
 import { composeResponse } from "../../../lib/agent/response-composer";
@@ -114,6 +115,10 @@ type StreamingChartAnswer = {
 
 type ChartAnswer = StaticChartAnswer | StreamingChartAnswer;
 
+type RouteDiagnostics = {
+  stage: string;
+};
+
 const chartTopics = new Set<Intent>([
   "career",
   "relationship",
@@ -124,9 +129,36 @@ const chartTopics = new Set<Intent>([
 ]);
 
 export async function POST(request: Request) {
+  const requestId = randomUUID();
+  const diagnostics: RouteDiagnostics = { stage: "request" };
+
+  try {
+    return await handlePost(request, diagnostics);
+  } catch (error) {
+    console.error("Agent request failed", {
+      code: "AGENT_REQUEST_FAILED",
+      stage: diagnostics.stage,
+      requestId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+
+    return new Response(JSON.stringify({ code: "AGENT_REQUEST_FAILED", requestId }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Ziwei-Error-Code": "AGENT_REQUEST_FAILED",
+        "X-Ziwei-Error-Stage": diagnostics.stage,
+        "X-Ziwei-Request-Id": requestId,
+      },
+    });
+  }
+}
+
+async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
   const rateLimitResponse = enforceRateLimit(request, "POST");
   if (rateLimitResponse) return rateLimitResponse;
 
+  diagnostics.stage = "parse_request";
   const body = (await request.json()) as ChatRequestBody;
   const profileId = toUuid(body.profileId) ?? randomUUID();
   const conversationId = toUuid(body.conversationId) ?? randomUUID();
@@ -137,6 +169,7 @@ export async function POST(request: Request) {
   const tools = createAgentTools({ stores, chartPersistence: getChartPersistence() });
   const evidenceRunId = body.evidenceRunId ?? randomUUID();
 
+  diagnostics.stage = "persist_user_message";
   await persistChatMessage({
     conversationId,
     profileId,
@@ -145,6 +178,7 @@ export async function POST(request: Request) {
   });
 
   if (body.chartInput) {
+    diagnostics.stage = "create_chart";
     await tools.createChart({ ...body.chartInput, profileId });
   }
 
@@ -154,6 +188,7 @@ export async function POST(request: Request) {
   const hasChart = stores.primaryChartByProfileId.has(profileId);
 
   if (route.requiresChart) {
+    diagnostics.stage = "restore_chart";
     const currentChart = await tools.getCurrentChart({ profileId, conversationId });
     if (!currentChart.ok) {
       return await streamAndPersist({
@@ -175,6 +210,7 @@ export async function POST(request: Request) {
     }
 
     if (chartTopics.has(route.intent)) {
+      diagnostics.stage = "analysis_preparation";
       const answer = await answerWithChartContext({
         stores,
         tools,
@@ -188,6 +224,9 @@ export async function POST(request: Request) {
         conversationContext,
         modelSettings: modelSettings,
         evidenceRunId,
+        onStage: (stage) => {
+          diagnostics.stage = stage;
+        },
       });
 
       const metadata = { intent: route.intent, safetyLevel: plan.safetyLevel };
@@ -303,6 +342,7 @@ async function answerWithChartContext({
   conversationContext,
   modelSettings,
   evidenceRunId,
+  onStage,
 }: {
   stores: InMemoryToolStores;
   tools: ReturnType<typeof createAgentTools>;
@@ -316,15 +356,19 @@ async function answerWithChartContext({
   conversationContext: string;
   modelSettings: ReturnType<typeof normalizeModelSettings>;
   evidenceRunId: string;
+  onStage: (stage: string) => void;
 }): Promise<ChartAnswer> {
   const topic = toChartTopic(intent);
+  onStage("chart_facts");
   const summary = await tools.summarizeChartFacts({
     chartId,
     topics: [topic],
   });
   const chartFacts = summary.ok ? summary.data.facts : [];
   const firstFact = chartFacts[0];
-  const agentPlan = await createLlmAnalysisPlan({
+  onStage("planner");
+  const planStartedAt = Date.now();
+  const plannerResult = await createLlmAnalysisPlan({
     settings: modelSettings,
     userContent,
     route: {
@@ -338,35 +382,52 @@ async function answerWithChartContext({
     chartFacts,
     conversationContext,
   });
+  const agentPlan = plannerResult.plan;
+  const planLatencyMs = Date.now() - planStartedAt;
   await recordRouteToolEventToStores(
     stores,
     profileId,
     conversationId,
     "createAnalysisPlan",
     { intent, deterministicPlan: plan },
-    agentPlan,
-    true,
+    plannerResult,
+    plannerResult.source !== "fallback",
+    planLatencyMs,
   );
 
+  onStage("supplemental_tools");
   await runSupplementalTools({ tools, chartId, topic, plan: agentPlan, firstFact });
 
+  onStage("skill");
+  const skillStartedAt = Date.now();
   const skill = await loadRouteSkill(agentPlan.requiredSkills[0]);
-  const knowledgeSources = await searchRouteKnowledge(
-    agentPlan.knowledgeQueries[0] ?? topic,
-    topic,
-    firstFact,
-    modelSettings,
-  );
-
+  const skillLatencyMs = Date.now() - skillStartedAt;
   await recordRouteToolEventToStores(
     stores,
     profileId,
     conversationId,
     "loadSkill",
     { skillId: agentPlan.requiredSkills[0] },
-    skill,
+    skill ?? {
+      ok: false,
+      error: {
+        code: "SKILL_LOAD_FAILED",
+        skillId: agentPlan.requiredSkills[0] ?? null,
+      },
+    },
     skill !== null,
+    skillLatencyMs,
   );
+
+  onStage("rag");
+  const knowledgeStartedAt = Date.now();
+  const knowledgeSources = await searchRouteKnowledge(
+    agentPlan.knowledgeQueries[0] ?? topic,
+    topic,
+    firstFact,
+    modelSettings,
+  );
+  const knowledgeLatencyMs = Date.now() - knowledgeStartedAt;
   await recordRouteToolEventToStores(
     stores,
     profileId,
@@ -375,8 +436,10 @@ async function answerWithChartContext({
     { query: agentPlan.knowledgeQueries[0], topic },
     knowledgeSources,
     knowledgeSources.length > 0,
+    knowledgeLatencyMs,
   );
 
+  onStage("compose_response");
   const draft = composeResponse({
     conclusion: buildConclusion(topic),
     chartBasis:
@@ -390,6 +453,8 @@ async function answerWithChartContext({
     knowledgeSources: knowledgeSources.map((source) => source.title),
   });
   const toolsUsed = stores.toolEvents.slice(toolEventStartIndex).map((event) => event.toolName);
+  onStage("deterministic_critic");
+  const criticStartedAt = Date.now();
   const critique = runResponseCritic({
     intent,
     draft,
@@ -406,6 +471,7 @@ async function answerWithChartContext({
     { intent, draft },
     critique,
     critique.passed,
+    Date.now() - criticStartedAt,
   );
 
   const deterministicContent = critique.passed
@@ -419,6 +485,7 @@ async function answerWithChartContext({
         followUp: "你愿意先补充一下当前现实处境吗？",
       });
   if (modelSettings.enabled) {
+    onStage("model_stream");
     await recordRouteToolEventToStores(
       stores,
       profileId,
@@ -626,26 +693,49 @@ function streamModelAndPersist({
         ...analysisContext,
       });
       if (!modelResult.ok) {
+        await recordRouteToolEventToStores(
+          stores,
+          profileId,
+          conversationId,
+          "completeModelResponse",
+          { provider: modelSettings.provider, model: modelSettings.model },
+          { errorCode: modelResult.errorCode, telemetry: modelResult.telemetry },
+          false,
+          modelResult.telemetry.completionMs,
+        );
         const finalEvidence = updateEvidenceAfterModelCritic({
           evidence,
           critique: { passed: false, issues: [modelResult.error], requiredRevision: false },
           usedFallback: true,
           modelError: modelResult.error,
+          revisionError: null,
           revisionAttempted: false,
+          modelTelemetry: modelResult.telemetry,
         });
         enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
         mergeRequestStoresToSnapshot(stores);
         enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
         enqueueEvent(controller, encoder, { event: "done", data: null });
-        controller.close();
+        closeStream(controller);
         return;
       }
+      await recordRouteToolEventToStores(
+        stores,
+        profileId,
+        conversationId,
+        "completeModelResponse",
+        { provider: modelSettings.provider, model: modelSettings.model },
+        { telemetry: modelResult.telemetry },
+        true,
+        modelResult.telemetry.completionMs,
+      );
       const modelContent = modelResult.content;
       enqueueEvent(controller, encoder, {
         event: "evidence",
         data: updateEvidenceRunStep(evidence, "critic", "running", "正在检查模型回答的事实边界。"),
       });
       let candidateContent = modelContent;
+      let modelCriticStartedAt = Date.now();
       let postCritique = runResponseCritic({
         intent: postCriticContext.intent,
         draft: candidateContent,
@@ -654,7 +744,10 @@ function streamModelAndPersist({
         knowledgeSources: postCriticContext.knowledgeSources,
         safetyLevel: postCriticContext.safetyLevel,
       });
+      let modelCriticLatencyMs = Date.now() - modelCriticStartedAt;
       let revisionAttempted = false;
+      let revisionTelemetry: ModelResponseTelemetry | null = null;
+      let revisionError: string | null = null;
 
       if (modelResult.ok && !postCritique.passed) {
         revisionAttempted = true;
@@ -668,9 +761,24 @@ function streamModelAndPersist({
           failedContent: candidateContent,
           finalCriticIssues: postCritique.issues,
         });
+        revisionTelemetry = revision.telemetry;
+
+        await recordRouteToolEventToStores(
+          stores,
+          profileId,
+          conversationId,
+          "completeModelRevision",
+          { provider: modelSettings.provider, model: modelSettings.model },
+          revision.ok
+            ? { telemetry: revision.telemetry }
+            : { errorCode: revision.errorCode, telemetry: revision.telemetry },
+          revision.ok,
+          revision.telemetry.completionMs,
+        );
 
         if (revision.ok) {
           candidateContent = revision.content;
+          modelCriticStartedAt = Date.now();
           postCritique = runResponseCritic({
             intent: postCriticContext.intent,
             draft: candidateContent,
@@ -679,6 +787,9 @@ function streamModelAndPersist({
             knowledgeSources: postCriticContext.knowledgeSources,
             safetyLevel: postCriticContext.safetyLevel,
           });
+          modelCriticLatencyMs += Date.now() - modelCriticStartedAt;
+        } else {
+          revisionError = revision.error;
         }
       }
       await recordRouteToolEventToStores(
@@ -694,6 +805,7 @@ function streamModelAndPersist({
         },
         postCritique,
         postCritique.passed,
+        modelCriticLatencyMs,
       );
       const usedFallback = !postCritique.passed;
       const finalEvidence = updateEvidenceAfterModelCritic({
@@ -701,7 +813,10 @@ function streamModelAndPersist({
         critique: postCritique,
         usedFallback,
         modelError: null,
+        revisionError,
         revisionAttempted,
+        modelTelemetry: modelResult.telemetry,
+        revisionTelemetry,
       });
 
       enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
@@ -709,7 +824,7 @@ function streamModelAndPersist({
         mergeRequestStoresToSnapshot(stores);
         enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
         enqueueEvent(controller, encoder, { event: "done", data: null });
-        controller.close();
+        closeStream(controller);
         return;
       }
       for (const chunk of chunkText(candidateContent, 32)) {
@@ -725,7 +840,7 @@ function streamModelAndPersist({
       });
       mergeRequestStoresToSnapshot(stores);
       enqueueEvent(controller, encoder, { event: "done", data: null });
-      controller.close();
+      closeStream(controller);
       } catch (error) {
         // Ensure stream always closes so client doesn't hang indefinitely
         const errorEvidence = updateEvidenceAfterModelCritic({
@@ -733,7 +848,9 @@ function streamModelAndPersist({
           critique: { passed: false, issues: [error instanceof Error ? error.message : "未知错误"], requiredRevision: false },
           usedFallback: true,
           modelError: error instanceof Error ? error.message : "未知错误",
+          revisionError: null,
           revisionAttempted: false,
+          modelTelemetry: null,
         });
         try {
           enqueueEvent(controller, encoder, { event: "evidence", data: errorEvidence });
@@ -743,7 +860,7 @@ function streamModelAndPersist({
         } catch {
           // ignore enqueue errors if controller is already closed
         }
-        controller.close();
+        closeStream(controller);
       }
     },
   });
@@ -770,6 +887,14 @@ function enqueueEvent(
   event: Parameters<typeof encodeChatStreamEvent>[0],
 ) {
   controller.enqueue(encoder.encode(encodeChatStreamEvent(event)));
+}
+
+function closeStream(controller: ReadableStreamDefaultController<Uint8Array>) {
+  try {
+    controller.close();
+  } catch {
+    // The client may already have cancelled the response stream.
+  }
 }
 
 function updateEvidenceRunStep(
@@ -801,42 +926,54 @@ function updateEvidenceAfterModelCritic({
   critique,
   usedFallback,
   modelError,
+  revisionError,
   revisionAttempted,
+  modelTelemetry = null,
+  revisionTelemetry = null,
 }: {
   evidence: ChatEvidence;
   critique: CritiqueResult;
   usedFallback: boolean;
   modelError: string | null;
+  revisionError?: string | null;
   revisionAttempted: boolean;
+  modelTelemetry?: ModelResponseTelemetry | null;
+  revisionTelemetry?: ModelResponseTelemetry | null;
 }): ChatEvidence {
   const fallbackReason = modelError
     ? `模型请求失败：${modelError}`
+    : revisionError
+      ? `模型修订请求失败：${revisionError}`
     : revisionAttempted
-      ? "模型修订后仍未通过最终检查，已降级为保守回答。"
-      : "模型输出未通过最终检查，已降级为保守回答。";
+      ? "模型修订后仍未通过最终检查，本次分析未完成。"
+      : "模型输出未通过最终检查，本次分析未完成。";
+  const timingDetail = formatModelTiming(modelTelemetry, revisionTelemetry);
+  const generationDetail = usedFallback
+    ? [fallbackReason, timingDetail].filter(Boolean).join(" ")
+    : ["已通过最终事实与安全检查", timingDetail].filter(Boolean).join(" · ");
 
   return {
     ...evidence,
     generation: usedFallback
-      ? { mode: "model_failed", detail: fallbackReason }
-      : { mode: "model", detail: "已通过最终事实与安全检查" },
+      ? { mode: "model_failed", detail: generationDetail }
+      : { mode: "model", detail: generationDetail },
     critic: {
       status: critique.passed ? "passed" : "needs_review",
-      issues: modelError ? [fallbackReason, ...critique.issues] : critique.issues,
+      issues: modelError || revisionError ? [fallbackReason, ...critique.issues] : critique.issues,
     },
     runs: evidence.runs.map((run) => ({
       ...run,
       status: usedFallback ? "failed" : "completed",
       completedAt: new Date().toISOString(),
       summary: usedFallback
-        ? `${run.summary} 模型输出未通过最终检查，已降级为保守回答。`
+        ? `${run.summary} 模型分析未完成，需要重试。`
         : `${run.summary} 模型输出已通过最终检查。`,
       steps: run.steps.map((step) => {
         if (step.id === "model") {
           return {
             ...step,
-            status: "completed",
-            detail: usedFallback ? "模型输出已生成，但最终采用保守回答" : "模型已完成综合分析",
+            status: modelError || revisionError ? "failed" : "completed",
+            detail: generationDetail,
           };
         }
 
@@ -852,6 +989,24 @@ function updateEvidenceAfterModelCritic({
       }),
     })),
   };
+}
+
+function formatModelTiming(
+  modelTelemetry: ModelResponseTelemetry | null,
+  revisionTelemetry: ModelResponseTelemetry | null,
+) {
+  if (!modelTelemetry) return "";
+
+  const initial = `首字 ${formatDuration(modelTelemetry.firstTokenMs)}，完成 ${formatDuration(modelTelemetry.completionMs)}`;
+  if (!revisionTelemetry) return initial;
+
+  return `${initial}；修订首字 ${formatDuration(revisionTelemetry.firstTokenMs)}，完成 ${formatDuration(revisionTelemetry.completionMs)}`;
+}
+
+function formatDuration(durationMs: number | null) {
+  if (durationMs === null) return "未返回";
+  if (durationMs < 1_000) return `${durationMs}ms`;
+  return `${(durationMs / 1_000).toFixed(1)}s`;
 }
 
 function buildEvidence({
@@ -871,7 +1026,18 @@ function buildEvidence({
   critique: CritiqueResult | null;
   generation?: EvidenceGeneration;
 }): ChatEvidence {
-  const toolsUsed = stores.toolEvents.slice(toolEventStartIndex).map((event) => event.toolName);
+  const toolEvents = stores.toolEvents.slice(toolEventStartIndex);
+  const toolsUsed = toolEvents.map((event) => event.toolName);
+  const phaseTimings = {
+    plan: readToolLatency(toolEvents, "createAnalysisPlan"),
+    skill: readToolLatency(toolEvents, "loadSkill"),
+    rag: readToolLatency(toolEvents, "searchKnowledge"),
+    critic: readToolLatency(toolEvents, "runResponseCritic"),
+  };
+  const plannerOutput = readToolOutput(toolEvents, "createAnalysisPlan") as {
+    source?: "model" | "deterministic" | "fallback";
+    errorCode?: string | null;
+  } | null;
   const critic = {
     status: critique === null ? ("not_run" as const) : critique.passed ? ("passed" as const) : ("needs_review" as const),
     issues: critique?.issues ?? [],
@@ -904,7 +1070,15 @@ function buildEvidence({
             : "completed",
         startedAt: "",
         completedAt,
-        steps: buildEvidenceSteps({ toolsUsed, chartFacts, knowledgeSources, critic, generation }),
+        steps: buildEvidenceSteps({
+          toolsUsed,
+          chartFacts,
+          knowledgeSources,
+          critic,
+          generation,
+          phaseTimings,
+          plannerOutput,
+        }),
       },
     ],
   };
@@ -916,8 +1090,15 @@ function buildEvidenceSteps({
   knowledgeSources,
   critic,
   generation,
+  phaseTimings,
+  plannerOutput,
 }: Pick<ChatEvidence, "toolsUsed" | "knowledgeSources" | "critic" | "generation"> & {
   chartFacts: ChartFact[];
+  phaseTimings: Record<"plan" | "skill" | "rag" | "critic", number | null>;
+  plannerOutput: {
+    source?: "model" | "deterministic" | "fallback";
+    errorCode?: string | null;
+  } | null;
 }): ChatEvidence["runs"][number]["steps"] {
   return [
     {
@@ -940,7 +1121,16 @@ function buildEvidenceSteps({
     {
       id: "plan",
       label: "生成计划",
-      detail: toolsUsed.length > 0 ? "确定需要调用的工具与知识" : "使用基础回复流程",
+      detail: withStepTiming(
+        plannerOutput?.source === "model"
+          ? "模型已生成受约束分析计划"
+          : plannerOutput?.source === "fallback"
+            ? `模型规划失败，已使用确定性计划${plannerOutput.errorCode ? `（${plannerOutput.errorCode}）` : ""}`
+            : toolsUsed.length > 0
+              ? "已使用确定性计划"
+              : "使用基础回复流程",
+        phaseTimings.plan,
+      ),
       status: toolsUsed.length > 0 ? "completed" : "pending",
     },
     {
@@ -952,18 +1142,23 @@ function buildEvidenceSteps({
     {
       id: "skill",
       label: "加载 skill",
-      detail: toolsUsed.includes("loadSkill") ? "已加载主题分析流程" : "未加载主题分析流程",
+      detail: withStepTiming(
+        toolsUsed.includes("loadSkill") ? "已加载主题分析流程" : "未加载主题分析流程",
+        phaseTimings.skill,
+      ),
       status: toolsUsed.includes("loadSkill") ? "completed" : "pending",
     },
     {
       id: "rag",
       label: "检索知识",
-      detail:
+      detail: withStepTiming(
         knowledgeSources.length > 0
           ? `命中 ${knowledgeSources.length} 条知识来源`
           : toolsUsed.includes("searchKnowledge")
             ? "已检索，未命中高相关知识"
             : "未检索知识库",
+        phaseTimings.rag,
+      ),
       status: knowledgeSources.length > 0 ? "completed" : toolsUsed.includes("searchKnowledge") ? "completed" : "pending",
     },
     {
@@ -989,12 +1184,14 @@ function buildEvidenceSteps({
     {
       id: "critic",
       label: "critic 检查",
-      detail:
+      detail: withStepTiming(
         critic.status === "passed"
           ? "已通过事实与安全检查"
           : critic.status === "needs_review"
             ? critic.issues.join("；")
             : "尚未运行",
+        phaseTimings.critic,
+      ),
       status:
         critic.status === "passed"
           ? "completed"
@@ -1003,6 +1200,34 @@ function buildEvidenceSteps({
             : "pending",
     },
   ];
+}
+
+function readToolLatency(
+  events: InMemoryToolStores["toolEvents"],
+  toolName: string,
+): number | null {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event?.toolName === toolName) return event.latencyMs;
+  }
+
+  return null;
+}
+
+function readToolOutput(
+  events: InMemoryToolStores["toolEvents"],
+  toolName: string,
+): unknown {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event?.toolName === toolName) return event.output;
+  }
+
+  return null;
+}
+
+function withStepTiming(detail: string, latencyMs: number | null) {
+  return latencyMs === null ? detail : `${detail} · 用时 ${formatDuration(latencyMs)}`;
 }
 
 function labelToolForEvidence(toolName: string) {
@@ -1032,7 +1257,7 @@ function textToStream(content: string) {
       for (const chunk of chunkText(content, 32)) {
         controller.enqueue(encoder.encode(chunk));
       }
-      controller.close();
+      closeStream(controller);
     },
   });
 }

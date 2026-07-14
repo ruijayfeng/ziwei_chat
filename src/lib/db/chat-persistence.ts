@@ -107,8 +107,8 @@ function toToolEventRow(event: PersistedToolEvent) {
     conversationId: event.conversationId,
     messageId: event.messageId,
     toolName: event.toolName,
-    input: event.input,
-    output: event.output,
+    input: event.input ?? null,
+    output: event.output ?? null,
     success: event.success,
     latencyMs: event.latencyMs,
   };

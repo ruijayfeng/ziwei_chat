@@ -16,6 +16,14 @@ export type LlmPlannerInput = {
   deterministicPlan: AnalysisPlan;
   chartFacts: ChartFact[];
   conversationContext?: string;
+  timeoutMs?: number;
+  fetchImplementation?: typeof fetch;
+};
+
+export type LlmPlannerResult = {
+  plan: AnalysisPlan;
+  source: "model" | "deterministic" | "fallback";
+  errorCode: string | null;
 };
 
 const allowedTools = new Set([
@@ -30,6 +38,15 @@ const allowedTools = new Set([
   "runResponseCritic",
 ]);
 
+const allowedSkills = new Set([
+  "career",
+  "relationship",
+  "wealth",
+  "personality",
+  "recent_fortune",
+  "chart_explanation",
+]);
+
 export async function createLlmAnalysisPlan({
   settings,
   userContent,
@@ -37,18 +54,30 @@ export async function createLlmAnalysisPlan({
   deterministicPlan,
   chartFacts,
   conversationContext = "",
-}: LlmPlannerInput): Promise<AnalysisPlan> {
-  if (!settings.enabled) return deterministicPlan;
+  timeoutMs = 3_000,
+  fetchImplementation,
+}: LlmPlannerInput): Promise<LlmPlannerResult> {
+  if (!settings.enabled) {
+    return { plan: deterministicPlan, source: "deterministic", errorCode: null };
+  }
 
   const result = await generateModelResponse({
     settings,
     systemPrompt:
       "你是 Ziwei Chat 的 Agent planner。只输出 JSON 计划，不输出用户最终回答。不能自行排盘，不能编造命盘事实。",
     prompt: buildPlannerPrompt({ userContent, route, deterministicPlan, chartFacts, conversationContext }),
+    timeoutMs,
+    maxTokens: 400,
+    fetchImplementation,
   });
-  if (!result.ok) return deterministicPlan;
+  if (!result.ok) {
+    return { plan: deterministicPlan, source: "fallback", errorCode: result.errorCode };
+  }
 
-  return normalizePlannerOutput(result.content, deterministicPlan);
+  const plan = normalizePlannerOutput(result.content, deterministicPlan);
+  return plan
+    ? { plan, source: "model", errorCode: null }
+    : { plan: deterministicPlan, source: "fallback", errorCode: "INVALID_PLANNER_OUTPUT" };
 }
 
 function buildPlannerPrompt({
@@ -86,20 +115,27 @@ function buildPlannerPrompt({
   ].join("\n");
 }
 
-function normalizePlannerOutput(content: string, fallback: AnalysisPlan): AnalysisPlan {
+function normalizePlannerOutput(content: string, fallback: AnalysisPlan): AnalysisPlan | null {
   try {
     const parsed = JSON.parse(extractJson(content)) as Partial<AnalysisPlan> & {
       analysisFocus?: unknown;
     };
+    if (
+      !Array.isArray(parsed.requiredTools) ||
+      !Array.isArray(parsed.requiredSkills) ||
+      !Array.isArray(parsed.knowledgeQueries)
+    ) {
+      return null;
+    }
 
     return {
       ...fallback,
       requiredTools: readAllowedTools(parsed.requiredTools, fallback.requiredTools),
-      requiredSkills: readStringArray(parsed.requiredSkills, fallback.requiredSkills).slice(0, 3),
+      requiredSkills: readAllowedSkills(parsed.requiredSkills, fallback.requiredSkills).slice(0, 3),
       knowledgeQueries: readStringArray(parsed.knowledgeQueries, fallback.knowledgeQueries).slice(0, 5),
     };
   } catch {
-    return fallback;
+    return null;
   }
 }
 
@@ -113,6 +149,11 @@ function extractJson(content: string) {
 function readAllowedTools(value: unknown, fallback: string[]) {
   const tools = readStringArray(value, fallback).filter((tool) => allowedTools.has(tool));
   return tools.length > 0 ? tools : fallback;
+}
+
+function readAllowedSkills(value: unknown, fallback: string[]) {
+  const skills = readStringArray(value, []).filter((skill) => allowedSkills.has(skill));
+  return skills.length > 0 ? skills : fallback;
 }
 
 function readStringArray(value: unknown, fallback: string[]) {

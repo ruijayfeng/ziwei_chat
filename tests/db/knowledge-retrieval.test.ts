@@ -69,4 +69,29 @@ describe("postgres knowledge retrieval", () => {
     ).resolves.toEqual([]);
     expect(execute).not.toHaveBeenCalled();
   });
+
+  test("bounds a hanging vector query so local retrieval can take over", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const execute = vi.fn(async () => new Promise<{ rows: unknown[] }>(() => {}));
+      const retriever = createPostgresKnowledgeRetriever({ execute }, { timeoutMs: 25 });
+      const result = retriever.search({
+        queryEmbedding: [0.1, 0.2],
+        topic: "career",
+        chartTerms: ["官禄"],
+        limit: 3,
+      });
+
+      const guarded = Promise.race([
+        result,
+        new Promise<unknown>((resolve) => setTimeout(() => resolve("TEST_GUARD_EXPIRED"), 50)),
+      ]);
+      await vi.advanceTimersByTimeAsync(50);
+
+      await expect(guarded).resolves.toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

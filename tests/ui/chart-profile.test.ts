@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  chartPalaceLabels,
   formatChartProfile,
   getChartSyncLabel,
 } from "../../src/lib/ui/chart-profile";
@@ -18,6 +19,12 @@ const baseChart: CreateChartInput = {
 };
 
 describe("chart profile UI helpers", () => {
+  test("provides the stable twelve-palace index used by the chart overview", () => {
+    expect(chartPalaceLabels).toEqual([
+      "命宫", "兄弟", "夫妻", "子女", "财帛", "疾厄", "迁移", "仆役", "官禄", "田宅", "福德", "父母",
+    ]);
+  });
+
   test("formats an empty chart state", () => {
     expect(formatChartProfile(null)).toEqual({
       title: "尚未创建命盘",

@@ -30,8 +30,16 @@ describe("createPostgresChartPersistence", () => {
       insert() {
         return {
           values(value: Record<string, unknown>) {
-            rows.push(value);
-            return { onConflictDoUpdate: async () => undefined };
+            if ("chartJson" in value) {
+              const existing = rows.find((item) => "chartJson" in item);
+              if (!existing) rows.push(value);
+            }
+            return {
+              onConflictDoUpdate: async (config: { set: Record<string, unknown> }) => {
+                const row = rows.find((item) => "chartJson" in item);
+                if (row) Object.assign(row, config.set);
+              },
+            };
           },
         };
       },
@@ -43,6 +51,11 @@ describe("createPostgresChartPersistence", () => {
               ? {
                   id: String(row.id),
                   displayName: String(row.displayName),
+                  gender: String(row.gender),
+                  birthDate: String(row.birthDate),
+                  birthTime: String(row.birthTime),
+                  calendarType: String(row.calendarType),
+                  birthPlace: typeof row.birthPlace === "string" ? row.birthPlace : null,
                   chartJson: row.chartJson,
                   chartSummary: row.chartSummary,
                 }
@@ -53,8 +66,15 @@ describe("createPostgresChartPersistence", () => {
     };
     const persistence = createPostgresChartPersistence(database);
 
-    await persistence.savePrimaryChart(input, chart);
+    const replacement = {
+      ...chart,
+      chartId: "00000000-0000-4000-8000-000000000003",
+      summary: { ...chart.summary, chartId: "00000000-0000-4000-8000-000000000003" },
+    };
 
-    await expect(persistence.getPrimaryChart(input.profileId)).resolves.toEqual(chart);
+    await persistence.savePrimaryChart(input, chart);
+    await persistence.savePrimaryChart(input, replacement);
+
+    await expect(persistence.getPrimaryChart(input.profileId)).resolves.toEqual(replacement);
   });
 });

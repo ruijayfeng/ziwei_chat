@@ -106,7 +106,7 @@ const topicPlans: Partial<Record<AnalysisPlan["topic"], Omit<AnalysisPlan, "safe
       "searchKnowledge",
       "runResponseCritic",
     ],
-    requiredSkills: ["general"],
+    requiredSkills: ["chart_explanation"],
     knowledgeQueries: ["命宫", "宫位"],
     expectedResponseShape: responseShape,
   },

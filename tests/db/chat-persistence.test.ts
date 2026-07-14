@@ -110,4 +110,41 @@ describe("createPostgresChatPersistence", () => {
 
     expect(deletedTables).toEqual([memories, charts, conversations]);
   });
+
+  test("maps undefined tool event JSON values to database nulls", async () => {
+    const writes: Array<{ table: unknown; value: Record<string, unknown> }> = [];
+    const database = {
+      insert(table: unknown) {
+        return {
+          values(value: Record<string, unknown>) {
+            writes.push({ table, value });
+            return {};
+          },
+        };
+      },
+      delete() {
+        return {
+          async where() {},
+        };
+      },
+    };
+    const persistence = createPostgresChatPersistence(database);
+
+    await persistence.saveToolEvent({
+      conversationId: "00000000-0000-4000-8000-000000000001",
+      toolName: "loadSkill",
+      input: undefined,
+      output: undefined,
+      success: false,
+      latencyMs: 0,
+    });
+
+    expect(writes).toContainEqual({
+      table: toolEvents,
+      value: expect.objectContaining({
+        input: null,
+        output: null,
+      }),
+    });
+  });
 });

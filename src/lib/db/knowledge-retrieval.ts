@@ -20,42 +20,69 @@ type ExecuteDatabase = {
   execute(query: unknown): Promise<{ rows?: unknown[] } | unknown[]>;
 };
 
-export function createPostgresKnowledgeRetriever(database: ExecuteDatabase) {
+export function createPostgresKnowledgeRetriever(
+  database: ExecuteDatabase,
+  options: { timeoutMs?: number } = {},
+) {
+  const timeoutMs = options.timeoutMs ?? 8_000;
+
   return {
     async search(input: PostgresKnowledgeSearchInput): Promise<KnowledgeSource[]> {
       if (input.queryEmbedding.length === 0) return [];
       const chartTerms = toTextArray(input.chartTerms);
       const contentPatterns = toTextArray(input.chartTerms.map((term) => `%${term}%`));
 
-      const result = await database.execute(
-        sql`
-          select
-            id::text as "chunkId",
-            title,
-            source,
-            source_path as "sourcePath",
-            source_url as "sourceUrl",
-            license,
-            school,
-            confidence,
-            left(content, 260) as excerpt,
-            1 - (embedding <=> ${toVectorLiteral(input.queryEmbedding)}::vector) as similarity
-          from knowledge_chunks
-          where topic = ${input.topic}
-            and embedding is not null
-            and (
-              ${input.chartTerms.length} = 0
-              or terms && ${chartTerms}
-              or content ilike any(${contentPatterns})
-            )
-          order by similarity desc
-          limit ${input.limit}
-        `,
-      );
+      try {
+        const result = await withTimeout(
+          database.execute(
+            sql`
+              select
+                id::text as "chunkId",
+                title,
+                source,
+                source_path as "sourcePath",
+                source_url as "sourceUrl",
+                license,
+                school,
+                confidence,
+                left(content, 260) as excerpt,
+                1 - (embedding <=> ${toVectorLiteral(input.queryEmbedding)}::vector) as similarity
+              from knowledge_chunks
+              where topic = ${input.topic}
+                and embedding is not null
+                and (
+                  ${input.chartTerms.length} = 0
+                  or terms && ${chartTerms}
+                  or content ilike any(${contentPatterns})
+                )
+              order by similarity desc
+              limit ${input.limit}
+            `,
+          ),
+          timeoutMs,
+        );
 
-      return readRows(result).map(readKnowledgeSource).filter(isKnowledgeSource);
+        return readRows(result).map(readKnowledgeSource).filter(isKnowledgeSource);
+      } catch {
+        return [];
+      }
     },
   };
+}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("vector search timed out")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 }
 
 function toVectorLiteral(values: number[]) {

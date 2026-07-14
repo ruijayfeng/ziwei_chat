@@ -116,6 +116,7 @@ type ToolEvent = {
 type StoredChart = CreateChartOutput & {
   profileId: string;
   isPrimary: boolean;
+  input?: CreateChartInput;
 };
 
 export type InMemoryToolStores = {
@@ -138,6 +139,7 @@ type CreateStoresInput = {
 type CreateAgentToolsInput = {
   stores?: InMemoryToolStores;
   chartPersistence?: ChartPersistence | null;
+  persistenceTimeoutMs?: number;
 };
 
 export function createInMemoryToolStores(
@@ -157,6 +159,7 @@ export function createInMemoryToolStores(
 export function createAgentTools({
   stores = createInMemoryToolStores(),
   chartPersistence = null,
+  persistenceTimeoutMs = 5_000,
 }: CreateAgentToolsInput = {}) {
   return {
     createChart: withToolEvent(stores, "createChart", async (input: CreateChartInput) => {
@@ -169,12 +172,13 @@ export function createAgentTools({
         ...result.data,
         profileId: input.profileId,
         isPrimary: input.isPrimary,
+        input,
       });
       if (input.isPrimary) {
         stores.primaryChartByProfileId.set(input.profileId, result.data.chartId);
         if (chartPersistence) {
           try {
-            await chartPersistence.savePrimaryChart(input, result.data);
+            await withTimeout(chartPersistence.savePrimaryChart(input, result.data), persistenceTimeoutMs);
           } catch {
             return toolError("PERSISTENCE_FAILED", "The primary chart could not be saved.");
           }
@@ -195,7 +199,15 @@ export function createAgentTools({
         }
 
         if (chartPersistence) {
-          const restored = await chartPersistence.getPrimaryChart(input.profileId);
+          let restored: CreateChartOutput | null;
+          try {
+            restored = await withTimeout(
+              chartPersistence.getPrimaryChart(input.profileId),
+              persistenceTimeoutMs,
+            );
+          } catch {
+            return toolError("PERSISTENCE_FAILED", "The primary chart could not be restored.");
+          }
           if (restored) {
             stores.charts.set(restored.chartId, {
               ...restored,
@@ -388,6 +400,20 @@ export function createAgentTools({
       },
     ),
   };
+}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("persistence timeout")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 }
 
 function withToolEvent<TInput, TOutput>(

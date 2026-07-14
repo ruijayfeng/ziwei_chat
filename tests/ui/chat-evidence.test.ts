@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  evidenceGenerationTone,
   evidenceFromResponse,
   evidenceKnowledgeSourceLabel,
+  evidenceRetrievalLabel,
   initialEvidence,
 } from "../../src/lib/ui/chat-evidence";
 import { evidenceStepLabel } from "../../src/lib/ui/chat-evidence";
@@ -142,8 +144,35 @@ describe("chat evidence UI helpers", () => {
     ).toBe("开源资料 · MIT · 本地检索");
   });
 
+  test("reports the retrieval mode that actually produced the evidence", () => {
+    expect(
+      evidenceRetrievalLabel({
+        ...initialEvidence,
+        toolsUsed: ["searchKnowledge"],
+        knowledgeSources: [
+          {
+            chunkId: "career",
+            title: "事业宫基础",
+            source: "curated",
+            sourcePath: "",
+            sourceUrl: "",
+            license: "",
+            school: "default",
+            confidence: "high",
+            excerpt: "官禄宫用于观察事业。",
+            retrievalMode: "local",
+          },
+        ],
+      }),
+    ).toBe("本地检索");
+  });
+
   test("uses truthful runtime and failed-step labels", () => {
     expect(runtimeLabel(defaultModelSettingsDraft)).toBe("本地规则");
     expect(evidenceStepLabel({ status: "failed" })).toBe("失败");
+    expect(evidenceGenerationTone({ mode: "model_failed" })).toBe("failed");
+    expect(evidenceGenerationTone({ mode: "model_pending" })).toBe("pending");
+    expect(evidenceGenerationTone({ mode: "model" })).toBe("success");
+    expect(evidenceGenerationTone({ mode: "model_required" })).toBe("neutral");
   });
 });

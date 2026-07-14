@@ -62,22 +62,27 @@ export async function searchKnowledge({
   vectorSearch,
 }: SearchKnowledgeInput): Promise<KnowledgeSource[]> {
   if (retrievalMode !== "local" && embeddingSettings?.enabled) {
-    const vectorResults = await searchVectorSources({
-      query,
-      topic,
-      chartTerms,
-      limit,
-      contentRoot,
-      embeddingSettings,
-      fetchImplementation,
-      vectorSearch,
-    });
+    try {
+      const vectorResults = await searchVectorSources({
+        query,
+        topic,
+        chartTerms,
+        limit,
+        contentRoot,
+        embeddingSettings,
+        fetchImplementation,
+        vectorSearch,
+      });
 
-    if (vectorResults.length > 0) {
-      return vectorResults.map((source) => ({
-        ...source,
-        retrievalMode: retrievalMode === "vector" ? "vector" : "hybrid",
-      }));
+      if (vectorResults.length > 0) {
+        return vectorResults.map((source) => ({
+          ...source,
+          retrievalMode: "vector",
+        }));
+      }
+    } catch {
+      // A failed optional vector path must not prevent the local baseline
+      // retrieval from returning truthful `local` sources.
     }
   }
 

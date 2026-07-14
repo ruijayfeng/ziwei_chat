@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { Menu, PanelRightOpen, Trash2 } from "lucide-react";
 
-import type { CreateChartInput } from "@/lib/domain/chart";
+import type { ChartSummary, CreateChartInput } from "@/lib/domain/chart";
 import { chatStreamHeader, readChatStreamEvents } from "@/lib/agent/evidence-events";
 import {
   evidenceFromPayload,
@@ -65,6 +65,14 @@ import { SettingsWorkspace } from "./settings-workspace";
 import { TopicsWorkspace } from "./topics-workspace";
 import { greetingForChart, type WorkspaceView } from "@/lib/ui/workspace-navigation";
 import { chartInputForChatRequest } from "@/lib/ui/chat-request";
+import {
+  chartSessionFromStorage,
+  chartSessionStorageKey,
+  chartSessionStorageValue,
+  chartVisualModelFromStorage,
+} from "@/lib/ui/chart-session";
+import { activateChartVisualModel, buildChartVisualModel, type ChartVisualModel } from "@/lib/ui/chart-visual";
+import type { ChartDiscMotionPhase } from "./chart-disc-motion";
 
 export function ZiweiChatShell() {
   const [profileId] = useState(() => {
@@ -83,6 +91,8 @@ export function ZiweiChatShell() {
   });
   const [conversationId] = useState(createClientUuid);
   const [chartInput, setChartInput] = useState<CreateChartInput | null>(null);
+  const [chartVisualModel, setChartVisualModel] = useState<ChartVisualModel | null>(null);
+  const [chartMotionPhase, setChartMotionPhase] = useState<ChartDiscMotionPhase>("empty");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [lastFailedContent, setLastFailedContent] = useState<string | null>(null);
@@ -108,6 +118,51 @@ export function ZiweiChatShell() {
     window.localStorage.setItem(modelSettingsStorageKey, modelSettingsStorageValue(modelSettings));
   }, [modelSettings, modelSettingsLoaded]);
 
+  useEffect(() => {
+    const restored = chartSessionFromStorage(
+      window.localStorage.getItem(chartSessionStorageKey(profileId)),
+      profileId,
+    );
+    let active = true;
+    const task = window.setTimeout(() => {
+      if (restored) {
+        setChartInput(restored);
+        setChartVisualModel(chartVisualModelFromStorage(
+          window.localStorage.getItem(chartSessionStorageKey(profileId)),
+          profileId,
+        ));
+        setChartMotionPhase("ready");
+        return;
+      }
+
+      void fetch(`/api/chart?profileId=${encodeURIComponent(profileId)}`)
+        .then(async (response) => {
+          if (!response.ok || !active) return;
+          const payload = (await response.json()) as {
+            chart: CreateChartInput;
+            chartId: string;
+            displayName: string;
+            summary: ChartSummary;
+          };
+          const primaryChart = { ...payload.chart, profileId, isPrimary: true };
+          if (!active) return;
+          setChartInput(primaryChart);
+          const visualModel = buildChartVisualModel(payload);
+          window.localStorage.setItem(chartSessionStorageKey(profileId), chartSessionStorageValue(primaryChart, visualModel));
+          setChartVisualModel(visualModel);
+          setChartMotionPhase("ready");
+        })
+        .catch(() => {
+          // A missing or unavailable persisted chart leaves the onboarding state empty.
+        });
+    }, 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(task);
+    };
+  }, [profileId]);
+
   async function sendMessage(contentOverride?: string) {
     const content = (contentOverride ?? draft).trim();
     if (!content || isStreaming) return;
@@ -123,6 +178,7 @@ export function ZiweiChatShell() {
     setDraft("");
     setError(null);
     setIsStreaming(true);
+    if (chartVisualModel) setChartMotionPhase("analyzing");
     const evidenceRunId = createClientUuid();
     setEvidence((current) => mergeEvidenceRun(current, createPendingEvidenceRun(evidenceRunId, content)));
 
@@ -142,6 +198,7 @@ export function ZiweiChatShell() {
       const responseError = chatErrorFromResponse(response);
       if (responseError) {
         setEvidence((current) => failEvidenceRun(current, evidenceRunId));
+        if (chartVisualModel) setChartMotionPhase("failed");
         setError(responseError);
         setLastFailedContent(content);
         return;
@@ -169,7 +226,12 @@ export function ZiweiChatShell() {
             eventBuffer = parsed.rest;
             for (const event of parsed.events) {
               if (event.event === "evidence") {
-                setEvidence((current) => mergeEvidenceState(current, evidenceFromPayload(event.data)));
+                const payloadEvidence = evidenceFromPayload(event.data);
+                setEvidence((current) => mergeEvidenceState(current, payloadEvidence));
+                setChartMotionPhase(chartMotionPhaseFromEvidence(payloadEvidence, Boolean(chartVisualModel)));
+                if (payloadEvidence.chartFacts.length > 0) {
+                  setChartVisualModel((current) => current ? activateChartVisualModel(current, payloadEvidence.chartFacts.map((fact) => fact.palace)) : current);
+                }
               }
               if (event.event === "token") {
                 assistantContent += event.data;
@@ -198,6 +260,7 @@ export function ZiweiChatShell() {
       if (streamError) {
         setMessages((current) => current.slice(0, -1));
         setEvidence((current) => failEvidenceRun(current, evidenceRunId));
+        if (chartVisualModel) setChartMotionPhase("failed");
         setError(streamError);
         setLastFailedContent(content);
         return;
@@ -206,6 +269,7 @@ export function ZiweiChatShell() {
       if (isEmptyAssistantResponse(assistantContent)) {
         setMessages((current) => current.slice(0, -1));
         setEvidence((current) => failEvidenceRun(current, evidenceRunId));
+        if (chartVisualModel) setChartMotionPhase("failed");
         setError(emptyAssistantResponseError());
         setLastFailedContent(content);
         return;
@@ -214,9 +278,11 @@ export function ZiweiChatShell() {
       if (chartInput) {
         setChartSynced(true);
       }
+      if (chartVisualModel) setChartMotionPhase("complete");
       setLastFailedContent(null);
     } catch (caught) {
       setEvidence((current) => failEvidenceRun(current, evidenceRunId));
+      if (chartVisualModel) setChartMotionPhase("failed");
       setError(classifyChatError(caught));
       setLastFailedContent(content);
     } finally {
@@ -231,7 +297,10 @@ export function ZiweiChatShell() {
   }
 
   function resetChartDraft() {
+    window.localStorage.removeItem(chartSessionStorageKey(profileId));
     setChartInput(null);
+    setChartVisualModel(null);
+    setChartMotionPhase("empty");
     setChartSynced(false);
     setEvidence(initialEvidence);
   }
@@ -243,8 +312,11 @@ export function ZiweiChatShell() {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("ziwei-chat-profile-id");
       window.localStorage.removeItem(modelSettingsStorageKey);
+      window.localStorage.removeItem(chartSessionStorageKey(profileId));
     }
     setChartInput(null);
+    setChartVisualModel(null);
+    setChartMotionPhase("empty");
     setChartSynced(false);
     setMessages([]);
     setDraft("");
@@ -255,10 +327,29 @@ export function ZiweiChatShell() {
     setActiveView("chat");
   }
 
-  function handleChartReady(nextChart: CreateChartInput) {
-    setChartInput(nextChart);
+  async function handleChartReady(nextChart: CreateChartInput) {
     setChartSynced(false);
     setError(null);
+    setChartMotionPhase("calculating");
+    try {
+      const response = await fetch("/api/chart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId, chart: nextChart }),
+      });
+      if (!response.ok) throw new Error("chart request failed");
+      const payload = (await response.json()) as { chartId: string; displayName: string; summary: ChartSummary };
+      const primaryChart = { ...nextChart, profileId, isPrimary: true };
+      setChartInput(primaryChart);
+      const visualModel = buildChartVisualModel(payload);
+      window.localStorage.setItem(chartSessionStorageKey(profileId), chartSessionStorageValue(primaryChart, visualModel));
+      setChartVisualModel(visualModel);
+      setChartMotionPhase("ready");
+    } catch {
+      setChartVisualModel(null);
+      setChartMotionPhase("failed");
+      setError({ kind: "server", message: "命盘生成未完成，请检查出生资料后重试。", canRetry: false });
+    }
   }
 
   function selectTopic(prompt: string) {
@@ -271,7 +362,7 @@ export function ZiweiChatShell() {
   const mainWorkspace = (() => {
     switch (activeView) {
       case "chart":
-        return <ChartWorkspace chartInput={chartInput} chartSynced={chartSynced} onChartReady={handleChartReady} onResetChart={resetChartDraft} profileId={profileId} />;
+        return <ChartWorkspace chartInput={chartInput} chartMotionPhase={chartMotionPhase} chartSynced={chartSynced} chartVisualModel={chartVisualModel} onChartReady={(chart) => void handleChartReady(chart)} onResetChart={resetChartDraft} profileId={profileId} />;
       case "topics":
         return <TopicsWorkspace onSelect={selectTopic} />;
       case "records":
@@ -279,7 +370,7 @@ export function ZiweiChatShell() {
       case "settings":
         return <SettingsWorkspace loaded={modelSettingsLoaded} localDataActions={localDataActions} onChange={setModelSettings} value={modelSettings} />;
       default:
-        return <ChatPanel draft={draft} error={error} greeting={greetingForChart(chartInput)} isStreaming={isStreaming} messages={messages} onDraftChange={setDraft} onRetry={retryLastMessage} onSubmit={() => void sendMessage()} onTopicSelect={selectTopic} />;
+        return <ChatPanel chartMotionPhase={chartMotionPhase} chartVisualModel={chartVisualModel} draft={draft} error={error} greeting={greetingForChart(chartInput)} isStreaming={isStreaming} messages={messages} onDraftChange={setDraft} onRetry={retryLastMessage} onSubmit={() => void sendMessage()} onTopicSelect={selectTopic} />;
     }
   })();
 
@@ -301,7 +392,7 @@ export function ZiweiChatShell() {
                 <SheetTitle>紫微知道</SheetTitle>
                 <SheetDescription>命盘资料、主题与本地设置。</SheetDescription>
               </SheetHeader>
-              <div className="h-[calc(100dvh-88px)]"><AppSidebar activeView={activeView} chartInput={chartInput} chartSynced={chartSynced} localDataActions={localDataActions} onEditChart={() => setActiveView("chart")} onSelectView={setActiveView} /></div>
+              <div className="h-[calc(100dvh-88px)]"><AppSidebar activeView={activeView} chartInput={chartInput} chartMotionPhase={chartMotionPhase} chartSynced={chartSynced} chartVisualModel={chartVisualModel} onEditChart={() => setActiveView("chart")} onSelectView={setActiveView} /></div>
             </SheetContent>
           </Sheet>
 
@@ -327,8 +418,8 @@ export function ZiweiChatShell() {
       </header>
 
       <section className="workspace-grid grid min-h-0 flex-1">
-        <aside className="hidden min-h-0 border-r border-border bg-card lg:flex lg:flex-col"><AppSidebar activeView={activeView} chartInput={chartInput} chartSynced={chartSynced} localDataActions={localDataActions} onEditChart={() => setActiveView("chart")} onSelectView={setActiveView} /></aside>
-        <div className="min-h-0">{mainWorkspace}</div>
+        <aside className="hidden min-h-0 border-r border-border bg-card lg:flex lg:flex-col"><AppSidebar activeView={activeView} chartInput={chartInput} chartMotionPhase={chartMotionPhase} chartSynced={chartSynced} chartVisualModel={chartVisualModel} onEditChart={() => setActiveView("chart")} onSelectView={setActiveView} /></aside>
+        <div className="min-h-0 overflow-y-auto">{mainWorkspace}</div>
         <aside className="hidden min-h-0 border-l border-border bg-card xl:flex xl:flex-col">{evidencePanel}</aside>
       </section>
     </main>
@@ -446,4 +537,14 @@ function mergeEvidenceState(current: EvidenceState, next: EvidenceState): Eviden
     runs: current.runs,
   };
   return next.runs.reduce((acc, run) => mergeEvidenceRun(acc, run), merged);
+}
+
+function chartMotionPhaseFromEvidence(evidence: EvidenceState, hasChart: boolean): ChartDiscMotionPhase {
+  if (!hasChart) return "empty";
+  const run = evidence.runs.at(-1);
+  if (run?.status === "failed" || evidence.generation.mode === "model_failed") return "failed";
+  if (run?.steps.some((step) => step.id === "critic" && step.status === "running")) return "critic";
+  if (run?.status === "running") return "analyzing";
+  if (run?.status === "completed" || evidence.critic.status === "passed") return "complete";
+  return "ready";
 }

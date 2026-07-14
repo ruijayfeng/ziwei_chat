@@ -61,6 +61,13 @@ export type EvidenceGeneration = {
   detail?: string;
 };
 
+export function evidenceGenerationTone(generation: EvidenceGeneration) {
+  if (generation.mode === "model") return "success" as const;
+  if (generation.mode === "model_pending") return "pending" as const;
+  if (generation.mode === "model_failed") return "failed" as const;
+  return "neutral" as const;
+}
+
 export type EvidenceState = {
   toolsUsed: string[];
   chartFacts: EvidenceChartFact[];
@@ -127,6 +134,15 @@ export function evidenceKnowledgeSourceLabel(source: EvidenceKnowledgeSource) {
         : "混合检索";
 
   return [sourceLabel, source.license, retrievalLabel].filter(Boolean).join(" · ");
+}
+
+export function evidenceRetrievalLabel(evidence: Pick<EvidenceState, "knowledgeSources" | "toolsUsed">) {
+  const modes = new Set(evidence.knowledgeSources.map((source) => source.retrievalMode));
+  if (modes.has("hybrid")) return "混合检索";
+  if (modes.has("vector")) return "向量检索";
+  if (modes.has("local")) return "本地检索";
+  if (evidence.toolsUsed.includes("searchKnowledge")) return "已检索（未命中）";
+  return null;
 }
 
 function normalizeEvidence(value: unknown): EvidenceState {

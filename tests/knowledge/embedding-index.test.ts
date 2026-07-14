@@ -13,6 +13,39 @@ import {
 } from "../../src/lib/knowledge/embedding-index";
 
 describe("knowledge embedding provider", () => {
+  test("times out a pending embedding request with a structured error", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const result = Promise.race([
+        generateEmbedding({
+          settings: {
+            provider: "openai",
+            enabled: true,
+            baseUrl: "https://api.openai.com/v1",
+            apiKey: "sk-test",
+            model: "text-embedding-3-small",
+          },
+          input: "career palace",
+          timeoutMs: 25,
+          fetchImplementation: vi.fn<typeof fetch>(async () => new Promise<Response>(() => {})),
+        }),
+        new Promise<{ ok: false; errorCode: "TEST_GUARD_EXPIRED" }>((resolve) => {
+          setTimeout(() => resolve({ ok: false, errorCode: "TEST_GUARD_EXPIRED" }), 50);
+        }),
+      ]);
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      await expect(result).resolves.toMatchObject({
+        ok: false,
+        errorCode: "EMBEDDING_TIMEOUT",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("calls an OpenAI-compatible embeddings endpoint", async () => {
     const fetchMock = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }] }), {

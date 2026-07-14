@@ -168,11 +168,31 @@ function mentionsUnknownChartFact(draft: string, chartFacts: ChartFact[]) {
 }
 
 function readChartBasisSection(draft: string) {
-  const start = draft.search(/命盘依据/);
-  if (start === -1) return draft;
+  const lines = draft.split(/\r?\n/);
+  const startLine = lines.findIndex((line) => line.includes("命盘依据"));
+  if (startLine === -1) return draft;
 
-  const rest = draft.slice(start);
-  const end = rest.search(/\n\n(?:现实解释|建议)/);
+  const basisLines: string[] = [];
+  const inlineBasis = lines[startLine]?.split("命盘依据", 2)[1]?.replace(/^[\s*：:]+/, "");
+  if (inlineBasis) basisLines.push(inlineBasis);
 
-  return end === -1 ? rest : rest.slice(0, end);
+  for (const line of lines.slice(startLine + 1)) {
+    if (isChartBasisBoundary(line)) break;
+    basisLines.push(line);
+  }
+
+  return basisLines.join("\n");
+}
+
+function isChartBasisBoundary(line: string) {
+  const heading = line
+    .trim()
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/^[-+*]\s+/, "")
+    .replace(/^(?:(?:\d+|[一二三四五六七八九十]+)[.、．]|[（(](?:\d+|[一二三四五六七八九十]+)[）)])\s*/, "")
+    .replace(/^\*{1,2}/, "")
+    .replace(/\*{1,2}$/, "")
+    .trim();
+
+  return /^(?:现实(?:层面(?:的)?(?:解释)?|解释)(?:与建议)?|建议|追问|参考知识(?:来源)?)(?:\s*[：:]|\s*$)/.test(heading);
 }
