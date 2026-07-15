@@ -23,6 +23,11 @@ workspace/sidebar.tsx: Desktop route navigation and anonymous product identity.
 workspace/mobile-chrome.tsx: Mobile/tablet top bar, accessible evidence sheet, and bottom route navigation.
 workspace/motion-provider.tsx: Motion configuration that respects the operating-system reduced-motion preference.
 workspace/nav-items.ts: Single typed source of truth for the five real workspace routes.
+workspace/workspace-provider.tsx: Persistent anonymous profile, chart restore/save, model settings, and cross-route browser state boundary.
+chart/chart-provider.tsx: Stable-id selection and hover state for the current sanitized chart display model.
+chart/destiny-chart.tsx: Interactive twelve-palace chart driven only by iztro display facts and real-index geometry.
+chart/palace-inspector.tsx: Deterministic star, transformation, body-palace, Laiyin-palace, and relationship details for the selected palace.
+chart/chart-page.tsx: Real chart route composition with loading, error, onboarding, chart, and local-reset states.
 ziwei-chat-shell.tsx: Client application shell coordinating anonymous profile, client-side workspace views, chart/model state, streamed retryable model errors, clear-data confirmation, mobile sheets, and evidence state.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

@@ -33,6 +33,7 @@ ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer 
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.
 ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.
+ui/chart-display.ts: Pure stable-id lookup and real-index three-way/four-direction geometry for the redesigned chart.
 ui/chart-visual.ts: Pure deterministic fact-to-disc model mapping and evidence-backed active palace selection.
 ui/topic-entry-layout.ts: Stable responsive grid policy for equal-weight quick-topic entries.
 ui/model-settings.ts: Browser-local model settings parser, serializer, provider defaults, and chat request payload shaping.
