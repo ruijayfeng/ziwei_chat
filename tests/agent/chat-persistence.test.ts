@@ -73,4 +73,22 @@ describe("chat persistence", () => {
 
     expect(calls).toEqual(["message", "tool"]);
   });
+
+  test("lists conversations and messages only for the owning profile in newest-first order", async () => {
+    const persistence = createInMemoryChatPersistence();
+    await persistence.saveMessage({ conversationId: "conversation-a", profileId: "profile-a", role: "user", content: "第一段事业问题" });
+    await persistence.saveMessage({ conversationId: "conversation-b", profileId: "profile-b", role: "user", content: "别人的问题" });
+    await persistence.saveMessage({ conversationId: "conversation-c", profileId: "profile-a", role: "user", content: "较新的感情问题" });
+    await persistence.saveMessage({ conversationId: "conversation-c", profileId: "profile-a", role: "assistant", content: "真实回答" });
+
+    await expect(persistence.listConversations?.("profile-a")).resolves.toEqual([
+      expect.objectContaining({ id: "conversation-c", title: "较新的感情问题" }),
+      expect.objectContaining({ id: "conversation-a", title: "第一段事业问题" }),
+    ]);
+    await expect(persistence.listMessages?.("profile-a", "conversation-c")).resolves.toEqual([
+      expect.objectContaining({ role: "user", content: "较新的感情问题" }),
+      expect.objectContaining({ role: "assistant", content: "真实回答" }),
+    ]);
+    await expect(persistence.listMessages?.("profile-b", "conversation-c")).resolves.toEqual([]);
+  });
 });

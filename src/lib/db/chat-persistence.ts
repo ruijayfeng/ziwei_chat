@@ -5,10 +5,12 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 import type {
   ChatPersistence,
+  ConversationMessageRecord,
+  ConversationRecord,
   PersistedChatMessage,
   PersistedToolEvent,
 } from "../agent/chat-persistence";
@@ -30,6 +32,20 @@ type ChatPersistenceDatabase = {
   delete(table: unknown): {
     where(condition: unknown): Promise<unknown> | unknown;
   };
+  update?(table: unknown): {
+    set(value: InsertValues): { where(condition: unknown): Promise<unknown> | unknown };
+  };
+};
+
+type ReadQuery = {
+  from(table: unknown): ReadQuery;
+  innerJoin(table: unknown, condition: unknown): ReadQuery;
+  where(condition: unknown): ReadQuery;
+  orderBy(order: unknown): Promise<Array<Record<string, unknown>>>;
+};
+
+type ReadDatabase = {
+  select(fields: Record<string, unknown>): ReadQuery;
 };
 
 type InsertResult = {
@@ -43,6 +59,7 @@ export function createPostgresChatPersistence(
     async saveMessage(message) {
       await ensureProfileConversation(database, message.profileId, message.conversationId);
       await database.insert(messages).values(toMessageRow(message));
+      await touchConversation(database, message);
     },
     async saveToolEvent(event) {
       if (event.profileId) {
@@ -50,12 +67,44 @@ export function createPostgresChatPersistence(
       }
       await database.insert(toolEvents).values(toToolEventRow(event));
     },
+    async listConversations(profileId) {
+      const readable = database as unknown as ReadDatabase;
+      const rows = await readable
+        .select({ id: conversations.id, title: conversations.title, lastMessageAt: conversations.lastMessageAt })
+        .from(conversations)
+        .where(eq(conversations.profileId, profileId))
+        .orderBy(desc(conversations.lastMessageAt));
+      return rows.map(toConversationRecord).filter(isConversationRecord);
+    },
+    async listMessages(profileId, conversationId) {
+      const readable = database as unknown as ReadDatabase;
+      const rows = await readable
+        .select({
+          id: messages.id,
+          conversationId: messages.conversationId,
+          role: messages.role,
+          content: messages.content,
+          createdAt: messages.createdAt,
+        })
+        .from(messages)
+        .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+        .where(and(eq(conversations.profileId, profileId), eq(conversations.id, conversationId)))
+        .orderBy(asc(messages.createdAt));
+      return rows.map(toConversationMessageRecord).filter(isConversationMessageRecord);
+    },
     async deleteProfileData(profileId) {
       await database.delete(memories).where(eq(memories.profileId, profileId));
       await database.delete(charts).where(eq(charts.profileId, profileId));
       await database.delete(conversations).where(eq(conversations.profileId, profileId));
     },
   };
+}
+
+async function touchConversation(database: ChatPersistenceDatabase, message: PersistedChatMessage) {
+  if (!database.update) return;
+  const values: InsertValues = { lastMessageAt: new Date(), updatedAt: new Date() };
+  if (message.role === "user") values.title = message.content.slice(0, 60);
+  await database.update(conversations).set(values).where(eq(conversations.id, message.conversationId));
 }
 
 async function ensureProfileConversation(
@@ -113,3 +162,39 @@ function toToolEventRow(event: PersistedToolEvent) {
     latencyMs: event.latencyMs,
   };
 }
+
+function toConversationRecord(row: Record<string, unknown>): ConversationRecord | null {
+  if (typeof row.id !== "string") return null;
+  return {
+    id: row.id,
+    title: typeof row.title === "string" && row.title.trim() ? row.title : "未命名对话",
+    lastMessageAt: toIsoString(row.lastMessageAt),
+  };
+}
+
+function toConversationMessageRecord(row: Record<string, unknown>): ConversationMessageRecord | null {
+  if (
+    typeof row.id !== "string" ||
+    typeof row.conversationId !== "string" ||
+    !isMessageRole(row.role) ||
+    typeof row.content !== "string"
+  ) return null;
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    role: row.role,
+    content: row.content,
+    createdAt: toIsoString(row.createdAt),
+  };
+}
+
+function toIsoString(value: unknown) {
+  return value instanceof Date ? value.toISOString() : typeof value === "string" ? value : "";
+}
+
+function isMessageRole(value: unknown): value is PersistedChatMessage["role"] {
+  return value === "user" || value === "assistant" || value === "system" || value === "tool";
+}
+
+function isConversationRecord(value: ConversationRecord | null): value is ConversationRecord { return value !== null; }
+function isConversationMessageRecord(value: ConversationMessageRecord | null): value is ConversationMessageRecord { return value !== null; }

@@ -32,6 +32,7 @@ ui/chat-evidence.ts: Chat evidence parsing and UI-ready contracts for tool, char
 ui/chat-contract.ts: Shared browser-to-chat API request and evidence wire contracts.
 ui/chat-client.ts: Abortable static/event-stream chat transport with evidence and protocol validation.
 ui/chat-session.ts: Per-message evidence state machine with single-flight, retry, and empty-answer handling.
+ui/conversation-records.ts: Validated persisted/current-browser conversation adapter with unavailable-storage fallback.
 ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds.
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.

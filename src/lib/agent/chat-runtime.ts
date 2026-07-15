@@ -163,6 +163,14 @@ export function getChatRuntimeSnapshot() {
   };
 }
 
+export async function listProfileConversations(profileId: string) {
+  return persistence.listConversations?.(profileId) ?? [];
+}
+
+export async function listProfileConversationMessages(profileId: string, conversationId: string) {
+  return persistence.listMessages?.(profileId, conversationId) ?? [];
+}
+
 export async function deleteProfileRuntimeData(profileId: string) {
   const ownedChartIds = new Set<string>();
   for (const [chartId, chart] of stores.charts.entries()) {

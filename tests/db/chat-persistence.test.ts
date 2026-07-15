@@ -147,4 +147,42 @@ describe("createPostgresChatPersistence", () => {
       }),
     });
   });
+
+  test("maps profile-scoped conversation and message reads to sanitized records", async () => {
+    const rows = [
+      [{ id: "conversation-1", title: "事业问题", lastMessageAt: new Date("2026-07-16T00:00:00Z") }],
+      [{ id: "message-1", conversationId: "conversation-1", role: "user", content: "事业问题", createdAt: new Date("2026-07-16T00:00:00Z") }],
+    ];
+    const database = readDatabase(rows);
+    const persistence = createPostgresChatPersistence(database);
+
+    await expect(persistence.listConversations?.("00000000-0000-4000-8000-000000000002")).resolves.toEqual([
+      { id: "conversation-1", title: "事业问题", lastMessageAt: "2026-07-16T00:00:00.000Z" },
+    ]);
+    await expect(persistence.listMessages?.(
+      "00000000-0000-4000-8000-000000000002",
+      "00000000-0000-4000-8000-000000000001",
+    )).resolves.toEqual([
+      { id: "message-1", conversationId: "conversation-1", role: "user", content: "事业问题", createdAt: "2026-07-16T00:00:00.000Z" },
+    ]);
+  });
 });
+
+function readDatabase(resultSets: Array<Array<Record<string, unknown>>>) {
+  let index = 0;
+  return {
+    insert() { return { async values() {} }; },
+    update() { return { set() { return { async where() {} }; } }; },
+    delete() { return { async where() {} }; },
+    select() {
+      const result = resultSets[index++] ?? [];
+      const query = {
+        from() { return query; },
+        innerJoin() { return query; },
+        where() { return query; },
+        orderBy() { return Promise.resolve(result); },
+      };
+      return query;
+    },
+  };
+}
