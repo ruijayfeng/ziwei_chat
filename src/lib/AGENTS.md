@@ -15,6 +15,7 @@ agent/evidence-events.ts: Event framing contract for evidence, answer tokens, re
 agent/planner.ts: Explicit analysis planner mapping intents to tools, skills, facts, retrieval queries, and response shape.
 agent/response-composer.ts: Response protocol composer for conclusion, chart basis, explanation, suggestion, follow-up, skill analysis steps, and knowledge source titles.
 chart/create-chart.ts: iztro chart creation adapter, birth validation, and structured chart engine errors.
+chart/chart-display.ts: Server-only iztro-to-display adapter that exposes all twelve palaces without leaking raw chart JSON.
 chart/summarize-chart.ts: Deterministic chart fact extraction from raw iztro chart JSON.
 db/client.ts: Drizzle/Postgres client factory and default database instance.
 db/chat-persistence.ts: Postgres-backed ChatPersistence adapter for messages, null-safe JSON tool events, and profile-owned data deletion.
@@ -23,6 +24,7 @@ db/schema.ts: Drizzle schema for profiles, charts, conversations, messages, memo
 db/knowledge-retrieval.ts: Optional time-bounded Postgres/pgvector knowledge retriever for database-backed semantic RAG.
 domain/analysis.ts: Shared intent, plan, analysis state, safety level, and critique contracts.
 domain/chart.ts: Shared chart input, output, summary, fact, and error contracts.
+domain/chart-display.ts: Browser-safe full-chart display contracts for palaces, star categories, transformations, and stable geometry.
 evaluation/cases.ts: Seed MVP regression cases for topics, missing chart, invalid input, safety, and out-of-scope prompts.
 evaluation/run-evals.ts: Deterministic local evaluation runner that records responses, tool events, critic results, and pass/fail evidence.
 http/rate-limit.ts: Fixed-window request limiter for API route abuse protection without external infrastructure.

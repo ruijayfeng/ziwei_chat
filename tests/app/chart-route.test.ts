@@ -28,6 +28,14 @@ describe("POST /api/chart", () => {
     const payload = await response.json();
     expect(payload.chartId).toEqual(expect.any(String));
     expect(payload.summary.facts.length).toBeGreaterThan(0);
+    expect(payload.display).toMatchObject({
+      chartId: payload.chartId,
+      displayName: "Jay",
+      palaces: expect.arrayContaining([
+        expect.objectContaining({ name: "命宫", earthlyBranch: expect.any(String) }),
+      ]),
+    });
+    expect(payload.display.palaces).toHaveLength(12);
     expect(payload.chartJson).toBeUndefined();
   });
 
@@ -60,6 +68,11 @@ describe("POST /api/chart", () => {
         birthTime: "12:00",
       },
       summary: { facts: expect.any(Array) },
+      display: {
+        chartId: expect.any(String),
+        displayName: "Jay",
+        palaces: expect.any(Array),
+      },
     });
   });
 

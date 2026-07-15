@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Read-only source repository used during the UI migration.
+    "ziwei-chat-redesign/**",
   ]),
 ]);
 

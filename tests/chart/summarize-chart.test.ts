@@ -34,6 +34,24 @@ describe("summarizeChart", () => {
     );
   });
 
+  test("uses the named 命宫 instead of iztro's 来因宫 marker", () => {
+    const chartJson = astro.bySolar("1990-5-17", 6, "male", true, "zh-CN");
+    const laiyinPalace = chartJson.palaces.find((palace) => palace.isOriginalPalace);
+    expect(laiyinPalace?.name).not.toBe("命宫");
+
+    const summary = summarizeChart({
+      chartId: "chart-fixture",
+      chartJson,
+      topics: ["personality"],
+    });
+
+    expect(summary.facts[0]).toMatchObject({
+      palace: "命宫",
+      patterns: expect.arrayContaining(["命宫主星", "身宫落点"]),
+    });
+    expect(summary.facts[0]?.palace).not.toBe(laiyinPalace?.name);
+  });
+
   test("returns a low-confidence fallback fact when chart palaces are unavailable", () => {
     const summary = summarizeChart({
       chartId: "chart-bad",

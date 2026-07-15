@@ -110,10 +110,6 @@ function readPalaces(chartJson: unknown): PalaceLike[] {
 }
 
 function findPalace(palaces: PalaceLike[], palaceName: string) {
-  if (palaceName === "命宫") {
-    return palaces.find((palace) => palace.isOriginalPalace === true);
-  }
-
   if (palaceName === "身宫") {
     return palaces.find((palace) => palace.isBodyPalace === true);
   }
@@ -149,12 +145,16 @@ function readTransforms(palace: PalaceLike) {
 function readPatterns(palace: PalaceLike) {
   const patterns: string[] = [];
 
-  if (palace.isOriginalPalace === true) {
+  if (palace.name === "命宫") {
     patterns.push("命宫主星");
   }
 
   if (palace.isBodyPalace === true) {
     patterns.push("身宫落点");
+  }
+
+  if (palace.isOriginalPalace === true) {
+    patterns.push("来因宫");
   }
 
   return patterns;

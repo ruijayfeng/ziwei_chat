@@ -7,6 +7,7 @@
 
 import { createRequestStores, getChartPersistence, mergeRequestStoresToSnapshot } from "../../../lib/agent/chat-runtime";
 import { createAgentTools } from "../../../lib/agent/tools";
+import { buildChartDisplayModel } from "../../../lib/chart/chart-display";
 import type { ChartPersistence } from "../../../lib/db/chart-persistence";
 import type { CreateChartInput } from "../../../lib/domain/chart";
 
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
     chartId: result.data.chartId,
     displayName: result.data.displayName,
     summary: result.data.summary,
+    display: buildChartDisplayModel({
+      chartId: result.data.chartId,
+      displayName: result.data.displayName,
+      chartJson: result.data.chartJson,
+    }),
   });
 }
 
@@ -47,6 +53,11 @@ export async function GET(request: Request) {
       chartId: chart.chartId,
       displayName: chart.displayName,
       summary: chart.summary,
+      display: buildChartDisplayModel({
+        chartId: chart.chartId,
+        displayName: chart.displayName,
+        chartJson: chart.chartJson,
+      }),
     });
   }
 
@@ -63,6 +74,11 @@ export async function GET(request: Request) {
     chartId: persisted.output.chartId,
     displayName: persisted.output.displayName,
     summary: persisted.output.summary,
+    display: buildChartDisplayModel({
+      chartId: persisted.output.chartId,
+      displayName: persisted.output.displayName,
+      chartJson: persisted.output.chartJson,
+    }),
   });
 }
 
