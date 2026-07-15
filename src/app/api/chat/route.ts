@@ -27,60 +27,20 @@ import { createLlmAnalysisPlan } from "../../../lib/agent/llm-planner";
 import { buildConversationContext } from "../../../lib/agent/conversation-context";
 import {
   normalizeModelSettings,
-  type IncomingModelSettings,
   type ModelResponseTelemetry,
 } from "../../../lib/agent/model-provider";
 import { buildAnalysisPlan } from "../../../lib/agent/planner";
 import { composeResponse } from "../../../lib/agent/response-composer";
 import { createAgentTools, type InMemoryToolStores } from "../../../lib/agent/tools";
 import type { CritiqueResult, Intent } from "../../../lib/domain/analysis";
-import type { ChartFact, ChartTopic, CreateChartInput } from "../../../lib/domain/chart";
+import type { ChartFact, ChartTopic } from "../../../lib/domain/chart";
 import { getDatabaseClient } from "../../../lib/db/client";
 import { createPostgresKnowledgeRetriever } from "../../../lib/db/knowledge-retrieval";
 import { checkRateLimit } from "../../../lib/http/rate-limit";
 import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
 import { searchKnowledge, type KnowledgeSource } from "../../../lib/knowledge/search";
 import type { EvidenceGeneration } from "../../../lib/ui/chat-evidence";
-
-type IncomingMessage = {
-  role: "user" | "assistant" | "system";
-  content: string;
-};
-
-type ChatRequestBody = {
-  profileId?: string;
-  conversationId?: string;
-  messages?: IncomingMessage[];
-  message?: string;
-  chartInput?: CreateChartInput;
-  modelSettings?: IncomingModelSettings;
-  evidenceRunId?: string;
-};
-
-type ChatEvidence = {
-  toolsUsed: string[];
-  chartFacts: Array<Pick<ChartFact, "id" | "topic" | "palace" | "stars" | "transforms" | "patterns" | "rawText" | "confidence">>;
-  knowledgeSources: KnowledgeSource[];
-  critic: {
-    status: "not_run" | "passed" | "needs_review";
-    issues: string[];
-  };
-  generation: EvidenceGeneration;
-  runs: Array<{
-    runId: string;
-    title: string;
-    summary: string;
-    status: "running" | "completed" | "failed";
-    startedAt: string;
-    completedAt: string;
-    steps: Array<{
-      id: string;
-      label: string;
-      detail: string;
-      status: "pending" | "running" | "completed" | "failed";
-    }>;
-  }>;
-};
+import type { ChatEvidence, ChatRequestBody } from "../../../lib/ui/chat-contract";
 
 type StaticChartAnswer = {
   kind: "static";

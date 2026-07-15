@@ -29,6 +29,9 @@ evaluation/cases.ts: Seed MVP regression cases for topics, missing chart, invali
 evaluation/run-evals.ts: Deterministic local evaluation runner that records responses, tool events, critic results, and pass/fail evidence.
 http/rate-limit.ts: Fixed-window request limiter for API route abuse protection without external infrastructure.
 ui/chat-evidence.ts: Chat evidence parsing and UI-ready contracts for tool, chart, actual retrieval mode, critic, generation state, planner fallback diagnostics, and model timing display.
+ui/chat-contract.ts: Shared browser-to-chat API request and evidence wire contracts.
+ui/chat-client.ts: Abortable static/event-stream chat transport with evidence and protocol validation.
+ui/chat-session.ts: Per-message evidence state machine with single-flight, retry, and empty-answer handling.
 ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds.
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.
