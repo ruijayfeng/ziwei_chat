@@ -67,6 +67,8 @@ type WorkspaceContextValue = {
   deleteAnonymousData: () => Promise<boolean>;
   dataDeleting: boolean;
   dataDeletionError: string | null;
+  inspectorOpen: boolean;
+  setInspectorOpen: (open: boolean) => void;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -86,6 +88,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [selectedEvidenceMessageId, setSelectedEvidenceMessageId] = useState<string | null>(null);
   const [dataDeleting, setDataDeleting] = useState(false);
   const [dataDeletionError, setDataDeletionError] = useState<string | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const chatAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -319,6 +322,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     deleteAnonymousData,
     dataDeleting,
     dataDeletionError,
+    inspectorOpen,
+    setInspectorOpen,
   }), [
     ready,
     profileId,
@@ -341,6 +346,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     deleteAnonymousData,
     dataDeleting,
     dataDeletionError,
+    inspectorOpen,
   ]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

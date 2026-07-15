@@ -18,6 +18,18 @@ describe("redesigned real chat surface", () => {
     expect(composer).not.toContain("fetch(");
     expect(composer).toContain('aria-label="输入命盘问题"');
     expect(composer).toContain("disabled={disabled}");
+    expect(experience).toContain("setInspectorOpen(true)");
+    expect(source("src/components/workspace/mobile-chrome.tsx")).toContain("<Sheet open={inspectorOpen}");
+  });
+
+  test("keeps new birth data empty and uses a non-overlapping mobile palace grid", () => {
+    const onboarding = source("src/components/chart-onboarding.tsx");
+    const destinyChart = source("src/components/chart/destiny-chart.tsx");
+
+    expect(onboarding).not.toContain('chartInput?.birthDate ?? "1990-05-17"');
+    expect(onboarding).not.toContain('chartInput?.birthTime ?? "12:00"');
+    expect(destinyChart).toContain("sm:hidden");
+    expect(destinyChart).toContain("grid-cols-3");
   });
 
   test("maps every real evidence category into the inspector", () => {

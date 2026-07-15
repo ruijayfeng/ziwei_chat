@@ -17,11 +17,19 @@ import {
 import { cn } from "@/lib/utils";
 import { workspaceNavItems } from "./nav-items";
 
-export function WorkspaceTopBar({ inspector }: { inspector: React.ReactNode }) {
+export function WorkspaceTopBar({
+  inspector,
+  inspectorOpen,
+  onInspectorOpenChange,
+}: {
+  inspector: React.ReactNode;
+  inspectorOpen: boolean;
+  onInspectorOpenChange: (open: boolean) => void;
+}) {
   return (
     <header className="flex min-h-16 items-center justify-between border-b border-border/70 px-4 sm:px-6 xl:hidden">
       <ZiweiLogotype className="lg:invisible" />
-      <Sheet>
+      <Sheet open={inspectorOpen} onOpenChange={(open) => onInspectorOpenChange(open)}>
         <SheetTrigger render={<Button aria-label="打开分析依据" size="icon-lg" variant="ghost" />}>
           <PanelRight />
         </SheetTrigger>

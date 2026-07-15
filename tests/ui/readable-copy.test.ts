@@ -7,11 +7,12 @@ const projectRoot = process.cwd();
 
 const userVisibleCopyFiles = [
   "src/components/chart-onboarding.tsx",
-  "src/components/chat-panel.tsx",
-  "src/components/evidence-drawer.tsx",
+  "src/components/chat/chat-composer.tsx",
+  "src/components/chat/chat-experience.tsx",
+  "src/components/chat/evidence-inspector.tsx",
+  "src/components/chart/chart-page.tsx",
   "src/components/model-settings-panel.tsx",
-  "src/components/topic-entry.tsx",
-  "src/components/ziwei-chat-shell.tsx",
+  "src/components/workspace/workspace-provider.tsx",
   "src/lib/agent/model-provider.ts",
   "src/lib/ui/chart-profile.ts",
   "src/lib/ui/chat-errors.ts",

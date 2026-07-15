@@ -17,7 +17,7 @@ content/ - Runtime skill workflows and curated local Markdown knowledge.
 drizzle/ - Generated Drizzle SQL migrations and migration metadata.
 public/ - Static assets served by Next.js.
 src/app/ - Next.js App Router entry points and application routes.
-src/components/ - Client UI components for onboarding, topic entry, chat, evidence, and the app shell.
+src/components/ - Redesigned workspace, chart, chat/evidence, records, insights, settings, and owned UI primitives.
 src/lib/ - Domain services, database contracts, chart engine adapters, and agent internals.
 tests/ - Vitest unit and integration tests for domain, persistence, agent, and evaluation behavior.
 </directory>

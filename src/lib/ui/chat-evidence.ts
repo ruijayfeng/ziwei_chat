@@ -1,7 +1,7 @@
 /**
  * [INPUT]: Depends on chat API response headers and structured evidence metadata
  * [OUTPUT]: Provides evidence parsing, timeline run helpers, and UI-ready evidence state contracts
- * [POS]: UI support module between /api/chat evidence snapshots/events and evidence-drawer rendering
+ * [POS]: UI support module between /api/chat evidence snapshots/events and per-message evidence inspectors
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 

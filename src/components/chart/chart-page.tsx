@@ -59,5 +59,5 @@ export function ChartPage() {
 }
 
 function ChartLoading() {
-  return <div className="mt-10 h-48 animate-pulse rounded-2xl border border-border bg-card/60" aria-label="正在读取命盘" />;
+  return <div className="mt-10 h-48 rounded-2xl border border-border bg-card/60" aria-label="正在读取命盘" />;
 }

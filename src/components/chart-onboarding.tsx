@@ -3,7 +3,7 @@
 /**
  * [INPUT]: Depends on React form events, CreateChartInput domain shape, shadcn UI primitives, and chart profile UI helpers
  * [OUTPUT]: Provides current chart/profile summary, edit form, save, and reset controls
- * [POS]: Profile management component beside chat-panel, topic-entry, and evidence-drawer
+ * [POS]: Profile management component embedded in the redesigned real-chart route
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
@@ -164,16 +164,18 @@ export function ChartOnboarding({
 
           <Field label="出生日期">
             <Input
-              defaultValue={chartInput?.birthDate ?? "1990-05-17"}
+              defaultValue={chartInput?.birthDate ?? ""}
               name="birthDate"
+              required
               type="date"
             />
           </Field>
           <Field label="出生时间">
             <Input
-              defaultValue={chartInput?.birthTime ?? "12:00"}
+              defaultValue={chartInput?.birthTime ?? ""}
               name="birthTime"
               placeholder="HH:mm 或时辰"
+              required
             />
           </Field>
           <Field label="出生地">

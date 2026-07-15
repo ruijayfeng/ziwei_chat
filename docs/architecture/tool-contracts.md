@@ -400,3 +400,12 @@ type CritiqueResult = {
 Errors:
 
 - `CRITIC_FAILED`
+
+## Browser/API presentation contracts
+
+These are application boundaries rather than Agent-callable tools:
+
+- `POST /api/chart` and `GET /api/chart` expose the legacy summary plus a sanitized twelve-palace `display` DTO. Raw `chartJson` stays server-side.
+- `POST /api/chat` accepts the anonymous profile, conversation history, current chart input, browser-owned model settings, and an evidence run id. Static answers use text plus `X-Ziwei-Evidence`; model answers use newline-framed `evidence`, critic-approved `token`, optional retryable `error`, and final `done` events.
+- `GET /api/conversations` is profile-scoped and returns only conversation/message display fields. It never returns model settings, API keys, message metadata, or tool payloads.
+- `DELETE /api/chat?profileId=...` deletes the anonymous profile's runtime/persisted data. The settings UI clears browser profile, chart, conversation, and model-setting state only after the server deletion succeeds.

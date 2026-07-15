@@ -1,12 +1,12 @@
 # Project Status
 
-> Version: 2026-07-13
-> Purpose: agent/frontend hardening handoff after Neon RAG, chart persistence, and answer-presentation updates.
+> Version: 2026-07-16
+> Purpose: redesigned App Router UI migration handoff with real chart, chat/evidence, settings, and conversation records.
 
 ## Current Branch State
 
 - Default integration branch: `master`
-- Current local state: agent, Neon RAG, chart persistence, workspace UI, and answer presentation work are implemented; commits are being organized from the validated local changes.
+- Current local state: the dark editorial multi-route UI is connected to the existing iztro and Agent pipeline on `codex/ui-redesign-prep`; the user-provided redesign repository remains an untracked reference only.
 - Latest merged PR before this beta pass: `#2 MVP hardening and product UI refinement`
 - Latest merge commit before this beta pass: `4ae68a7`
 - CI status at merge: GitHub Actions `Verify` passed; Vercel preview passed.
@@ -31,8 +31,10 @@
 - The 104 bundled knowledge Markdown chunks are ingested into Neon with 1024-dimensional `BAAI/bge-large-zh-v1.5` vectors; runtime RAG queries pgvector first and labels a keyword fallback as `local`.
 - Anonymous profile data deletion through `DELETE /api/chat?profileId=...`.
 - Runtime fixed-window rate limiter for `/api/chat`.
-- Product UI rebuilt into the reference-led "紫微知道" workspace: fixed desktop identity/navigation rail, client-side chat/chart/topics/records/settings views, report-style chat responses, real-evidence analysis rail, and mobile navigation/evidence sheets.
-- Critic-approved answers now reveal progressively in the client over roughly 3 seconds using Unicode-safe, length-adjusted batches; loading skeletons and reduced-motion support remain available. Ordinary model prose is rendered through an HTML-free Markdown renderer, while complete five-part analysis responses retain the structured report layout.
+- Product UI rebuilt into real App Router routes `/`, `/chart`, `/records`, `/insights`, and `/settings`, with desktop navigation, mobile tabs, report/Markdown answers, and a responsive per-message evidence inspector.
+- `/api/chart` now returns a sanitized twelve-palace display DTO backed by iztro; the UI uses real palace indices for 三方四正 and distinguishes 命宫 from iztro's 来因宫 marker.
+- Browser chat transport supports static text and newline-framed evidence/token/error/done streams. Each assistant attempt owns its evidence snapshot, retry content, and failure state without carrying facts across turns.
+- Profile-scoped `/api/conversations` reads and the records route expose only real conversation/message display fields. Insights stays explicitly unavailable until a sourced aggregation and critic pipeline exists.
 - shadcn/Base UI owned primitives in `src/components/ui/` for buttons, cards, inputs, textarea, select, sheet, alert dialog, badge, and separator.
 - Third-party Claude Code skills are installed under `.agents/skills` with `.claude/skills` symlinks and `skills-lock.json` source hashes; use them only after reviewing scope because they run with full agent permissions.
 - CI workflow on pull requests and pushes to `master`: `npm ci`, lint, typecheck, tests, agent evals, and build.
@@ -57,15 +59,16 @@ Latest verified local results for the agent/frontend hardening pass:
 - Browser QA: provider-backed general chat passed with saved localStorage model settings, no hydration errors, assistant response rendered, and `正在分析` cleared
 - Browser QA: provider-backed chart question passed after saving a chart, evidence completed, critic passed, no hydration or uncontrolled field warnings
 
-Latest verified UI rebuild results:
+Latest verified redesigned UI migration results before final browser QA:
 
 - `npm run lint`: passed with no application errors; warnings are limited to installed `.agents/skills/impeccable` scripts.
 - `npm run typecheck`: passed.
-- `npm run test`: 28 files / 117 tests passed.
+- `npm run test`: 47 files / 208 tests passed.
 - `npm run eval:agent`: 10 cases / 0 failures.
 - `npm run build`: passed.
-- Browser QA: desktop `1536px` reference review confirmed the fixed three-column workspace, topic view switch, honest runtime labels, and no fake evidence data.
-- Browser QA: mobile `390px` review confirmed no horizontal overflow, chat-first layout, reachable navigation/evidence sheets, and readable topic controls.
+- Browser QA: `390px` had no horizontal overflow, mobile tabs and the evidence bottom sheet were reachable, and a real provider-backed response completed with final critic/evidence state.
+- Browser QA: `1024px` rendered the real twelve-palace chart, deterministic fact inspector, and edit form with the desktop rail plus responsive evidence trigger.
+- Browser QA: `1280px` and `1536px` rendered the three-column shell and real records/insights/settings routes without horizontal overflow; browser console errors were empty.
 - Agent continuity repair: every browser chat request now includes the current primary chart, so serverless cold starts or process changes cannot drop chart context between turns. The runtime also restores chart ownership for same-process requests.
 - Agent context repair: the planner and analyst now receive an explicit, speaker-labeled window of the latest 12 non-empty turns. This is bounded conversation context, not implicit durable memory.
 - Generation integrity repair: evidence explicitly identifies whether the current answer was LLM-generated, awaiting model configuration, or failed before completion; the right runtime rail and retry UI use that state directly.
@@ -80,12 +83,11 @@ Latest verified answer-presentation results:
 - `npm run build`: passed.
 - Browser reload smoke: local `http://localhost:3000` loaded without console errors.
 
-Latest chart-visual and motion work:
+Latest chart presentation work:
 
-- Saving birth data now calls a dedicated deterministic `/api/chart` boundary and returns a sanitized chart summary without exposing raw chart JSON.
-- The sidebar and chart workspace share one SVG chart-disc component backed only by iztro-derived facts; current evidence can highlight the palaces used for an answer.
-- GSAP React timelines communicate calculation, analysis, critic, and completion states with scoped cleanup and reduced-motion handling.
-- The right evidence rail uses a continuous hierarchy instead of repeated desktop cards, while compact mobile sheets preserve bordered sections.
+- Saving birth data calls a deterministic `/api/chart` boundary and returns sanitized summary/display data without exposing raw chart JSON.
+- The chart route and home ring consume only the real display DTO; mock ratings, AI traits, and generated palace summaries are absent.
+- The right inspector exposes tools, facts, knowledge sources, generation mode, critic result, and Agent steps for the selected/latest assistant message; mobile and tablet use an accessible bottom sheet.
 
 Latest agent latency and failure hardening work:
 
@@ -105,7 +107,7 @@ Latest agent latency and failure hardening work:
 - RAG is hot-swappable: local Markdown keyword search remains the no-database baseline; optional embedding settings can use a local JSON embedding index for hybrid retrieval; when `DATABASE_URL` and embedding settings are present, runtime retrieval attempts Postgres/pgvector first and falls back locally if needed.
 - Product authentication, hosted accounts, payments, subscriptions, multi-chart management, reports, and large ingestion are intentionally out of V1 scope.
 - `npm audit` still reports moderate advisories in Next/PostCSS and drizzle-kit/esbuild chains. npm suggests force fixes that imply breaking downgrades, so they were not applied.
-- UI is a stronger MVP product shell, but not yet a final flagship design pass. Future design work should continue using `impeccable`/product UI review with browser evidence.
+- Weekly letters, monthly reflections, and long-term pattern insights remain intentionally unavailable because no sourced aggregation/critic pipeline exists.
 
 ## Recommended Next Work
 
@@ -113,7 +115,7 @@ Latest agent latency and failure hardening work:
 2. Review user-facing Chinese copy in the browser before public announcement.
 3. Continue curating imported `ziwei-doushu` chunks by topic, then decide which chunks should graduate from imported seed content to curated product knowledge.
 4. Fill the remaining skill and knowledge gaps listed in `docs/development/agent-content-gaps.md`.
-5. Add persisted conversation list and reload behavior if the product should feel stateful beyond the current session.
+5. Design and validate a sourced long-term insights aggregation contract before adding weekly/monthly personalized content.
 6. If database-backed mode matters later, configure a local or Neon `DATABASE_URL`, run Drizzle migrations, and add one smoke test against real Postgres.
 
 ## Handoff Entry Points

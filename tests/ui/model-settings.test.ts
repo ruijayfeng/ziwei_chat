@@ -66,7 +66,7 @@ describe("model settings UI helpers", () => {
   test("summarizes chat and embedding configuration status for the settings panel", () => {
     expect(modelSettingsStatus(defaultModelSettingsDraft)).toEqual({
       label: "本地模式",
-      description: "使用内置确定性回答，不会调用外部回答模型。",
+      description: "不调用外部回答模型；命盘工具与检索仍可运行，个性化分析正文需要配置回答模型。",
       missingFields: [],
       ready: false,
       embeddingReady: false,

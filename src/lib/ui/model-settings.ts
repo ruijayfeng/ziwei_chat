@@ -117,8 +117,8 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
     return {
       label: "本地模式",
       description: embeddingReady
-        ? "回答使用本地规则；Embedding 已配置，可用于知识库索引或检索。"
-        : "使用内置确定性回答，不会调用外部回答模型。",
+        ? "不调用外部回答模型；Embedding 可用于检索，个性化分析正文仍需要配置回答模型。"
+        : "不调用外部回答模型；命盘工具与检索仍可运行，个性化分析正文需要配置回答模型。",
       missingFields: [],
       ready: false,
       embeddingReady,

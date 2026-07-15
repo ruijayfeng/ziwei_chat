@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 
 import { ChatInspector } from "@/components/chat/chat-inspector";
+import { useWorkspace } from "./workspace-provider";
 import { WorkspaceSidebar } from "./sidebar";
 import { WorkspaceTabBar, WorkspaceTopBar } from "./mobile-chrome";
 
@@ -22,13 +23,14 @@ function PlaceholderInspector() {
 
 export function WorkspaceAppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { inspectorOpen, setInspectorOpen } = useWorkspace();
   const inspector = pathname === "/" ? <ChatInspector /> : <PlaceholderInspector />;
 
   return (
     <div className="grid min-h-[100dvh] grid-cols-1 bg-background text-foreground lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]">
       <WorkspaceSidebar />
       <div className="flex min-h-[100dvh] min-w-0 flex-col">
-        <WorkspaceTopBar inspector={inspector} />
+        <WorkspaceTopBar inspector={inspector} inspectorOpen={inspectorOpen} onInspectorOpenChange={setInspectorOpen} />
         <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-24 pt-6 sm:px-7 lg:px-10 lg:pb-8 xl:px-12">
           {children}
         </main>

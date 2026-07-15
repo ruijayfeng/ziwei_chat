@@ -18,6 +18,7 @@ export function ChatExperience() {
     retryLastMessage,
     resetChat,
     setSelectedEvidenceMessageId,
+    setInspectorOpen,
   } = useWorkspace();
   const threadRef = useRef<HTMLDivElement>(null);
   const active = chatSession.messages.length > 0;
@@ -58,7 +59,10 @@ export function ChatExperience() {
             <MessageBubble
               key={message.id}
               message={message}
-              onInspect={message.role === "assistant" ? () => setSelectedEvidenceMessageId(message.id) : undefined}
+              onInspect={message.role === "assistant" ? () => {
+                setSelectedEvidenceMessageId(message.id);
+                if (window.matchMedia("(max-width: 1279px)").matches) setInspectorOpen(true);
+              } : undefined}
               onRetry={message.status === "failed" ? () => void retryLastMessage() : undefined}
             />
           ))}

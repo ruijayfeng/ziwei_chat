@@ -11,10 +11,11 @@ The beta does not require product login, payment, a hosted Ziwei Chat account, P
 - Chat flow: user message -> intent -> deterministic chart facts -> optional LLM planner -> tools -> skill -> local/hybrid RAG -> optional LLM analyst -> critic -> response.
 - OpenAI-compatible real model streaming from page-supplied provider, Base URL, API key, and model.
 - Optional OpenAI-compatible embedding settings for semantic RAG.
-- Deterministic-local fallback when no model is configured or a model call fails.
-- Evidence drawer for tools, chart facts, knowledge sources, critic status, and dynamic Agent run events.
+- Deterministic chart/tool/RAG preparation remains available without a model; chart-analysis prose explicitly asks for model configuration instead of fabricating a local answer.
+- Per-message evidence inspector for tools, chart facts, knowledge sources, critic status, generation state, and Agent run events.
 - Model-backed answers stream evidence events and answer tokens; final model output is checked by the critic before user-visible text is emitted.
 - Local Markdown/keyword knowledge search, including curated notes and imported `Renhuai123/ziwei-doushu` chunks with source/license metadata.
+- Real routes for chat, twelve-palace chart, profile-scoped conversation records, honest insights empty state, and settings.
 
 ## Local Development
 
@@ -27,7 +28,7 @@ Open `http://localhost:3000`.
 
 ## Configure A Real Model
 
-Open the app, use the **模型设置** panel, and choose a provider.
+Open `/settings`, use the **模型设置** panel, and choose a provider.
 
 Required fields:
 
@@ -38,7 +39,7 @@ Required fields:
 
 The API key is stored only in this browser's `localStorage`; it is sent to `/api/chat` for that request and is not written to the project database by this MVP. Use the **清空 API Key** button to remove it from browser storage.
 
-If settings are incomplete, Ziwei Chat stays in deterministic-local mode.
+If settings are incomplete, general chat remains available and deterministic Agent preparation still runs, but personalized chart-analysis prose asks you to finish model configuration.
 
 The Embedding section is optional. When it is not configured, Ziwei Chat uses local Markdown keyword RAG. With `DATABASE_URL`, a configured embedding provider, and ingested knowledge, the app uses Neon/pgvector first and falls back to local retrieval when needed.
 
@@ -109,17 +110,8 @@ The default local URL is documented in `.env.example`. The compose file uses a p
 2. Fill the chart form with birth date, time, gender, and calendar type.
 3. Ask: `我最近想换工作，适合动吗？`
 4. Watch the assistant answer.
-5. Open evidence and confirm tools, chart facts, knowledge sources, and critic status are present.
+5. Open the responsive evidence inspector and confirm tools, chart facts, knowledge sources, generation state, and critic status are present.
 6. Configure a real OpenAI-compatible model and ask another question to verify token streaming.
-
-## Screenshots
-
-Beta screenshots live in `public/screenshots/`:
-
-- `desktop-chat-evidence.png` - chart panel, chat answer, and evidence drawer after a career question.
-- `desktop-model-settings.png` - model settings panel with a configured provider.
-- `mobile-chart-sheet.png` - mobile chart/profile sheet.
-- `mobile-evidence-sheet.png` - mobile evidence sheet.
 
 ## Safety And Scope
 

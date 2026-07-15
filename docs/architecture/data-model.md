@@ -55,6 +55,8 @@ Indexes:
 
 Stores chat sessions.
 
+The read API is profile-scoped: `/api/conversations?profileId=...` lists sanitized summaries, while adding `conversationId` returns ordered sanitized messages only when that conversation belongs to the same anonymous profile. Message metadata and tool payloads are not returned by this UI endpoint.
+
 | Field | Type | Notes |
 | --- | --- | --- |
 | id | uuid | Primary key |

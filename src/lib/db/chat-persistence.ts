@@ -5,7 +5,7 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import type {
   ChatPersistence,
@@ -103,7 +103,9 @@ export function createPostgresChatPersistence(
 async function touchConversation(database: ChatPersistenceDatabase, message: PersistedChatMessage) {
   if (!database.update) return;
   const values: InsertValues = { lastMessageAt: new Date(), updatedAt: new Date() };
-  if (message.role === "user") values.title = message.content.slice(0, 60);
+  if (message.role === "user") {
+    values.title = sql`coalesce(${conversations.title}, ${message.content.slice(0, 60)})`;
+  }
   await database.update(conversations).set(values).where(eq(conversations.id, message.conversationId));
 }
 

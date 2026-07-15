@@ -43,7 +43,10 @@ export function isChartDisplayModel(value: unknown): value is ChartDisplayModel 
     return false;
   }
   if (!Array.isArray(value.palaces) || value.palaces.length !== 12) return false;
-  return value.palaces.every(isChartDisplayPalace);
+  if (!value.palaces.every(isChartDisplayPalace)) return false;
+  const ids = new Set(value.palaces.map((palace) => palace.id));
+  const indices = new Set(value.palaces.map((palace) => palace.index));
+  return ids.size === 12 && indices.size === 12 && [...indices].every((index) => index >= 0 && index < 12);
 }
 
 export function chartSessionFromStorage(value: string | null, profileId: string): CreateChartInput | null {

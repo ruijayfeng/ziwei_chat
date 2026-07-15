@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Depends on CreateChartInput, deterministic chart tools, and runtime chart persistence
- * [OUTPUT]: Provides a sanitized chart summary for the client chart-disc visual
+ * [OUTPUT]: Provides backward-compatible chart summary plus sanitized twelve-palace display data
  * [POS]: Explicit chart-save boundary, separate from chat streaming and model execution
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
