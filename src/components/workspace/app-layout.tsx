@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
+import { ChatInspector } from "@/components/chat/chat-inspector";
 import { WorkspaceSidebar } from "./sidebar";
 import { WorkspaceTabBar, WorkspaceTopBar } from "./mobile-chrome";
 
@@ -20,7 +21,8 @@ function PlaceholderInspector() {
 }
 
 export function WorkspaceAppLayout({ children }: { children: React.ReactNode }) {
-  const inspector = <PlaceholderInspector />;
+  const pathname = usePathname();
+  const inspector = pathname === "/" ? <ChatInspector /> : <PlaceholderInspector />;
 
   return (
     <div className="grid min-h-[100dvh] grid-cols-1 bg-background text-foreground lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]">

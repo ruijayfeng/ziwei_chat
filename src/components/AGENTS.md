@@ -24,6 +24,7 @@ workspace/mobile-chrome.tsx: Mobile/tablet top bar, accessible evidence sheet, a
 workspace/motion-provider.tsx: Motion configuration that respects the operating-system reduced-motion preference.
 workspace/nav-items.ts: Single typed source of truth for the five real workspace routes.
 workspace/workspace-provider.tsx: Persistent anonymous profile, chart restore/save, model settings, and cross-route browser state boundary.
+chat/: Redesigned real chat experience, controlled composer/messages, truthful chart ring, and per-message evidence inspector.
 chart/chart-provider.tsx: Stable-id selection and hover state for the current sanitized chart display model.
 chart/destiny-chart.tsx: Interactive twelve-palace chart driven only by iztro display facts and real-index geometry.
 chart/palace-inspector.tsx: Deterministic star, transformation, body-palace, Laiyin-palace, and relationship details for the selected palace.

@@ -5,7 +5,7 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { Lightbulb, ListChecks, MessageCircleQuestion, Sparkles } from "lucide-react";
+import { CircleCheck, Lightbulb, ListChecks, MessageCircleQuestion, type LucideIcon } from "lucide-react";
 
 import { parseChatReport } from "@/lib/ui/chat-report";
 import { MarkdownMessage } from "./markdown-message";
@@ -19,7 +19,7 @@ export function ReportMessage({ content, streaming = false }: { content: string;
 
   return (
     <article className="overflow-hidden rounded-xl border border-border bg-card" aria-label="命盘分析回答">
-      <ReportSection icon={Sparkles} title="结论" className="border-b border-border">
+      <ReportSection icon={CircleCheck} title="结论" className="border-b border-border">
         <p className="text-base font-semibold text-foreground">{report.conclusion}</p>
       </ReportSection>
       <div className="grid divide-y divide-border md:grid-cols-2 md:divide-x md:divide-y-0">
@@ -45,6 +45,6 @@ export function ReportMessage({ content, streaming = false }: { content: string;
   );
 }
 
-function ReportSection({ icon: Icon, title, children, className = "" }: { icon: typeof Sparkles; title: string; children: React.ReactNode; className?: string }) {
+function ReportSection({ icon: Icon, title, children, className = "" }: { icon: LucideIcon; title: string; children: React.ReactNode; className?: string }) {
   return <section className={`min-w-0 p-5 ${className}`}><div className="mb-3 flex items-center gap-2 text-sm font-medium text-primary"><Icon className="size-4" />{title}</div>{children}</section>;
 }

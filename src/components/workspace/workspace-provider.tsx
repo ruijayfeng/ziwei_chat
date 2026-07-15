@@ -1,16 +1,25 @@
 "use client";
 
 /**
- * [INPUT]: Depends on browser localStorage, /api/chart, chart session validation, and model settings helpers
- * [OUTPUT]: Provides anonymous profile, current chart, model settings, and shared workspace actions
+ * [INPUT]: Depends on browser localStorage, /api/chart, /api/chat, typed chat transport/session, and model settings helpers
+ * [OUTPUT]: Provides anonymous profile, current chart, model settings, per-message chat/evidence, and deletion actions
  * [POS]: Persistent client state boundary mounted above all workspace routes
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { CreateChartInput } from "@/lib/domain/chart";
 import type { ChartDisplayModel } from "@/lib/domain/chart-display";
+import { ChatClientError, sendChatRequest } from "@/lib/ui/chat-client";
+import { initialEvidence, type EvidenceState } from "@/lib/ui/chat-evidence";
+import { classifyChatError, type ChatErrorState } from "@/lib/ui/chat-errors";
+import {
+  chatRequestMessages,
+  chatSessionReducer,
+  initialChatSessionState,
+  type ChatSessionState,
+} from "@/lib/ui/chat-session";
 import {
   chartDisplayModelFromStorage,
   chartSessionFromStorage,
@@ -21,6 +30,7 @@ import {
 import {
   defaultModelSettingsDraft,
   modelSettingsDraftFromStorage,
+  modelSettingsRequestFromDraft,
   modelSettingsStorageKey,
   modelSettingsStorageValue,
   type ModelSettingsDraft,
@@ -47,6 +57,16 @@ type WorkspaceContextValue = {
   modelSettings: ModelSettingsDraft;
   modelSettingsLoaded: boolean;
   setModelSettings: React.Dispatch<React.SetStateAction<ModelSettingsDraft>>;
+  chatSession: ChatSessionState;
+  sendMessage: (content: string) => Promise<void>;
+  retryLastMessage: () => Promise<void>;
+  resetChat: () => void;
+  selectedEvidenceMessageId: string | null;
+  setSelectedEvidenceMessageId: (messageId: string | null) => void;
+  selectedEvidence: EvidenceState;
+  deleteAnonymousData: () => Promise<boolean>;
+  dataDeleting: boolean;
+  dataDeletionError: string | null;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -62,6 +82,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [chartError, setChartError] = useState<string | null>(null);
   const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(defaultModelSettingsDraft);
   const [modelSettingsLoaded, setModelSettingsLoaded] = useState(false);
+  const [chatSession, dispatchChat] = useReducer(chatSessionReducer, initialChatSessionState);
+  const [selectedEvidenceMessageId, setSelectedEvidenceMessageId] = useState<string | null>(null);
+  const [dataDeleting, setDataDeleting] = useState(false);
+  const [dataDeletionError, setDataDeletionError] = useState<string | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const bootstrapTimer = window.setTimeout(() => {
@@ -131,6 +156,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [profileId]);
 
+  useEffect(() => () => chatAbortRef.current?.abort(), []);
+
   const saveChart = useCallback(async (nextChart: CreateChartInput) => {
     setChartLoading(true);
     setChartError(null);
@@ -170,6 +197,104 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setChartError(null);
   }, [profileId]);
 
+  const sendMessage = useCallback(async (rawContent: string) => {
+    const content = rawContent.trim();
+    if (!content || !profileId || !conversationId || chatAbortRef.current) return;
+
+    const requestId = crypto.randomUUID();
+    const evidenceRunId = crypto.randomUUID();
+    const assistantMessageId = crypto.randomUUID();
+    const action = {
+      type: "turn_started" as const,
+      requestId,
+      content,
+      evidenceRunId,
+      userMessageId: crypto.randomUUID(),
+      assistantMessageId,
+    };
+    const nextSession = chatSessionReducer(chatSession, action);
+    if (nextSession === chatSession) return;
+
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
+    setSelectedEvidenceMessageId(assistantMessageId);
+    dispatchChat(action);
+
+    try {
+      await sendChatRequest({
+        profileId,
+        conversationId,
+        messages: chatRequestMessages(nextSession),
+        chartInput: chartInput ?? undefined,
+        modelSettings: modelSettingsRequestFromDraft(modelSettings),
+        evidenceRunId,
+        signal: controller.signal,
+      }, {
+        onEvidence: (evidence) => dispatchChat({ type: "evidence_received", requestId, evidence }),
+        onToken: (token) => dispatchChat({ type: "token_received", requestId, token }),
+      });
+      dispatchChat({ type: "turn_completed", requestId });
+      if (chartInput) setChartSynced(true);
+    } catch (error) {
+      dispatchChat({ type: "turn_failed", requestId, error: toChatError(error) });
+    } finally {
+      if (chatAbortRef.current === controller) chatAbortRef.current = null;
+    }
+  }, [chartInput, chatSession, conversationId, modelSettings, profileId]);
+
+  const retryLastMessage = useCallback(async () => {
+    if (chatSession.lastFailedContent) await sendMessage(chatSession.lastFailedContent);
+  }, [chatSession.lastFailedContent, sendMessage]);
+
+  const resetChat = useCallback(() => {
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    dispatchChat({ type: "session_reset" });
+    setConversationId(crypto.randomUUID());
+    setSelectedEvidenceMessageId(null);
+  }, []);
+
+  const deleteAnonymousData = useCallback(async () => {
+    if (!profileId || dataDeleting) return false;
+    setDataDeleting(true);
+    setDataDeletionError(null);
+    try {
+      const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
+
+      chatAbortRef.current?.abort();
+      chatAbortRef.current = null;
+      window.localStorage.removeItem("ziwei-chat-profile-id");
+      window.localStorage.removeItem(modelSettingsStorageKey);
+      window.localStorage.removeItem(chartSessionStorageKey(profileId));
+      const nextProfileId = crypto.randomUUID();
+      window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
+      setProfileId(nextProfileId);
+      setConversationId(crypto.randomUUID());
+      setChartInput(null);
+      setChartDisplay(null);
+      setChartSynced(false);
+      setChartError(null);
+      setModelSettings(defaultModelSettingsDraft);
+      dispatchChat({ type: "session_reset" });
+      setSelectedEvidenceMessageId(null);
+      return true;
+    } catch (error) {
+      setDataDeletionError(error instanceof Error ? error.message : "匿名资料删除失败。");
+      return false;
+    } finally {
+      setDataDeleting(false);
+    }
+  }, [dataDeleting, profileId]);
+
+  const selectedEvidence = useMemo(() => {
+    const selected = selectedEvidenceMessageId
+      ? chatSession.messages.find((message) => message.id === selectedEvidenceMessageId)
+      : null;
+    const latestAssistant = [...chatSession.messages].reverse().find((message) => message.role === "assistant");
+    return selected?.evidence ?? latestAssistant?.evidence ?? initialEvidence;
+  }, [chatSession.messages, selectedEvidenceMessageId]);
+
   const value = useMemo<WorkspaceContextValue>(() => ({
     ready,
     profileId,
@@ -184,6 +309,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     modelSettings,
     modelSettingsLoaded,
     setModelSettings,
+    chatSession,
+    sendMessage,
+    retryLastMessage,
+    resetChat,
+    selectedEvidenceMessageId,
+    setSelectedEvidenceMessageId,
+    selectedEvidence,
+    deleteAnonymousData,
+    dataDeleting,
+    dataDeletionError,
   }), [
     ready,
     profileId,
@@ -197,6 +332,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     resetLocalChart,
     modelSettings,
     modelSettingsLoaded,
+    chatSession,
+    sendMessage,
+    retryLastMessage,
+    resetChat,
+    selectedEvidenceMessageId,
+    selectedEvidence,
+    deleteAnonymousData,
+    dataDeleting,
+    dataDeletionError,
   ]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
@@ -210,4 +354,11 @@ export function useWorkspace() {
 
 function isUuid(value: string | null): value is string {
   return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
+}
+
+function toChatError(error: unknown): ChatErrorState {
+  if (error instanceof ChatClientError) {
+    return { kind: error.kind, message: error.message, canRetry: error.canRetry };
+  }
+  return classifyChatError(error);
 }
