@@ -36,6 +36,7 @@ ui/chart-profile.ts: Chart profile label formatting and sync-state copy for curr
 ui/chart-visual.ts: Pure deterministic fact-to-disc model mapping and evidence-backed active palace selection.
 ui/topic-entry-layout.ts: Stable responsive grid policy for equal-weight quick-topic entries.
 ui/model-settings.ts: Browser-local model settings parser, serializer, provider defaults, and chat request payload shaping.
+ui/workspace-layout.ts: Pure responsive policy that keeps evidence available as a sheet below the desktop rail breakpoint.
 knowledge/skill-loader.ts: Markdown skill loader and validator for deterministic topic workflows.
 knowledge/search.ts: Local Markdown/keyword retrieval plus exception-safe vector-to-local fallback with truthful source-mode labels.
 knowledge/embedding-provider.ts: Time-bounded OpenAI-compatible embedding adapter for query/index vector generation.

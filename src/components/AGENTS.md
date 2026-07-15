@@ -17,6 +17,12 @@ topics-workspace.tsx: Dedicated topic selection workspace that returns selected 
 model-settings-panel.tsx: Browser-local OpenAI-compatible model provider settings panel for Base URL, API key, and model name.
 topic-entry.tsx: Topic shortcut control for the five MVP Ziwei analysis flows with icon-assisted quick actions.
 ui/: shadcn/Base UI component primitives owned by the project, used for buttons, cards, inputs, sheets, badges, separators, textareas, selects, and alert dialogs.
+brand/ziwei-logotype.tsx: LXGW WenKai wordmark and restrained cinnabar seal used by desktop and mobile navigation.
+workspace/app-layout.tsx: Shared App Router workspace shell with persistent sidebar, responsive inspector access, main scroll surface, and mobile tabs.
+workspace/sidebar.tsx: Desktop route navigation and anonymous product identity.
+workspace/mobile-chrome.tsx: Mobile/tablet top bar, accessible evidence sheet, and bottom route navigation.
+workspace/motion-provider.tsx: Motion configuration that respects the operating-system reduced-motion preference.
+workspace/nav-items.ts: Single typed source of truth for the five real workspace routes.
 ziwei-chat-shell.tsx: Client application shell coordinating anonymous profile, client-side workspace views, chart/model state, streamed retryable model errors, clear-data confirmation, mobile sheets, and evidence state.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md
