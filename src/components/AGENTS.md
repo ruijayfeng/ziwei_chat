@@ -33,6 +33,7 @@ records/: Previous real conversation timeline retained temporarily for adapter w
 insights/: Previous explicit empty state retained temporarily for later service integration.
 chart/chart-context.tsx: Reference selected/hovered palace state.
 chart/chart-hero.tsx: Reference editorial chart header and quick-locate controls.
+chart/chart-profile-sheet.tsx: Reference-style create/edit sheet reusing WorkspaceProvider and the existing ChartOnboarding form.
 chart/destiny-chart.tsx: Reference radial twelve-palace renderer currently driven by static `PALACES`.
 chart/palace-inspector.tsx: Reference palace inspector currently driven by static `PALACES`.
 chart/chart-provider.tsx, chart-page.tsx: Previous real chart presentation retained temporarily for iztro adapter work.

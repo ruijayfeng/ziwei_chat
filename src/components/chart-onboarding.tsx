@@ -11,7 +11,6 @@ import type { CreateChartInput } from "@/lib/domain/chart";
 import { formatChartProfile, getChartSyncLabel } from "@/lib/ui/chart-profile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -76,17 +75,17 @@ export function ChartOnboarding({
     : "empty-chart";
 
   return (
-    <Card className="border-border/90 bg-card shadow-none ring-0" size="sm">
-      <CardHeader className="gap-3">
+    <div className="space-y-5">
+      <section className="surface rounded-2xl p-4">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
             <UserRound size={18} strokeWidth={1.8} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground">当前命盘</p>
-            <CardTitle className="mt-1 truncate text-base font-semibold">
+            <h3 className="mt-1 truncate text-base font-semibold text-foreground">
               {profile.title}
-            </CardTitle>
+            </h3>
             <p className="mt-1 text-sm leading-5 text-muted-foreground">
               {profile.subtitle}
             </p>
@@ -98,9 +97,9 @@ export function ChartOnboarding({
             {syncLabel}
           </Badge>
         </div>
-      </CardHeader>
+      </section>
 
-      <CardContent className="space-y-4">
+      <div className="space-y-4">
         {profile.details.length > 0 ? (
           <>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
@@ -203,8 +202,8 @@ export function ChartOnboarding({
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

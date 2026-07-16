@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
@@ -74,5 +74,30 @@ describe("chart display geometry", () => {
       expect(source).not.toContain("PALACES");
       expect(source).toContain("palaces");
     }
+  });
+
+  test("restores chart create and edit access through the reference route", () => {
+    const route = readFileSync(
+      resolve(process.cwd(), "src/app/(workspace)/chart/page.tsx"),
+      "utf8",
+    );
+    const hero = readFileSync(
+      resolve(process.cwd(), "src/components/chart/chart-hero.tsx"),
+      "utf8",
+    );
+    const sheetPath = resolve(process.cwd(), "src/components/chart/chart-profile-sheet.tsx");
+
+    expect(existsSync(sheetPath)).toBe(true);
+    expect(route).toContain("<ChartProfileSheet");
+    expect(route).toContain("chartDisplay={chartDisplay}");
+    expect(hero).toContain("onEdit");
+    expect(hero).toContain("hasChart ? '编辑命盘' : '创建命盘'");
+    expect(hero).toContain("点击宫位查看确定性排盘事实");
+    expect(hero).not.toContain("AI 将实时解释每一次点击");
+
+    const sheet = existsSync(sheetPath) ? readFileSync(sheetPath, "utf8") : "";
+    expect(sheet).toContain("<ChartOnboarding");
+    expect(sheet).toContain("saveChart");
+    expect(sheet).toContain("resetLocalChart");
   });
 });
