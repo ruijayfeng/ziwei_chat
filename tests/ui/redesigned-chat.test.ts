@@ -21,4 +21,11 @@ describe("reference chat presentation", () => {
     expect(experience).toContain("<ThinkingIndicator />");
     expect(bubble).toContain("ziwei-shimmer");
   });
+
+  test("calls reduced-motion hooks before role-specific returns", () => {
+    const bubble = source("src/components/chat/message-bubble.tsx");
+
+    expect(bubble.indexOf("const reduceMotion = useReducedMotion()"))
+      .toBeLessThan(bubble.indexOf("if (isUser)"));
+  });
 });

@@ -116,6 +116,7 @@ export function MessageBubble({
   isLast?: boolean
   onRetry?: () => void
 }) {
+  const reduceMotion = useReducedMotion()
   const isUser = message.role === 'user'
 
   if (isUser) {
@@ -132,8 +133,6 @@ export function MessageBubble({
       </motion.div>
     )
   }
-
-  const reduceMotion = useReducedMotion()
 
   return (
     <motion.div
