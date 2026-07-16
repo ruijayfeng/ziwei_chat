@@ -3,16 +3,18 @@ export type SihuaType = '化禄' | '化权' | '化科' | '化忌'
 export type MainStar = {
   name: string
   sihua?: SihuaType
+  brightness?: string
 }
 
 export type Palace = {
   id: string
+  sourceIndex: number
   name: string
   branch: string
   mainStars: MainStar[]
   minorStars: string[]
   keywords: string[]
-  rating: number // 1 - 5, palace energy strength
+  rating: number | null // 1 - 5 when iztro provides a recognized major-star brightness
   summary: string
   aiTraits: string[]
   basis: string[]
@@ -29,6 +31,7 @@ export type Palace = {
 export const PALACES: Palace[] = [
   {
     id: 'ming',
+    sourceIndex: 0,
     name: '命宫',
     branch: '午',
     mainStars: [{ name: '紫微', sihua: '化权' }, { name: '天府' }],
@@ -42,6 +45,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'siblings',
+    sourceIndex: 1,
     name: '兄弟',
     branch: '未',
     mainStars: [{ name: '太阴' }],
@@ -55,6 +59,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'spouse',
+    sourceIndex: 2,
     name: '夫妻',
     branch: '申',
     mainStars: [{ name: '贪狼', sihua: '化禄' }],
@@ -68,6 +73,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'children',
+    sourceIndex: 3,
     name: '子女',
     branch: '酉',
     mainStars: [{ name: '巨门' }],
@@ -81,6 +87,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'wealth',
+    sourceIndex: 4,
     name: '财帛',
     branch: '戌',
     mainStars: [{ name: '武曲', sihua: '化科' }, { name: '天相' }],
@@ -94,6 +101,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'health',
+    sourceIndex: 5,
     name: '疾厄',
     branch: '亥',
     mainStars: [{ name: '天梁' }],
@@ -107,6 +115,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'travel',
+    sourceIndex: 6,
     name: '迁移',
     branch: '子',
     mainStars: [{ name: '七杀' }],
@@ -120,6 +129,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'friends',
+    sourceIndex: 7,
     name: '交友',
     branch: '丑',
     mainStars: [],
@@ -133,6 +143,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'career',
+    sourceIndex: 8,
     name: '官禄',
     branch: '寅',
     mainStars: [{ name: '破军' }],
@@ -146,6 +157,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'property',
+    sourceIndex: 9,
     name: '田宅',
     branch: '卯',
     mainStars: [{ name: '天机' }, { name: '太阳' }],
@@ -159,6 +171,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'fortune',
+    sourceIndex: 10,
     name: '福德',
     branch: '辰',
     mainStars: [{ name: '天同', sihua: '化忌' }],
@@ -172,6 +185,7 @@ export const PALACES: Palace[] = [
   },
   {
     id: 'parents',
+    sourceIndex: 11,
     name: '父母',
     branch: '巳',
     mainStars: [{ name: '廉贞' }],

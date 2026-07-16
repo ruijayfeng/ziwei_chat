@@ -14,12 +14,13 @@ import { useChart } from './chart-context'
  */
 const BRIGHTNESS = ['陷', '利', '得', '旺', '庙'] as const
 
-function LuminanceGauge({ value }: { value: number }) {
+function LuminanceGauge({ value }: { value: number | null }) {
   const r = 15
   const circ = 2 * Math.PI * r
   const sweep = 0.75 // 270° visible arc, gap at the bottom
-  const ratio = Math.max(0, Math.min(value, 5)) / 5
-  const label = BRIGHTNESS[Math.max(0, Math.min(value, 5) - 1)] ?? '陷'
+  const normalizedValue = value ?? 0
+  const ratio = Math.max(0, Math.min(normalizedValue, 5)) / 5
+  const label = value === null ? '—' : BRIGHTNESS[Math.max(0, Math.min(value, 5) - 1)] ?? '陷'
 
   return (
     <div className="relative flex size-11 shrink-0 items-center justify-center">
@@ -172,7 +173,7 @@ export function PalaceInspector() {
             </div>
             <div
               className="flex flex-col items-center gap-0.5"
-              aria-label={`星曜亮度 ${palace.rating} / 5`}
+              aria-label={palace.rating === null ? '星曜亮度暂无数据' : `星曜亮度 ${palace.rating} / 5`}
             >
               <LuminanceGauge value={palace.rating} />
               <span className="text-[10px] tracking-[0.15em] text-muted-foreground">亮度</span>

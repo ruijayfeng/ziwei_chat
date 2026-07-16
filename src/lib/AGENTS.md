@@ -35,6 +35,7 @@ ui/chat-contract.ts: Shared browser-to-chat API request and evidence wire contra
 ui/chat-client.ts: Abortable static/event-stream chat transport with evidence and protocol validation.
 ui/chat-session.ts: Per-message evidence state machine with single-flight, retry, and empty-answer handling.
 ui/reference-chat.ts: Pure real-session-to-reference-presentation adapter for chat phase, thinking, streaming, and failure messages.
+ui/reference-chart.ts: Pure sanitized iztro display-to-reference-palace adapter; preserves real indices, stars, four transforms, brightness, and sourced empty interpretation fields.
 ui/conversation-records.ts: Validated persisted/current-browser conversation adapter with unavailable-storage fallback.
 ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds.
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
