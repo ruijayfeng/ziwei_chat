@@ -24,4 +24,13 @@ describe("reference redesign visual contract", () => {
     expect(source("src/components/brand/logotype.tsx")).toContain("ZiweiLogotype");
     expect(source("src/components/motion-provider.tsx")).toContain("MotionConfig");
   });
+
+  test("loads reference fonts without a build-time Google Fonts dependency", () => {
+    const layout = source("src/app/layout.tsx");
+
+    expect(layout).not.toContain("next/font/google");
+    expect(layout).toContain("fonts.googleapis.com/css2?family=Fraunces");
+    expect(layout).toContain("--font-fraunces");
+    expect(layout).toContain("--font-noto-serif");
+  });
 });
