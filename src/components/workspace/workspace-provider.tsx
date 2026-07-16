@@ -261,6 +261,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           chartOperationRevision: chartOperationRevisionRef.current,
         };
         if (!isCurrentProfileOperation(saveToken, currentOperation)) return false;
+        setSettledProfileId(profileId);
         setChartError(error instanceof Error ? error.message : "命盘保存失败。");
         setChartSynced(false);
         return false;

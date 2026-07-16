@@ -121,4 +121,14 @@ describe("reference redesign visual contract", () => {
     expect(save).toContain("isCurrentProfileOperation(saveToken, currentOperation)");
     expect(deletion).toContain("chartOperationRevisionRef.current += 1");
   });
+
+  test("settles the current profile when a chart save fails", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
+    const saveCatch = save.slice(save.indexOf("} catch"), save.indexOf("} finally"));
+
+    expect(saveCatch).toContain("isCurrentProfileOperation(saveToken, currentOperation)");
+    expect(saveCatch).toContain("setSettledProfileId(profileId);");
+    expect(saveCatch).toContain("setChartError");
+  });
 });
