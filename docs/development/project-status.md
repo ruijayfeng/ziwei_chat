@@ -6,10 +6,11 @@
 ## UI-First Reference Transplant Status
 
 - The presentation from `ziwei-chat-redesign` is now the active source for the global shell, home/chat, radial chart, records, insights, and settings visual language.
-- `/`, `/chart`, `/records`, and `/insights` intentionally use the reference presentation data during visual acceptance.
+- `/records` and `/insights` intentionally retain reference presentation data while their sourced service adapters remain pending.
 - Existing chart, chat/Agent, evidence, conversation, model-settings, and anonymous-profile services remain in the repository and continue to pass their targeted contracts.
 - The settings route is still connected to real browser-local model settings and anonymous-data deletion.
-- Real chat streaming and evidence are wired into the transplanted reference views through `WorkspaceProvider`; chart and conversation data remain tracked in `docs/development/ui-backend-gap-list.md`.
+- Real chat streaming/evidence and the real iztro chart are wired into the transplanted reference views through `WorkspaceProvider`; conversation history remains tracked in `docs/development/ui-backend-gap-list.md`.
+- `/chart` preserves the supplied radial presentation, maps the sanitized `ChartDisplayModel` into its palace contract, restores the current anonymous chart, and exposes create/edit through a reference-style sheet backed by the existing `/api/chart` flow.
 - Backend adaptation must preserve the accepted reference UI instead of replacing its component structure.
 
 ## Current Branch State
@@ -95,7 +96,10 @@ Latest verified answer-presentation results:
 Latest chart presentation work:
 
 - Saving birth data calls a deterministic `/api/chart` boundary and returns sanitized summary/display data without exposing raw chart JSON.
-- The chart route and home ring consume only the real display DTO; mock ratings, AI traits, and generated palace summaries are absent.
+- The accepted radial chart route consumes the real display DTO through a pure reference adapter; its SVG geometry, rotation, transitions, typography, and responsive composition remain unchanged.
+- With no saved chart, the full presentation remains visible as an explicitly labelled demo. After restore/save, palace names, indices, branches, stars, four transforms, brightness, body-palace, and Laiyin-palace facts come from iztro.
+- Mock AI traits and generated palace interpretations are absent from real-chart state. Unsupported sections retain their reference layout and show sourced empty-state copy directing analysis to the Agent conversation.
+- A reference-style create/edit sheet reuses the existing `ChartOnboarding`, anonymous profile, save, reset, and `/api/chart` contracts.
 - The right inspector exposes tools, facts, knowledge sources, generation mode, critic result, and Agent steps for the selected/latest assistant message; mobile and tablet use an accessible bottom sheet.
 
 Latest agent latency and failure hardening work:

@@ -31,11 +31,11 @@ workspace/app-layout.tsx, sidebar.tsx, mobile-chrome.tsx, motion-provider.tsx, n
 chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; the reference inspector rail renders real Agent evidence and critic state.
 records/: Previous real conversation timeline retained temporarily for adapter work.
 insights/: Previous explicit empty state retained temporarily for later service integration.
-chart/chart-context.tsx: Reference selected/hovered palace state.
-chart/chart-hero.tsx: Reference editorial chart header and quick-locate controls.
+chart/chart-context.tsx: Reference palace collection plus selected/hovered state; initializes against the real 命宫.
+chart/chart-hero.tsx: Reference editorial chart header, truthful data-source copy, quick-locate controls, and create/edit entry.
 chart/chart-profile-sheet.tsx: Reference-style create/edit sheet reusing WorkspaceProvider and the existing ChartOnboarding form.
-chart/destiny-chart.tsx: Reference radial twelve-palace renderer currently driven by static `PALACES`.
-chart/palace-inspector.tsx: Reference palace inspector currently driven by static `PALACES`.
-chart/chart-provider.tsx, chart-page.tsx: Previous real chart presentation retained temporarily for iztro adapter work.
+chart/destiny-chart.tsx: Reference radial twelve-palace renderer driven by context palaces from the real adapter or explicit demo fallback.
+chart/palace-inspector.tsx: Reference palace inspector showing deterministic iztro facts and explicit unsourced-analysis empty states.
+chart/chart-provider.tsx, chart-page.tsx: Previous real chart presentation retained temporarily for later dead-code cleanup; active routes use the reference components.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

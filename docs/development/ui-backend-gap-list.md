@@ -5,17 +5,14 @@
 
 ## Current Integration Summary
 
-- Service and contract layer is healthy: targeted chart, chat, conversation, chat-client, chat-session, model-settings, and conversation-record tests pass 36/36.
-- `WorkspaceProvider` still restores charts, stores model settings, sends `/api/chat` requests, deletes anonymous data, and owns real chat state.
-- The transplanted home, chart, records, and insights routes currently render the reference data providers instead of consuming `WorkspaceProvider` or the existing API adapters.
+- Service and contract layer is healthy: the full test gate passes 52 files / 225 tests, and Agent evaluation passes 10/10.
+- `WorkspaceProvider` restores and saves charts, stores model settings, sends `/api/chat` requests, deletes anonymous data, and owns real chat/evidence state.
+- The transplanted chat and chart routes now consume real service state behind the accepted reference UI; records and insights still use reference presentation data.
 - The settings route remains connected to real browser-local model settings and anonymous-data deletion.
 
 ## P0 — Blocks Core Use
 
-| Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
-| --- | --- | --- | --- | --- | --- |
-| `/chart` | Display the current iztro chart | Radial chart consumes static `PALACES` | `/api/chart`, `WorkspaceProvider.chartDisplay`, `ChartDisplayModel` | Add `ChartDisplayModel -> Palace[]` adapter and feed reference `ChartProvider` | High: displayed palaces are not the user's chart |
-| `/chart` | Create or edit a chart | Reference chart page has no entry point for `ChartOnboarding` | `/api/chart` POST, `WorkspaceProvider.saveChart`, `ChartOnboarding` | Place onboarding/edit flow behind a reference-style sheet or route action without changing radial chart composition | High: a new user cannot create the chart shown by the UI |
+No open P0 integration gaps remain for the accepted chat and chart core loop.
 
 ## P1 — Important Integration
 
@@ -23,8 +20,6 @@
 | --- | --- | --- | --- | --- | --- |
 | `/records` | Conversation history | Timeline consumes static `RECORDS` and `MONTHLY_REFLECTION` | `/api/conversations`, `loadConversationList`, `loadConversationMessages` | Convert conversation list/messages into reference timeline items and expanded detail content | Medium: route does not show persisted conversations |
 | Global sidebar | Current chart summary | Sidebar contains a fixed sexagenary date and fixed chart card | `WorkspaceProvider.chartDisplay`, stored chart input | Add a small view-model adapter for the existing reference card | Medium: global chart identity is disconnected |
-| `/chart` inspector | Palace facts and analysis | Palace content, traits, ratings, basis, and "实时生成" text come from static `PALACES` | Sanitized iztro display DTO plus Agent tools/evidence | Separate deterministic palace facts from optional Agent analysis and map both into the existing inspector sections | Medium: visual interaction works, content is static |
-| Global | Anonymous profile chart restore | `WorkspaceProvider` fetches `/api/chart` in the background, but reference pages do not consume the result | `/api/chart` GET and browser chart session | Bind restored state to sidebar, chart route, and home ring after chart adapter exists | Medium: service work occurs without visible effect |
 
 ## P2 — Later Enhancement
 
@@ -44,7 +39,10 @@
 | --- | --- | --- |
 | Model settings | Connected | `/settings` consumes `WorkspaceProvider.modelSettings`, persists through the existing localStorage helpers, and keeps API keys browser-local |
 | Anonymous-data deletion on settings | Connected | `/settings` calls `WorkspaceProvider.deleteAnonymousData`, which invokes `DELETE /api/chat` before clearing local state |
-| Chart service | Available, not displayed by transplanted chart | `/api/chart` route tests pass; provider restore/save code remains present |
+| Current chart display | Connected | `ChartDisplayModel -> Palace[]` adapter feeds the unchanged reference radial chart with real palace indices, branches, stars, four transforms, brightness, body-palace, and Laiyin-palace facts |
+| Chart create/edit | Connected | Reference-style right sheet reuses `ChartOnboarding`, `WorkspaceProvider.saveChart`, `resetLocalChart`, and `/api/chart`; no duplicate transport or form contract was added |
+| Anonymous chart restore | Connected on `/chart` | Browser/server-restored `WorkspaceProvider.chartDisplay` replaces the explicitly labelled demo fallback and resets selection to the real 命宫 |
+| Unsupported chart interpretation fields | Explicit gap state | The inspector keeps the reference sections but does not fabricate ratings, personality traits, recommendations, or AI analysis when the DTO has no source; it directs interpretation to the Agent conversation |
 | Chat/Agent service | Connected | Reference `ChatProvider` adapts `WorkspaceProvider.chatSession`, `sendMessage`, retry, reset, busy, streaming, and failure states without changing the accepted UI |
 | Chat evidence and critic | Connected | Reference `ChatInspector` renders the existing `EvidenceInspector` inside the accepted rail and mobile sheet, including runs, tools, chart facts, knowledge, critic, generation, and model status |
 | Conversation service | Available, not used by transplanted records | `/api/conversations` and conversation adapter tests pass |
@@ -61,7 +59,6 @@
 
 ## Recommended Integration Order
 
-1. Adapt `ChartDisplayModel` into the reference `Palace[]` model and restore chart creation/edit access.
-2. Adapt persisted conversations into the reference records timeline.
-3. Connect global sidebar chart state.
-4. Leave insights and auxiliary controls until their service contracts exist.
+1. Adapt persisted conversations into the reference records timeline.
+2. Connect global sidebar chart state.
+3. Leave insights and auxiliary controls until their service contracts exist.

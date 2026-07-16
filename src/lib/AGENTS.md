@@ -2,7 +2,7 @@
 > L2 | Parent: AGENTS.md
 
 Member List
-chart-data.ts: Temporary reference UI palace model, static twelve-palace content, tones, and three-way/four-direction geometry pending iztro display adaptation.
+chart-data.ts: Reference palace presentation contract, explicitly labelled demo fallback, four-transform tones, and three-way/four-direction geometry.
 workspace-data.ts: Temporary reference UI themes, records, reflections, weekly letter, and patterns pending real service adapters.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-scoped caches, primary-chart persistence recovery, and tool event recording.
