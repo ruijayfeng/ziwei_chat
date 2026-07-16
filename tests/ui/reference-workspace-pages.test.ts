@@ -16,7 +16,6 @@ describe("reference workspace pages", () => {
     expect(timeline).toContain("loadConversationMessages");
     expect(timeline).toContain("type ConversationDetailState");
     expect(timeline).toContain("retryDetail");
-    expect(timeline).not.toContain("detailRequestId");
     expect(timeline).not.toContain("MONTHLY_REFLECTION");
     expect(timeline).not.toContain("RECORDS.map");
   });

@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  conversationDetailLoadErrorMessage,
+  conversationRecordsReducer,
   conversationTimelineItem,
+  createConversationRecordsState,
   currentSessionConversation,
   loadConversationList,
   loadConversationMessages,
@@ -55,5 +58,31 @@ describe("conversation records UI adapter", () => {
     );
 
     expect(item.kind).toBe("conversation");
+  });
+
+  test("keeps concurrent detail results isolated across selections and profiles", () => {
+    const aMessages = [{ id: "a1", conversationId: "a", role: "assistant" as const, content: "A answer", createdAt: "" }];
+    const bMessages = [{ id: "b1", conversationId: "b", role: "assistant" as const, content: "B answer", createdAt: "" }];
+    let state = createConversationRecordsState("profile-1");
+
+    state = conversationRecordsReducer(state, { type: "detail_loading", profileId: "profile-1", conversationId: "a" });
+    state = conversationRecordsReducer(state, { type: "select", profileId: "profile-1", conversationId: "b" });
+    state = conversationRecordsReducer(state, { type: "detail_loading", profileId: "profile-1", conversationId: "b" });
+    state = conversationRecordsReducer(state, { type: "detail_resolved", profileId: "profile-1", conversationId: "a", messages: aMessages });
+
+    expect(state.selectedId).toBe("b");
+    expect(state.details.a).toEqual({ phase: "ready", messages: aMessages });
+    expect(state.details.b).toEqual({ phase: "loading", messages: undefined });
+
+    state = conversationRecordsReducer(state, { type: "reset", profileId: "profile-2" });
+    state = conversationRecordsReducer(state, { type: "detail_resolved", profileId: "profile-1", conversationId: "b", messages: bMessages });
+    expect(state).toEqual(createConversationRecordsState("profile-2"));
+
+    state = conversationRecordsReducer(state, { type: "detail_resolved", profileId: "profile-2", conversationId: "b", messages: bMessages });
+    state = conversationRecordsReducer(state, { type: "detail_failed", profileId: "profile-2", conversationId: "b" });
+    expect(state.details.b).toEqual({ phase: "error", message: conversationDetailLoadErrorMessage, messages: bMessages });
+
+    state = conversationRecordsReducer(state, { type: "detail_retry", profileId: "profile-2", conversationId: "b" });
+    expect(state.details.b).toEqual({ phase: "idle", messages: bMessages });
   });
 });

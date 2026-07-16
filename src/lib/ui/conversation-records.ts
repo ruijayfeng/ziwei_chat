@@ -23,6 +23,56 @@ export type ConversationMessageItem = {
   createdAt: string;
 };
 
+export const conversationDetailLoadErrorMessage = "\u5bf9\u8bdd\u5185\u5bb9\u8bfb\u53d6\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+
+export type ConversationDetailState =
+  | { phase: "idle"; messages?: ConversationMessageItem[] }
+  | { phase: "loading"; messages?: ConversationMessageItem[] }
+  | { phase: "ready"; messages: ConversationMessageItem[] }
+  | { phase: "error"; message: string; messages?: ConversationMessageItem[] };
+
+export type ConversationRecordsState = {
+  profileId: string;
+  conversations: ConversationListItem[];
+  details: Record<string, ConversationDetailState>;
+  selectedId: string | null;
+};
+
+export type ConversationRecordsAction =
+  | { type: "reset"; profileId: string }
+  | { type: "conversations_loaded"; profileId: string; conversations: ConversationListItem[] }
+  | { type: "select"; profileId: string; conversationId: string }
+  | { type: "detail_loading"; profileId: string; conversationId: string }
+  | { type: "detail_resolved"; profileId: string; conversationId: string; messages: ConversationMessageItem[] }
+  | { type: "detail_failed"; profileId: string; conversationId: string }
+  | { type: "detail_retry"; profileId: string; conversationId: string };
+
+export function createConversationRecordsState(profileId: string): ConversationRecordsState {
+  return { profileId, conversations: [], details: {}, selectedId: null };
+}
+
+export function conversationRecordsReducer(
+  state: ConversationRecordsState,
+  action: ConversationRecordsAction,
+): ConversationRecordsState {
+  if (action.type === "reset") return createConversationRecordsState(action.profileId);
+  if (action.profileId !== state.profileId) return state;
+  if (action.type === "conversations_loaded") return { ...state, conversations: action.conversations };
+  if (action.type === "select") return { ...state, selectedId: action.conversationId };
+
+  const detail = state.details[action.conversationId];
+  if (action.type === "detail_loading") return withDetail(state, action.conversationId, { phase: "loading", messages: detail?.messages });
+  if (action.type === "detail_resolved") return withDetail(state, action.conversationId, { phase: "ready", messages: action.messages });
+  if (action.type === "detail_failed") {
+    return withDetail(state, action.conversationId, {
+      phase: "error",
+      message: conversationDetailLoadErrorMessage,
+      messages: detail?.messages,
+    });
+  }
+  return withDetail(state, action.conversationId, { phase: "idle", messages: detail?.messages });
+}
+
 export type ConversationTimelineKind =
   | "career"
   | "relationship"
@@ -112,6 +162,14 @@ function inferTimelineKind(prompt: string): ConversationTimelineKind {
     if (keywords.some((keyword) => prompt.includes(keyword))) return kind;
   }
   return "conversation";
+}
+
+function withDetail(
+  state: ConversationRecordsState,
+  conversationId: string,
+  detail: ConversationDetailState,
+): ConversationRecordsState {
+  return { ...state, details: { ...state.details, [conversationId]: detail } };
 }
 
 const TIMELINE_KIND_KEYWORDS: Record<Exclude<ConversationTimelineKind, "conversation">, string[]> = {

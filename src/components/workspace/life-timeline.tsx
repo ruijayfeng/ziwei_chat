@@ -1,10 +1,13 @@
 'use client'
 
 import {
+  conversationRecordsReducer,
   conversationTimelineItem,
+  createConversationRecordsState,
   currentSessionConversation,
   loadConversationList,
   loadConversationMessages,
+  type ConversationDetailState,
   type ConversationListItem,
   type ConversationMessageItem,
   type ConversationTimelineItem,
@@ -21,25 +24,12 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 
 type RecordsLoadState =
   | { phase: 'loading' }
   | { phase: 'ready'; unavailable: boolean }
   | { phase: 'error'; message: string }
-
-type ConversationDetailState =
-  | { phase: 'idle'; messages?: ConversationMessageItem[] }
-  | { phase: 'loading'; messages?: ConversationMessageItem[] }
-  | { phase: 'ready'; messages: ConversationMessageItem[] }
-  | { phase: 'error'; message: string; messages?: ConversationMessageItem[] }
-
-type ProfileRecordsState = {
-  profileId: string
-  conversations: ConversationListItem[]
-  details: Record<string, ConversationDetailState>
-  selectedId: string | null
-}
 
 type ProfileLoadState = {
   profileId: string
@@ -58,12 +48,7 @@ const KIND_DISPLAY: Record<ConversationTimelineItem['kind'], { accent: string; i
 export function LifeTimeline() {
   const { ready, profileId, conversationId, chatSession } = useWorkspace()
   const current = currentSessionConversation(conversationId, chatSession.messages)
-  const [records, setRecords] = useState<ProfileRecordsState>({
-    profileId: '',
-    conversations: [],
-    details: {},
-    selectedId: null,
-  })
+  const [records, dispatchRecords] = useReducer(conversationRecordsReducer, '', createConversationRecordsState)
   const [loadState, setLoadState] = useState<ProfileLoadState>({ profileId: '', state: { phase: 'loading' } })
   const listRequestId = useRef(0)
   const requestProfileId = useRef(profileId)
@@ -73,7 +58,7 @@ export function LifeTimeline() {
     listRequestId.current += 1
   }
 
-  const activeRecords = records.profileId === profileId ? records : emptyProfileRecords(profileId)
+  const activeRecords = records.profileId === profileId ? records : createConversationRecordsState(profileId)
   const activeLoadState = loadState.profileId === profileId ? loadState.state : { phase: 'loading' as const }
   const conversations = useMemo(() => mergeCurrentSession(activeRecords.conversations, current), [activeRecords.conversations, current])
   const activeId = conversations.some((conversation) => conversation.id === activeRecords.selectedId)
@@ -87,18 +72,7 @@ export function LifeTimeline() {
   const selectedItem = selected ? conversationTimelineItem(selected, selectedMessages) : null
 
   const retryDetail = useCallback((conversationId: string) => {
-    setRecords((previous) => {
-      if (previous.profileId !== profileId) return previous
-      const detail = previous.details[conversationId]
-      return {
-        ...previous,
-        selectedId: conversationId,
-        details: {
-          ...previous.details,
-          [conversationId]: { phase: 'idle', messages: detail?.messages },
-        },
-      }
-    })
+    dispatchRecords({ type: 'detail_retry', profileId, conversationId })
   }, [profileId])
 
   useEffect(() => {
@@ -108,14 +82,12 @@ export function LifeTimeline() {
     void (async () => {
       await Promise.resolve()
       if (requestId !== listRequestId.current) return
-      setRecords(emptyProfileRecords(profileId))
+      dispatchRecords({ type: 'reset', profileId })
       setLoadState({ profileId, state: { phase: 'loading' } })
       try {
         const result = await loadConversationList(profileId)
         if (requestId !== listRequestId.current) return
-        setRecords((previous) => previous.profileId === profileId
-          ? { ...previous, conversations: result.conversations }
-          : { ...emptyProfileRecords(profileId), conversations: result.conversations })
+        dispatchRecords({ type: 'conversations_loaded', profileId, conversations: result.conversations })
         setLoadState({ profileId, state: { phase: 'ready', unavailable: result.unavailable } })
       } catch (error) {
         if (requestId !== listRequestId.current) return
@@ -134,42 +106,12 @@ export function LifeTimeline() {
 
     void (async () => {
       await Promise.resolve()
-      setRecords((previous) => {
-        if (previous.profileId !== profileId) return previous
-        const previousDetail = previous.details[activeId]
-        return {
-          ...previous,
-          details: {
-            ...previous.details,
-            [activeId]: { phase: 'loading', messages: previousDetail?.messages },
-          },
-        }
-      })
+      dispatchRecords({ type: 'detail_loading', profileId, conversationId: activeId })
       try {
         const messages = await loadConversationMessages(profileId, activeId)
-        setRecords((previous) => {
-          if (previous.profileId !== profileId) return previous
-          return {
-            ...previous,
-            details: { ...previous.details, [activeId]: { phase: 'ready', messages } },
-          }
-        })
-      } catch (error) {
-        setRecords((previous) => {
-          if (previous.profileId !== profileId) return previous
-          const previousDetail = previous.details[activeId]
-          return {
-            ...previous,
-            details: {
-              ...previous.details,
-              [activeId]: {
-                phase: 'error',
-                message: error instanceof Error ? error.message : '对话内容读取失败，请稍后重试。',
-                messages: previousDetail?.messages,
-              },
-            },
-          }
-        })
+        dispatchRecords({ type: 'detail_resolved', profileId, conversationId: activeId, messages })
+      } catch {
+        dispatchRecords({ type: 'detail_failed', profileId, conversationId: activeId })
       }
     })()
   }, [activeId, activeRecords.details, current?.conversation.id, profileId, ready])
@@ -227,7 +169,7 @@ export function LifeTimeline() {
                 )}>
                   <button
                     type="button"
-                    onClick={() => setRecords((previous) => previous.profileId === profileId ? { ...previous, selectedId: item.id } : previous)}
+                    onClick={() => dispatchRecords({ type: 'select', profileId, conversationId: item.id })}
                     aria-expanded={isOpen}
                     className="w-full p-4 text-left"
                   >
@@ -310,10 +252,6 @@ function MessageList({ messages }: { messages: ConversationMessageItem[] }) {
       ))}
     </ol>
   )
-}
-
-function emptyProfileRecords(profileId: string): ProfileRecordsState {
-  return { profileId, conversations: [], details: {}, selectedId: null }
 }
 
 function mergeCurrentSession(
