@@ -75,8 +75,26 @@ describe("reference redesign visual contract", () => {
     const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
     const deletionCatch = deletion.slice(deletion.indexOf("} catch"), deletion.indexOf("} finally"));
 
-    expect(save).toContain("if (dataDeleting) return false;");
-    expect(save).toContain("}, [dataDeleting, profileId])");
+    expect(save).toContain("if (dataDeletingRef.current) return Promise.resolve(false);");
+    expect(save).toContain("}, [profileId]);");
     expect(deletionCatch).toContain("setChartLoading(false);");
+  });
+
+  test("serializes chart saves before deletion requests", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
+    const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
+    const saveAwaitIndex = deletion.indexOf("await chartSavePromiseRef.current");
+    const deleteRequestIndex = deletion.indexOf("fetch(`/api/chat");
+
+    expect(provider).toContain("chartSavePromiseRef");
+    expect(provider).toContain("dataDeletingRef");
+    expect(save).toContain("if (dataDeletingRef.current) return Promise.resolve(false);");
+    expect(save).toContain("chartSavePromiseRef.current = operationPromise");
+    expect(save).toContain("chartSavePromiseRef.current === operationPromise");
+    expect(deletion).toContain("if (!profileId || dataDeletingRef.current) return false;");
+    expect(deletion).toContain("dataDeletingRef.current = true;");
+    expect(saveAwaitIndex).toBeGreaterThanOrEqual(0);
+    expect(deleteRequestIndex).toBeGreaterThan(saveAwaitIndex);
   });
 });

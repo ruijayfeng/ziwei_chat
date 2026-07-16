@@ -85,6 +85,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [settledProfileId, setSettledProfileId] = useState("");
   const revisionRef = useRef(0);
   const profileIdRef = useRef("");
+  const chartSavePromiseRef = useRef<Promise<boolean> | null>(null);
+  const dataDeletingRef = useRef(false);
   const [chartSynced, setChartSynced] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
   const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(defaultModelSettingsDraft);
@@ -178,43 +180,56 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => () => chatAbortRef.current?.abort(), []);
 
-  const saveChart = useCallback(async (nextChart: CreateChartInput) => {
-    if (dataDeleting) return false;
+  const saveChart = useCallback((nextChart: CreateChartInput) => {
+    if (dataDeletingRef.current) return Promise.resolve(false);
     const operation = { profileId, revision: revisionRef.current };
-    setChartLoading(true);
-    setChartError(null);
-    try {
-      const response = await fetch("/api/chart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId, chart: nextChart }),
-      });
-      if (!response.ok) throw new Error("命盘保存失败，请检查出生信息后重试。");
-      const payload = (await response.json()) as ChartApiPayload;
-      if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
-      const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
-      if (!isCurrentProfileOperation(operation, currentOperation)) return false;
-      const primaryChart = { ...nextChart, profileId, isPrimary: true };
-      setChartInput(primaryChart);
-      setChartDisplay(payload.display);
-      setChartSynced(true);
-      setSettledProfileId(profileId);
-      window.localStorage.setItem(
-        chartSessionStorageKey(profileId),
-        chartSessionStorageValue(primaryChart, null, payload.display),
-      );
-      return true;
-    } catch (error) {
-      const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
-      if (!isCurrentProfileOperation(operation, currentOperation)) return false;
-      setChartError(error instanceof Error ? error.message : "命盘保存失败。");
-      setChartSynced(false);
-      return false;
-    } finally {
-      const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
-      if (isCurrentProfileOperation(operation, currentOperation)) setChartLoading(false);
-    }
-  }, [dataDeleting, profileId]);
+    const operationPromise = (async () => {
+      setChartLoading(true);
+      setChartError(null);
+      try {
+        const response = await fetch("/api/chart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId, chart: nextChart }),
+        });
+        if (!response.ok) throw new Error("命盘保存失败，请检查出生信息后重试。");
+        const payload = (await response.json()) as ChartApiPayload;
+        if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
+        const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
+        if (!isCurrentProfileOperation(operation, currentOperation)) return false;
+        const primaryChart = { ...nextChart, profileId, isPrimary: true };
+        setChartInput(primaryChart);
+        setChartDisplay(payload.display);
+        setChartSynced(true);
+        setSettledProfileId(profileId);
+        window.localStorage.setItem(
+          chartSessionStorageKey(profileId),
+          chartSessionStorageValue(primaryChart, null, payload.display),
+        );
+        return true;
+      } catch (error) {
+        const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
+        if (!isCurrentProfileOperation(operation, currentOperation)) return false;
+        setChartError(error instanceof Error ? error.message : "命盘保存失败。");
+        setChartSynced(false);
+        return false;
+      } finally {
+        const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
+        if (isCurrentProfileOperation(operation, currentOperation)) setChartLoading(false);
+      }
+    })();
+
+    chartSavePromiseRef.current = operationPromise;
+    void operationPromise.then(
+      () => {
+        if (chartSavePromiseRef.current === operationPromise) chartSavePromiseRef.current = null;
+      },
+      () => {
+        if (chartSavePromiseRef.current === operationPromise) chartSavePromiseRef.current = null;
+      },
+    );
+    return operationPromise;
+  }, [profileId]);
 
   const resetLocalChart = useCallback(() => {
     if (!profileId) return;
@@ -283,11 +298,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteAnonymousData = useCallback(async () => {
-    if (!profileId || dataDeleting) return false;
-    revisionRef.current += 1;
+    if (!profileId || dataDeletingRef.current) return false;
+    dataDeletingRef.current = true;
     setDataDeleting(true);
     setDataDeletionError(null);
     try {
+      if (chartSavePromiseRef.current) {
+        try {
+          await chartSavePromiseRef.current;
+        } catch {
+          // Save failures are represented by saveChart's resolved false result.
+        }
+      }
+      revisionRef.current += 1;
       const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
       if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
 
@@ -315,9 +338,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setDataDeletionError(error instanceof Error ? error.message : "匿名资料删除失败。");
       return false;
     } finally {
+      dataDeletingRef.current = false;
       setDataDeleting(false);
     }
-  }, [dataDeleting, profileId]);
+  }, [profileId]);
 
   const selectedEvidence = useMemo(() => {
     const selected = selectedEvidenceMessageId
