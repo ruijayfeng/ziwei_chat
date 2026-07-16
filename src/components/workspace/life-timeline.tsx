@@ -51,12 +51,6 @@ export function LifeTimeline() {
   const [records, dispatchRecords] = useReducer(conversationRecordsReducer, '', createConversationRecordsState)
   const [loadState, setLoadState] = useState<ProfileLoadState>({ profileId: '', state: { phase: 'loading' } })
   const listRequestId = useRef(0)
-  const requestProfileId = useRef(profileId)
-
-  if (requestProfileId.current !== profileId) {
-    requestProfileId.current = profileId
-    listRequestId.current += 1
-  }
 
   const activeRecords = records.profileId === profileId ? records : createConversationRecordsState(profileId)
   const activeLoadState = loadState.profileId === profileId ? loadState.state : { phase: 'loading' as const }
