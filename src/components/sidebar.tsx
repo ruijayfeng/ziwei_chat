@@ -44,10 +44,12 @@ function NavigationItem({ item, active }: { item: NavItem; active: boolean }) {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { ready, chartLoading, chartDisplay } = useWorkspace()
+  const { ready, chartLoading, chartDisplay, chartRestoreSettled, chartError } = useWorkspace()
   const chartSummary = sidebarChartSummary({
     ready,
+    settled: chartRestoreSettled,
     loading: chartLoading,
+    error: chartError,
     chart: chartDisplay,
   })
 
@@ -81,13 +83,19 @@ export function Sidebar() {
           <span className="text-sm font-medium text-foreground">
             {chartSummary.phase === 'loading'
               ? '正在读取命盘…'
+              : chartSummary.phase === 'error'
+                ? '命盘恢复失败'
               : chartSummary.phase === 'empty'
                 ? '尚未创建命盘'
                 : chartSummary.displayName}
           </span>
         </div>
         <p className="mb-3.5 font-mono text-xs tracking-wide text-muted-foreground">
-          {chartSummary.phase === 'ready' ? chartSummary.detail : ' '}
+          {chartSummary.phase === 'ready'
+            ? chartSummary.detail
+            : chartSummary.phase === 'error'
+              ? chartSummary.message
+              : ' '}
         </p>
         {chartSummary.phase === 'loading' ? (
           <button
@@ -102,7 +110,11 @@ export function Sidebar() {
             href="/chart"
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 py-2 text-xs font-medium text-primary transition-colors duration-300 hover:bg-primary/15"
           >
-            {chartSummary.phase === 'empty' ? '创建命盘' : '查看命盘'}
+            {chartSummary.phase === 'error'
+              ? '查看命盘状态'
+              : chartSummary.phase === 'empty'
+                ? '创建命盘'
+                : '查看命盘'}
             <ChevronRight className="size-3.5" strokeWidth={2} />
           </Link>
         )}

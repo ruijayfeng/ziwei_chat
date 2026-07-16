@@ -39,7 +39,18 @@ describe("reference redesign visual contract", () => {
 
     expect(sidebar).toContain("useWorkspace()");
     expect(sidebar).toContain("sidebarChartSummary");
+    expect(sidebar).toContain("chartRestoreSettled");
+    expect(sidebar).toContain("chartError");
+    expect(sidebar).toContain("查看命盘状态");
     expect(sidebar).not.toContain("我的命盘");
     expect(sidebar).not.toContain("开通 Pro");
+  });
+
+  test("exposes profile-scoped chart restore settlement", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+
+    expect(provider).toContain("chartRestoreSettled");
+    expect(provider).toContain("settledProfileId");
+    expect(provider).toContain("settledProfileId === profileId");
   });
 });

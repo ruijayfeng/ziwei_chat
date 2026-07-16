@@ -50,6 +50,7 @@ type WorkspaceContextValue = {
   chartInput: CreateChartInput | null;
   chartDisplay: ChartDisplayModel | null;
   chartLoading: boolean;
+  chartRestoreSettled: boolean;
   chartSynced: boolean;
   chartError: string | null;
   saveChart: (chart: CreateChartInput) => Promise<boolean>;
@@ -80,6 +81,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [chartInput, setChartInput] = useState<CreateChartInput | null>(null);
   const [chartDisplay, setChartDisplay] = useState<ChartDisplayModel | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
+  const [settledProfileId, setSettledProfileId] = useState("");
   const [chartSynced, setChartSynced] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
   const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(defaultModelSettingsDraft);
@@ -115,6 +117,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!profileId) return;
     let cancelled = false;
     const restoreTimer = window.setTimeout(() => {
+      setChartError(null);
+      setChartInput(null);
+      setChartDisplay(null);
+      setChartSynced(false);
       const storageKey = chartSessionStorageKey(profileId);
       const storedValue = window.localStorage.getItem(storageKey);
       const storedChart = chartSessionFromStorage(storedValue, profileId);
@@ -124,6 +130,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (storedChart && storedDisplay) {
         setChartDisplay(storedDisplay);
         setChartSynced(true);
+        setChartLoading(false);
+        setSettledProfileId(profileId);
         return;
       }
 
@@ -135,7 +143,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           return (await response.json()) as ChartApiPayload;
         })
         .then((payload) => {
-          if (cancelled || !payload || !payload.chart || !isChartDisplayModel(payload.display)) return;
+          if (cancelled || !payload || !payload.chart) return;
+          if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
           const primaryChart = { ...payload.chart, profileId, isPrimary: true };
           setChartInput(primaryChart);
           setChartDisplay(payload.display);
@@ -149,7 +158,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           if (!cancelled) setChartError(error instanceof Error ? error.message : "命盘恢复失败。");
         })
         .finally(() => {
-          if (!cancelled) setChartLoading(false);
+          if (!cancelled) {
+            setChartLoading(false);
+            setSettledProfileId(profileId);
+          }
         });
     }, 0);
 
@@ -177,6 +189,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setChartInput(primaryChart);
       setChartDisplay(payload.display);
       setChartSynced(true);
+      setSettledProfileId(profileId);
       window.localStorage.setItem(
         chartSessionStorageKey(profileId),
         chartSessionStorageValue(primaryChart, null, payload.display),
@@ -298,6 +311,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return selected?.evidence ?? latestAssistant?.evidence ?? initialEvidence;
   }, [chatSession.messages, selectedEvidenceMessageId]);
 
+  const chartRestoreSettled = profileId !== "" && settledProfileId === profileId;
+
   const value = useMemo<WorkspaceContextValue>(() => ({
     ready,
     profileId,
@@ -305,6 +320,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     chartInput,
     chartDisplay,
     chartLoading,
+    chartRestoreSettled,
     chartSynced,
     chartError,
     saveChart,
@@ -331,6 +347,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     chartInput,
     chartDisplay,
     chartLoading,
+    chartRestoreSettled,
     chartSynced,
     chartError,
     saveChart,
