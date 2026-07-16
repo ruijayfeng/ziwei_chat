@@ -4,6 +4,7 @@ import {
   conversationTimelineItem,
   currentSessionConversation,
   loadConversationList,
+  loadConversationMessages,
 } from "../../src/lib/ui/conversation-records";
 import { initialEvidence } from "../../src/lib/ui/chat-evidence";
 
@@ -11,6 +12,12 @@ describe("conversation records UI adapter", () => {
   test("treats unavailable persistence as an honest fallback state", async () => {
     const result = await loadConversationList("profile-1", async () => new Response(null, { status: 503 }));
     expect(result).toEqual({ conversations: [], unavailable: true });
+  });
+
+  test("rejects unavailable conversation details with a safe error", async () => {
+    await expect(
+      loadConversationMessages("profile-1", "conversation-1", async () => new Response(null, { status: 503 })),
+    ).rejects.toThrow("\u5bf9\u8bdd\u5185\u5bb9\u8bfb\u53d6\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002");
   });
 
   test("maps only real non-empty current-session messages", () => {

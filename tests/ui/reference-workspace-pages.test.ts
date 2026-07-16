@@ -14,6 +14,8 @@ describe("reference workspace pages", () => {
     expect(timeline).toContain("useWorkspace()");
     expect(timeline).toContain("loadConversationList");
     expect(timeline).toContain("loadConversationMessages");
+    expect(timeline).toContain("type ConversationDetailState");
+    expect(timeline).toContain("retryDetail");
     expect(timeline).not.toContain("MONTHLY_REFLECTION");
     expect(timeline).not.toContain("RECORDS.map");
   });

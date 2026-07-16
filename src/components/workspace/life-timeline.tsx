@@ -21,12 +21,30 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type RecordsLoadState =
   | { phase: 'loading' }
   | { phase: 'ready'; unavailable: boolean }
   | { phase: 'error'; message: string }
+
+type ConversationDetailState =
+  | { phase: 'idle'; messages?: ConversationMessageItem[] }
+  | { phase: 'loading'; messages?: ConversationMessageItem[] }
+  | { phase: 'ready'; messages: ConversationMessageItem[] }
+  | { phase: 'error'; message: string; messages?: ConversationMessageItem[] }
+
+type ProfileRecordsState = {
+  profileId: string
+  conversations: ConversationListItem[]
+  details: Record<string, ConversationDetailState>
+  selectedId: string | null
+}
+
+type ProfileLoadState = {
+  profileId: string
+  state: RecordsLoadState
+}
 
 const KIND_DISPLAY: Record<ConversationTimelineItem['kind'], { accent: string; icon: LucideIcon; label: string }> = {
   career: { accent: 'oklch(0.75 0.13 150)', icon: Briefcase, label: '事业' },
@@ -40,22 +58,50 @@ const KIND_DISPLAY: Record<ConversationTimelineItem['kind'], { accent: string; i
 export function LifeTimeline() {
   const { ready, profileId, conversationId, chatSession } = useWorkspace()
   const current = currentSessionConversation(conversationId, chatSession.messages)
-  const [persisted, setPersisted] = useState<ConversationListItem[]>([])
-  const [messagesByConversation, setMessagesByConversation] = useState<Record<string, ConversationMessageItem[]>>({})
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [loadState, setLoadState] = useState<RecordsLoadState>({ phase: 'loading' })
+  const [records, setRecords] = useState<ProfileRecordsState>({
+    profileId: '',
+    conversations: [],
+    details: {},
+    selectedId: null,
+  })
+  const [loadState, setLoadState] = useState<ProfileLoadState>({ profileId: '', state: { phase: 'loading' } })
   const listRequestId = useRef(0)
   const detailRequestId = useRef(0)
+  const requestProfileId = useRef(profileId)
 
-  const conversations = useMemo(() => mergeCurrentSession(persisted, current), [current, persisted])
-  const activeId = conversations.some((conversation) => conversation.id === selectedId)
-    ? selectedId
+  if (requestProfileId.current !== profileId) {
+    requestProfileId.current = profileId
+    listRequestId.current += 1
+    detailRequestId.current += 1
+  }
+
+  const activeRecords = records.profileId === profileId ? records : emptyProfileRecords(profileId)
+  const activeLoadState = loadState.profileId === profileId ? loadState.state : { phase: 'loading' as const }
+  const conversations = useMemo(() => mergeCurrentSession(activeRecords.conversations, current), [activeRecords.conversations, current])
+  const activeId = conversations.some((conversation) => conversation.id === activeRecords.selectedId)
+    ? activeRecords.selectedId
     : conversations[0]?.id ?? null
   const selected = conversations.find((conversation) => conversation.id === activeId) ?? null
-  const selectedMessages = activeId === current?.conversation.id
-    ? current.messages
-    : activeId ? messagesByConversation[activeId] ?? [] : []
+  const selectedDetail = activeId === current?.conversation.id
+    ? { phase: 'ready', messages: current.messages } satisfies ConversationDetailState
+    : activeId ? activeRecords.details[activeId] : undefined
+  const selectedMessages = selectedDetail?.messages ?? []
   const selectedItem = selected ? conversationTimelineItem(selected, selectedMessages) : null
+
+  const retryDetail = useCallback((conversationId: string) => {
+    setRecords((previous) => {
+      if (previous.profileId !== profileId) return previous
+      const detail = previous.details[conversationId]
+      return {
+        ...previous,
+        selectedId: conversationId,
+        details: {
+          ...previous.details,
+          [conversationId]: { phase: 'idle', messages: detail?.messages },
+        },
+      }
+    })
+  }, [profileId])
 
   useEffect(() => {
     if (!ready || !profileId) return
@@ -64,55 +110,97 @@ export function LifeTimeline() {
     void (async () => {
       await Promise.resolve()
       if (requestId !== listRequestId.current) return
-      setLoadState({ phase: 'loading' })
+      setRecords(emptyProfileRecords(profileId))
+      setLoadState({ profileId, state: { phase: 'loading' } })
       try {
         const result = await loadConversationList(profileId)
         if (requestId !== listRequestId.current) return
-        setPersisted(result.conversations)
-        setLoadState({ phase: 'ready', unavailable: result.unavailable })
+        setRecords((previous) => previous.profileId === profileId
+          ? { ...previous, conversations: result.conversations }
+          : { ...emptyProfileRecords(profileId), conversations: result.conversations })
+        setLoadState({ profileId, state: { phase: 'ready', unavailable: result.unavailable } })
       } catch (error) {
         if (requestId !== listRequestId.current) return
-        setLoadState({ phase: 'error', message: error instanceof Error ? error.message : '对话记录读取失败，请稍后重试。' })
+        setLoadState({
+          profileId,
+          state: { phase: 'error', message: error instanceof Error ? error.message : '对话记录读取失败，请稍后重试。' },
+        })
       }
     })()
   }, [profileId, ready])
 
   useEffect(() => {
-    if (!ready || !profileId || !activeId || activeId === current?.conversation.id || messagesByConversation[activeId]) return
+    if (!ready || !profileId || !activeId || activeId === current?.conversation.id) return
+    const detail = activeRecords.details[activeId]
+    if (detail && detail.phase !== 'idle') return
     const requestId = ++detailRequestId.current
 
-    void loadConversationMessages(profileId, activeId)
-      .then((messages) => {
-        if (requestId !== detailRequestId.current) return
-        setMessagesByConversation((cached) => ({ ...cached, [activeId]: messages }))
+    void (async () => {
+      await Promise.resolve()
+      if (requestId !== detailRequestId.current) return
+      setRecords((previous) => {
+        if (previous.profileId !== profileId) return previous
+        const previousDetail = previous.details[activeId]
+        return {
+          ...previous,
+          details: {
+            ...previous.details,
+            [activeId]: { phase: 'loading', messages: previousDetail?.messages },
+          },
+        }
       })
-      .catch(() => {
+      try {
+        const messages = await loadConversationMessages(profileId, activeId)
         if (requestId !== detailRequestId.current) return
-        setMessagesByConversation((cached) => ({ ...cached, [activeId]: [] }))
-      })
-  }, [activeId, current?.conversation.id, messagesByConversation, profileId, ready])
+        setRecords((previous) => {
+          if (previous.profileId !== profileId) return previous
+          return {
+            ...previous,
+            details: { ...previous.details, [activeId]: { phase: 'ready', messages } },
+          }
+        })
+      } catch (error) {
+        if (requestId !== detailRequestId.current) return
+        setRecords((previous) => {
+          if (previous.profileId !== profileId) return previous
+          const previousDetail = previous.details[activeId]
+          return {
+            ...previous,
+            details: {
+              ...previous.details,
+              [activeId]: {
+                phase: 'error',
+                message: error instanceof Error ? error.message : '对话内容读取失败，请稍后重试。',
+                messages: previousDetail?.messages,
+              },
+            },
+          }
+        })
+      }
+    })()
+  }, [activeId, activeRecords.details, current?.conversation.id, profileId, ready])
 
   return (
     <div className="relative">
       <div className="absolute bottom-2 left-[19px] top-2 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
-      {loadState.phase === 'error' && (
-        <p className="mb-4 ml-14 text-sm text-muted-foreground">{loadState.message}</p>
+      {activeLoadState.phase === 'error' && (
+        <p className="mb-4 ml-14 text-sm text-muted-foreground">{activeLoadState.message}</p>
       )}
-      {loadState.phase === 'ready' && loadState.unavailable && (
+      {activeLoadState.phase === 'ready' && activeLoadState.unavailable && (
         <p className="mb-4 ml-14 text-sm text-muted-foreground">历史记录暂不可用，当前浏览器会话仍可查看。</p>
       )}
-      {loadState.phase === 'loading' && !conversations.length && (
+      {activeLoadState.phase === 'loading' && !conversations.length && (
         <p className="mb-4 ml-14 text-sm text-muted-foreground">正在读取对话记录。</p>
       )}
-      {!conversations.length && loadState.phase !== 'loading' ? (
+      {!conversations.length && activeLoadState.phase !== 'loading' ? (
         <p className="ml-14 text-sm leading-relaxed text-muted-foreground">还没有可展示的真实对话记录。</p>
       ) : (
         <ol className="flex flex-col gap-3">
           {conversations.map((conversation, index) => {
             const messages = conversation.id === current?.conversation.id
               ? current.messages
-              : messagesByConversation[conversation.id] ?? []
+              : activeRecords.details[conversation.id]?.messages ?? []
             const item = conversationTimelineItem(conversation, messages)
             const display = KIND_DISPLAY[item.kind]
             const Icon = display.icon
@@ -139,15 +227,16 @@ export function LifeTimeline() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(item.id)}
-                  aria-expanded={isOpen}
-                  className={cn(
-                    'surface surface-hover mb-1 flex-1 rounded-2xl p-4 text-left',
-                    isOpen && 'border-primary/30',
-                  )}
-                >
+                <div className={cn(
+                  'surface surface-hover mb-1 flex-1 rounded-2xl text-left',
+                  isOpen && 'border-primary/30',
+                )}>
+                  <button
+                    type="button"
+                    onClick={() => setRecords((previous) => previous.profileId === profileId ? { ...previous, selectedId: item.id } : previous)}
+                    aria-expanded={isOpen}
+                    className="w-full p-4 text-left"
+                  >
                   <div className="flex items-center gap-2.5">
                     <span
                       className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
@@ -163,6 +252,8 @@ export function LifeTimeline() {
                   </div>
                   {!isOpen && item.preview && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{item.preview}</p>}
 
+                  </button>
+
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
@@ -172,11 +263,15 @@ export function LifeTimeline() {
                         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                         className="overflow-hidden"
                       >
-                        <ConversationMessages messages={selectedItem?.messages ?? []} />
+                        <ConversationMessages
+                          detail={selectedDetail}
+                          messages={selectedItem?.messages ?? []}
+                          onRetry={() => retryDetail(item.id)}
+                        />
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </button>
+                </div>
               </motion.li>
             )
           })}
@@ -186,9 +281,31 @@ export function LifeTimeline() {
   )
 }
 
-function ConversationMessages({ messages }: { messages: ConversationMessageItem[] }) {
-  if (!messages.length) return <p className="pt-3 text-sm text-muted-foreground">正在读取这段对话，或该对话暂无可展示内容。</p>
+function ConversationMessages({
+  detail,
+  messages,
+  onRetry,
+}: {
+  detail: ConversationDetailState | undefined
+  messages: ConversationMessageItem[]
+  onRetry: () => void
+}) {
+  if (detail?.phase === 'error') {
+    return (
+      <div className="pt-3">
+        <p className="text-sm text-muted-foreground">{detail.message}</p>
+        <button type="button" onClick={onRetry} className="mt-2 text-sm font-medium text-primary hover:text-primary/80">重试</button>
+        {messages.length > 0 && <MessageList messages={messages} />}
+      </div>
+    )
+  }
 
+  if (!messages.length) return <p className="pt-3 text-sm text-muted-foreground">正在读取这段对话。</p>
+
+  return <MessageList messages={messages} />
+}
+
+function MessageList({ messages }: { messages: ConversationMessageItem[] }) {
   return (
     <ol className="mt-4 grid gap-4 border-t border-border/70 pt-4">
       {messages.map((message) => (
@@ -199,6 +316,10 @@ function ConversationMessages({ messages }: { messages: ConversationMessageItem[
       ))}
     </ol>
   )
+}
+
+function emptyProfileRecords(profileId: string): ProfileRecordsState {
+  return { profileId, conversations: [], details: {}, selectedId: null }
 }
 
 function mergeCurrentSession(
