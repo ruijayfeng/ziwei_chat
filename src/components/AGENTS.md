@@ -8,11 +8,12 @@ mobile-chrome.tsx: Reference-owned mobile top bar, bottom tabs, and animated ins
 nav-items.ts: Reference route order and icons; settings href is corrected to the real `/settings` route.
 gradient-background.tsx: Reference ambient background, stars, vignette, and texture.
 glass-card.tsx: Reference surface wrapper.
-hero-header.tsx: Reference home editorial header with the current Shanghai calendar date; music remains a visual-only control.
+hero-header.tsx: Reference home editorial header with the current Shanghai calendar date; unsupported music control is removed from V1.
 destiny-ring.tsx: Reference home destiny-ring renderer.
 chat-composer.tsx: Reference home/docked composer presentation and theme prompts.
 inspector-context.tsx: Inspector open/close contract used by reference shell controls.
-inspector-panel.tsx: Reference default inspector with a confirmed, loading/error-aware connection to WorkspaceProvider anonymous-data deletion.
+inspector-panel.tsx: Reference default inspector that supplies its native trigger styling to the shared, boolean-aware anonymous-data deletion dialog.
+clear-anonymous-data-dialog.tsx: Controlled shared deletion presentation that awaits the provider result, retains failures in-modal, and accepts caller-owned trigger styling.
 motion-provider.tsx: Reference MotionConfig boundary respecting reduced-motion preferences.
 brand/logotype.tsx: Reference LXGW WenKai/Fraunces wordmark.
 brand-mark.tsx: Reference circular compass mark used by inspector surfaces.

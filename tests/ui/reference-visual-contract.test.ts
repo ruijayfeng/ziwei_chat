@@ -151,7 +151,7 @@ describe("reference redesign visual contract", () => {
 
     expect(inspector).toContain("useWorkspace()");
     expect(inspector).toContain("deleteAnonymousData");
-    expect(inspector).toContain("AlertDialog");
+    expect(inspector).toContain("ClearAnonymousDataDialog");
     expect(inspector).toContain("dataDeletionError");
   });
 });

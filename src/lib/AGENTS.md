@@ -43,6 +43,7 @@ ui/chat-errors.ts: Chat error classification helpers for retryable network, rate
 ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.
 ui/sidebar-chart.ts: Pure WorkspaceProvider chart-state adapter for truthful sidebar loading, error, empty, and ready presentation.
 ui/current-calendar.ts: Shanghai-time current-date formatter and exact next-midnight refresh calculation for the home header.
+ui/data-deletion-dialog.ts: Pure controlled-dialog reducer that blocks pending closes and closes only after successful anonymous-data deletion.
 ui/profile-operation.ts: Profile/revision operation tokens that prevent stale chart restore and save mutations from winning.
 ui/chart-display.ts: Pure stable-id lookup and real-index three-way/four-direction geometry for the redesigned chart.
 ui/chart-visual.ts: Pure deterministic fact-to-disc model mapping and evidence-backed active palace selection.

@@ -70,3 +70,59 @@ Results:
 
 - No task-specific implementation concerns remain.
 - Insights intentionally remains unavailable until a sourced aggregation and critic pipeline exists.
+
+## Review Follow-up: Shared Deletion Controller
+
+### Root Cause
+
+The original settings and inspector dialogs were uncontrolled. Their confirmation handlers did not await the existing `WorkspaceProvider.deleteAnonymousData(): Promise<boolean>` result, so the dialog could close before a failed deletion left `dataDeletionError` visible. The failure message was outside the active modal.
+
+### RED
+
+1. Added `tests/ui/data-deletion-dialog.test.ts` for pending-close prevention, failed deletion retention, and successful deletion close behavior.
+2. Updated Inspector and Settings source contracts to require `ClearAnonymousDataDialog`; the shared dialog contract requires controlled `open`, `await onConfirm()`, boolean completion, and an in-modal alert.
+3. Ran:
+
+   ```text
+   npm run test -- tests/ui/data-deletion-dialog.test.ts tests/ui/reference-visual-contract.test.ts tests/ui/reference-settings-page.test.ts
+   ```
+
+4. Result: failed as expected. The reducer module and shared component were absent, while Inspector and Settings retained duplicate deletion dialogs.
+
+### GREEN
+
+1. Added `src/lib/ui/data-deletion-dialog.ts`: a pure reducer whose pending state rejects close events; successful confirmation closes and failed confirmation remains open.
+2. Added `src/components/clear-anonymous-data-dialog.tsx`: controlled project AlertDialog presentation that awaits the Provider boolean result, disables trigger/cancel/action while pending or provider-deleting, and shows the supplied error in `AlertDialogContent`.
+3. Replaced Inspector and Settings deletion UIs with the shared component while preserving each surface's trigger styling. Removed the local settings `ClearDataDialog`.
+4. Focused verification:
+
+   ```text
+   npm run test -- tests/ui/data-deletion-dialog.test.ts tests/ui/reference-visual-contract.test.ts tests/ui/reference-settings-page.test.ts
+   npm run typecheck
+   ```
+
+   Result: 3 files / 18 tests passed; typecheck passed.
+
+5. Documentation now records the shared dialog/reducer and states that attachment and music controls are removed from V1. Insights remains open.
+
+### Full Review-Follow-up Gate
+
+Ran after the shared-controller changes:
+
+```text
+git diff --check
+npm run lint -- --quiet
+npm run typecheck
+npm run test
+npm run eval:agent
+npm run build
+```
+
+Results:
+
+- `git diff --check`: passed.
+- `npm run lint -- --quiet`: passed with no lint output.
+- `npm run typecheck`: passed.
+- `npm run test`: 56 files / 255 tests passed.
+- `npm run eval:agent`: 10 cases passed, 0 failures.
+- `npm run build`: passed; production route generation completed.

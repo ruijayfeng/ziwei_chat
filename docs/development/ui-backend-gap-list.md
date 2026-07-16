@@ -25,8 +25,6 @@ No open P0 integration gaps remain for the accepted chat and chart core loop.
 | Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
 | --- | --- | --- | --- | --- | --- |
 | `/insights` | Weekly letter and long-term patterns | Static `WEEKLY_LETTER` and `PATTERNS` | No sourced aggregation pipeline | Design an aggregation, provenance, generation-time, and critic contract before replacing static content | Medium: current content is presentation-only |
-| `/` | Attachment button | Visual button only | No upload or attachment API | Define supported attachment types and request contract before enabling | Low |
-| `/` | Background music button | Visual button only | No audio asset or playback state | Decide whether the control remains decorative or receives an owned audio source | Low |
 
 ## Connected Today
 
@@ -34,7 +32,7 @@ No open P0 integration gaps remain for the accepted chat and chart core loop.
 | --- | --- | --- |
 | Model settings | Connected | `/settings` consumes `WorkspaceProvider.modelSettings`, persists through the existing localStorage helpers, and keeps API keys browser-local |
 | Anonymous-data deletion on settings | Connected | `/settings` calls `WorkspaceProvider.deleteAnonymousData`, which invokes `DELETE /api/chat` before clearing local state |
-| Anonymous-data deletion in default inspector | Connected | Inspector uses the project AlertDialog and the same `WorkspaceProvider.deleteAnonymousData`, `dataDeleting`, and `dataDeletionError` state as settings |
+| Anonymous-data deletion in settings and default inspector | Connected | Both surfaces use the shared controlled dialog, await `WorkspaceProvider.deleteAnonymousData`, prevent pending closes, retain failures in the active modal, and render `dataDeletionError` there |
 | Conversation records | Connected | `/records` loads profile-scoped persisted conversations and current browser-session history through the records controller and displays selected-message details |
 | Global sidebar chart | Connected | `sidebarChartSummary` adapts WorkspaceProvider restore/save state to loading, error, empty, and ready card states |
 | Home current date | Connected | `currentCalendarDisplay` formats the current Asia/Shanghai date and refreshes at the next Shanghai midnight |
@@ -59,4 +57,4 @@ No open P0 integration gaps remain for the accepted chat and chart core loop.
 ## Recommended Integration Order
 
 1. Leave insights unavailable until its sourced aggregation and critic contracts exist.
-2. Leave auxiliary controls unavailable until their service contracts exist.
+2. Attachments and background music are removed from V1 scope; do not restore controls until their product contracts are accepted.
