@@ -46,4 +46,33 @@ describe("chart display geometry", () => {
     expect(source).toContain("<motion.path");
     expect(source).toContain("OUTER_RING");
   });
+
+  test("binds the reference chart route to the real workspace display model", () => {
+    const route = readFileSync(
+      resolve(process.cwd(), "src/app/(workspace)/chart/page.tsx"),
+      "utf8",
+    );
+    const context = readFileSync(
+      resolve(process.cwd(), "src/components/chart/chart-context.tsx"),
+      "utf8",
+    );
+
+    expect(route).toContain("useWorkspace()");
+    expect(route).toContain("referencePalaces(chartDisplay)");
+    expect(route).toContain("chartDisplay?.chartId ?? 'demo-chart'");
+    expect(context).toContain("palaces: Palace[]");
+    expect(context).toContain("palace.name === '命宫'");
+  });
+
+  test("reads palace data from the reference chart context instead of static imports", () => {
+    for (const file of ["destiny-chart.tsx", "palace-inspector.tsx", "chart-hero.tsx"]) {
+      const source = readFileSync(
+        resolve(process.cwd(), `src/components/chart/${file}`),
+        "utf8",
+      );
+
+      expect(source).not.toContain("PALACES");
+      expect(source).toContain("palaces");
+    }
+  });
 });

@@ -1,12 +1,21 @@
+'use client'
+
 import { AppLayout } from '@/components/app-layout'
 import { ChartHero } from '@/components/chart/chart-hero'
 import { ChartProvider } from '@/components/chart/chart-context'
 import { DestinyChart } from '@/components/chart/destiny-chart'
 import { PalaceInspector } from '@/components/chart/palace-inspector'
+import { useWorkspace } from '@/components/workspace/workspace-provider'
+import { PALACES } from '@/lib/chart-data'
+import { referencePalaces } from '@/lib/ui/reference-chart'
 
 export default function ChartPage() {
+  const { chartDisplay, chartLoading } = useWorkspace()
+  const palaces = chartDisplay ? referencePalaces(chartDisplay) : PALACES
+  const chartKey = chartDisplay?.chartId ?? 'demo-chart'
+
   return (
-    <ChartProvider>
+    <ChartProvider key={chartKey} palaces={palaces}>
       <AppLayout fill inspector={<PalaceInspector />}>
         <div className="flex h-full flex-col">
           <ChartHero />
@@ -17,7 +26,11 @@ export default function ChartPage() {
 
           <footer className="flex shrink-0 items-center justify-center gap-2 text-xs text-muted-foreground/70">
             <span className="size-1 rounded-full bg-primary/60" />
-            点击任意宫位查看解读，连线为三方四正 · 命盘为演示数据
+            {chartDisplay
+              ? `${chartDisplay.displayName} · iztro 确定性排盘 · 连线为三方四正`
+              : chartLoading
+                ? '正在恢复当前命盘'
+                : '演示命盘 · 创建命盘后替换为真实排盘'}
           </footer>
         </div>
       </AppLayout>

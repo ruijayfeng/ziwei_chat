@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { getRelatedIndices, PALACES, SIHUA_TONE } from '@/lib/chart-data'
+import { getRelatedIndices, SIHUA_TONE } from '@/lib/chart-data'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
@@ -148,8 +148,8 @@ function Badge({
 }
 
 export function PalaceInspector() {
-  const { selected, setSelected } = useChart()
-  const palace = PALACES[selected]
+  const { palaces, selected, setSelected } = useChart()
+  const palace = palaces[selected]
   const { trine, opposite } = getRelatedIndices(selected)
   const sihuaStars = palace.mainStars.filter((s) => s.sihua)
 
@@ -185,21 +185,29 @@ export function PalaceInspector() {
 
       {/* Scrollable detail */}
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
-        <Section title="AI 解读" hint="实时生成" defaultOpen>
-          <ul className="flex flex-col gap-2.5">
-            {palace.aiTraits.map((trait) => (
-              <li key={trait} className="flex gap-2.5 text-sm leading-relaxed text-foreground/85">
-                <span className="mt-2 size-1 shrink-0 rounded-full bg-primary/70" />
-                {trait}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">依据</span>
-            {palace.basis.map((b) => (
-              <Badge key={b}>{b}</Badge>
-            ))}
-          </div>
+        <Section title="AI 解读" hint={palace.aiTraits.length > 0 ? '演示内容' : '尚未生成'} defaultOpen>
+          {palace.aiTraits.length > 0 ? (
+            <ul className="flex flex-col gap-2.5">
+              {palace.aiTraits.map((trait) => (
+                <li key={trait} className="flex gap-2.5 text-sm leading-relaxed text-foreground/85">
+                  <span className="mt-2 size-1 shrink-0 rounded-full bg-primary/70" />
+                  {trait}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              当前仅展示 iztro 的确定性排盘事实。需要解读时，可回到对话页让 Agent 基于本命盘分析。
+            </p>
+          )}
+          {palace.basis.length > 0 ? (
+            <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">命盘依据</span>
+              {palace.basis.map((b) => (
+                <Badge key={b}>{b}</Badge>
+              ))}
+            </div>
+          ) : null}
         </Section>
 
         <Section title="主星" hint={`${palace.mainStars.length} 颗`} defaultOpen>
@@ -257,7 +265,7 @@ export function PalaceInspector() {
                         : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground',
                     )}
                   >
-                    {PALACES[idx].name}
+                    {palaces[idx].name}
                   </button>
                 ))}
               </div>
@@ -269,32 +277,40 @@ export function PalaceInspector() {
                 onClick={() => setSelected(opposite)}
                 className="rounded-lg border border-gold/40 px-2.5 py-1 text-xs text-gold transition-colors hover:bg-gold/10"
               >
-                {PALACES[opposite].name}
+                {palaces[opposite].name}
               </button>
             </div>
           </div>
         </Section>
 
         <Section title="人格关键词" defaultOpen>
-          <div className="flex flex-wrap gap-2">
-            {palace.keywords.map((k) => (
-              <Badge key={k}>{k}</Badge>
-            ))}
-          </div>
+          {palace.keywords.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {palace.keywords.map((k) => (
+                <Badge key={k}>{k}</Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">暂无经过 Agent 与 critic 验证的人格关键词。</p>
+          )}
         </Section>
 
         <Section title="推荐探索" defaultOpen>
-          <div className="flex flex-wrap gap-2">
-            {palace.related.map((topic) => (
-              <button
-                key={topic}
-                type="button"
-                className="surface inline-flex items-center rounded-full px-3.5 py-1.5 text-xs text-muted-foreground transition-colors duration-300 hover:border-primary/40 hover:text-foreground"
-              >
-                {topic}
-              </button>
-            ))}
-          </div>
+          {palace.related.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {palace.related.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  className="surface inline-flex items-center rounded-full px-3.5 py-1.5 text-xs text-muted-foreground transition-colors duration-300 hover:border-primary/40 hover:text-foreground"
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">完成一次相关对话后，再从真实分析结果中生成探索方向。</p>
+          )}
         </Section>
       </div>
     </aside>

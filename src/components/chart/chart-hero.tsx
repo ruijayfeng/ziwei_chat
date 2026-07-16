@@ -1,12 +1,11 @@
 'use client'
 
-import { PALACES } from '@/lib/chart-data'
 import { useChart } from './chart-context'
 
 const QUICK_JUMPS = ['命宫', '财帛', '官禄', '迁移']
 
 export function ChartHero() {
-  const { selected, setSelected } = useChart()
+  const { palaces, selected, setSelected } = useChart()
 
   return (
     <header className="flex shrink-0 items-start justify-between gap-6">
@@ -29,7 +28,7 @@ export function ChartHero() {
         <span className="text-xs tracking-[0.2em] text-muted-foreground">快速定位</span>
         <div className="flex flex-wrap justify-end gap-1.5">
           {QUICK_JUMPS.map((name) => {
-            const index = PALACES.findIndex((p) => p.name === name)
+            const index = palaces.findIndex((p) => p.name === name)
             const active = index === selected
             return (
               <button

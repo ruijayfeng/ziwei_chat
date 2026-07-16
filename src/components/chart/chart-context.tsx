@@ -1,8 +1,10 @@
 'use client'
 
 import { createContext, useContext, useMemo, useState } from 'react'
+import type { Palace } from '@/lib/chart-data'
 
 type ChartContextValue = {
+  palaces: Palace[]
   selected: number
   setSelected: (index: number) => void
   hovered: number | null
@@ -11,13 +13,15 @@ type ChartContextValue = {
 
 const ChartContext = createContext<ChartContextValue | null>(null)
 
-export function ChartProvider({ children }: { children: React.ReactNode }) {
-  const [selected, setSelected] = useState(0)
+export function ChartProvider({ palaces, children }: { palaces: Palace[]; children: React.ReactNode }) {
+  const initialSelected = Math.max(0, palaces.findIndex((palace) => palace.name === '命宫'))
+  const [requestedSelected, setSelected] = useState(initialSelected)
   const [hovered, setHovered] = useState<number | null>(null)
+  const selected = palaces[requestedSelected] ? requestedSelected : initialSelected
 
   const value = useMemo(
-    () => ({ selected, setSelected, hovered, setHovered }),
-    [selected, hovered],
+    () => ({ palaces, selected, setSelected, hovered, setHovered }),
+    [palaces, selected, hovered],
   )
 
   return <ChartContext.Provider value={value}>{children}</ChartContext.Provider>

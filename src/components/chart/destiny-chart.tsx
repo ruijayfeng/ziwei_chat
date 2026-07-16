@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { getRelatedIndices, PALACES, SIHUA_TONE } from '@/lib/chart-data'
+import { getRelatedIndices, SIHUA_TONE } from '@/lib/chart-data'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useChart } from './chart-context'
@@ -97,7 +97,7 @@ const ROTATE_TRANSITION = 'transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)'
 
 /* ------------------------------ Chart ------------------------------- */
 export function DestinyChart() {
-  const { selected, setSelected, hovered, setHovered } = useChart()
+  const { palaces, selected, setSelected, hovered, setHovered } = useChart()
 
   // Wheel rotation: selected palace is always carried to the top (12 o'clock)
   // along the shortest path, while labels counter-rotate to stay upright.
@@ -113,7 +113,7 @@ export function DestinyChart() {
 
   const { trine, opposite } = getRelatedIndices(selected)
   const relatedSet = new Set([...trine, opposite])
-  const focus = PALACES[selected]
+  const focus = palaces[selected]
 
   // Static top wedge (selected always rotates under it).
   const half = 13
@@ -323,7 +323,7 @@ export function DestinyChart() {
         </svg>
 
         {/* palace labels (counter-rotated to stay upright) */}
-        {PALACES.map((palace, i) => {
+        {palaces.map((palace, i) => {
           const p = polar(i, LABEL_RADIUS)
           const isSelected = selected === i
           const isRelated = relatedSet.has(i)
@@ -399,7 +399,7 @@ export function DestinyChart() {
         })}
 
         {/* branch badges (counter-rotated to stay upright) */}
-        {PALACES.map((palace, i) => {
+        {palaces.map((palace, i) => {
           const p = polar(i, BRANCH_RADIUS)
           const isSelected = selected === i
           const isRelated = relatedSet.has(i)
