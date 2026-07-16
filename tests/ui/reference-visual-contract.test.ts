@@ -145,4 +145,13 @@ describe("reference redesign visual contract", () => {
     expect(deletionCatch).not.toContain("setSettledProfileId");
     expect(deletionCatch).not.toContain("setChartError");
   });
+
+  test("connects default inspector deletion to the workspace operation", () => {
+    const inspector = source("src/components/inspector-panel.tsx");
+
+    expect(inspector).toContain("useWorkspace()");
+    expect(inspector).toContain("deleteAnonymousData");
+    expect(inspector).toContain("AlertDialog");
+    expect(inspector).toContain("dataDeletionError");
+  });
 });

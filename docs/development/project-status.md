@@ -6,10 +6,10 @@
 ## UI-First Reference Transplant Status
 
 - The presentation from `ziwei-chat-redesign` is now the active source for the global shell, home/chat, radial chart, records, insights, and settings visual language.
-- `/records` and `/insights` intentionally retain reference presentation data while their sourced service adapters remain pending.
+- `/records` is backed by profile-scoped persisted/current-browser conversation data; `/insights` intentionally retains reference presentation data while its sourced aggregation adapter remains pending.
 - Existing chart, chat/Agent, evidence, conversation, model-settings, and anonymous-profile services remain in the repository and continue to pass their targeted contracts.
-- The settings route is still connected to real browser-local model settings and anonymous-data deletion.
-- Real chat streaming/evidence and the real iztro chart are wired into the transplanted reference views through `WorkspaceProvider`; conversation history remains tracked in `docs/development/ui-backend-gap-list.md`.
+- The settings route and default inspector are connected to real browser-local model settings and the shared confirmed anonymous-data deletion operation.
+- Real chat streaming/evidence, persisted conversation history, and the real iztro chart are wired into the transplanted reference views through `WorkspaceProvider` and focused adapters.
 - `/chart` preserves the supplied radial presentation, maps the sanitized `ChartDisplayModel` into its palace contract, restores the current anonymous chart, and exposes create/edit through a reference-style sheet backed by the existing `/api/chart` flow.
 - Backend adaptation must preserve the accepted reference UI instead of replacing its component structure.
 
@@ -45,6 +45,8 @@
 - `/api/chart` now returns a sanitized twelve-palace display DTO backed by iztro; the UI uses real palace indices for 三方四正 and distinguishes 命宫 from iztro's 来因宫 marker.
 - Browser chat transport supports static text and newline-framed evidence/token/error/done streams. Each assistant attempt owns its evidence snapshot, retry content, and failure state without carrying facts across turns.
 - Profile-scoped `/api/conversations` reads and the records route expose only real conversation/message display fields. Insights stays explicitly unavailable until a sourced aggregation and critic pipeline exists.
+- The sidebar chart card uses the real `WorkspaceProvider` restore/save state through `sidebarChartSummary`; the home header formats the current Shanghai date and refreshes at local midnight.
+- Settings and the default inspector share a confirmed deletion flow backed by `WorkspaceProvider.deleteAnonymousData`; it serializes pending chart writes, disables duplicate deletion controls, preserves local state on failure, and renders the shared error.
 - shadcn/Base UI owned primitives in `src/components/ui/` for buttons, cards, inputs, textarea, select, sheet, alert dialog, badge, and separator.
 - Third-party Claude Code skills are installed under `.agents/skills` with `.claude/skills` symlinks and `skills-lock.json` source hashes; use them only after reviewing scope because they run with full agent permissions.
 - CI workflow on pull requests and pushes to `master`: `npm ci`, lint, typecheck, tests, agent evals, and build.

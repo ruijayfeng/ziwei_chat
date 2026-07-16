@@ -3,16 +3,16 @@
 
 Member List
 app-layout.tsx: Reference-owned viewport shell with ambient background, desktop sidebar, responsive inspector, and mobile chrome.
-sidebar.tsx: Reference-owned desktop navigation, chart summary card, and visual product footer.
+sidebar.tsx: Reference-owned desktop navigation and current-chart card bound through the real sidebar-chart adapter.
 mobile-chrome.tsx: Reference-owned mobile top bar, bottom tabs, and animated inspector sheet.
 nav-items.ts: Reference route order and icons; settings href is corrected to the real `/settings` route.
 gradient-background.tsx: Reference ambient background, stars, vignette, and texture.
 glass-card.tsx: Reference surface wrapper.
-hero-header.tsx: Reference home editorial header and date/music controls.
+hero-header.tsx: Reference home editorial header with the current Shanghai calendar date; music remains a visual-only control.
 destiny-ring.tsx: Reference home destiny-ring renderer.
 chat-composer.tsx: Reference home/docked composer presentation and theme prompts.
 inspector-context.tsx: Inspector open/close contract used by reference shell controls.
-inspector-panel.tsx: Reference default inspector presentation; real evidence binding remains pending.
+inspector-panel.tsx: Reference default inspector with a confirmed, loading/error-aware connection to WorkspaceProvider anonymous-data deletion.
 motion-provider.tsx: Reference MotionConfig boundary respecting reduced-motion preferences.
 brand/logotype.tsx: Reference LXGW WenKai/Fraunces wordmark.
 brand-mark.tsx: Reference circular compass mark used by inspector surfaces.
@@ -22,9 +22,9 @@ report-message.tsx: Structured response-protocol renderer retained for real chat
 markdown-message.tsx: HTML-free Markdown renderer retained for real chat adaptation.
 model-settings-panel.tsx: Real browser-local model provider controls, restyled with reference surfaces.
 ui/: Project-owned shadcn/Base UI primitives.
-workspace/workspace-provider.tsx: Persistent anonymous profile, real chart restore/save, model settings, real chat transport/evidence, and anonymous-data deletion boundary.
+workspace/workspace-provider.tsx: Persistent anonymous profile, serialized real chart restore/save ownership, model settings, real chat transport/evidence, and anonymous-data deletion boundary.
 workspace/page-header.tsx: Reference editorial page header and ring glyph.
-workspace/life-timeline.tsx: Reference records timeline currently driven by static workspace data.
+workspace/life-timeline.tsx: Reference records controller rendering persisted and current-browser conversation history with detail loading and retry state.
 workspace/pattern-list.tsx: Reference insights pattern list currently driven by static workspace data.
 workspace/weekly-letter.tsx: Reference weekly-letter surface currently driven by static workspace data.
 workspace/app-layout.tsx, sidebar.tsx, mobile-chrome.tsx, motion-provider.tsx, nav-items.ts: Previous approximate shell retained temporarily and no longer used by routes.

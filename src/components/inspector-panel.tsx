@@ -4,6 +4,19 @@ import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, Compass, Shield, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { useWorkspace } from '@/components/workspace/workspace-provider'
 
 function Section({
   title,
@@ -56,6 +69,8 @@ function Section({
 }
 
 export function InspectorPanel() {
+  const { deleteAnonymousData, dataDeleting, dataDeletionError } = useWorkspace()
+
   return (
     <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto px-6 py-6">
       {/* Quiet companion intro — honest about what this panel is for */}
@@ -93,13 +108,49 @@ export function InspectorPanel() {
           <Shield className="size-3.5 shrink-0 text-primary" strokeWidth={1.75} />
           当前为匿名使用，资料仅保存在此浏览器。
         </div>
-        <button
-          type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/40 py-2.5 text-xs font-medium text-muted-foreground transition-colors duration-300 hover:border-destructive/40 hover:text-destructive"
-        >
-          <Trash2 className="size-3.5" strokeWidth={1.75} />
-          清除匿名资料数据
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger
+            disabled={dataDeleting}
+            render={
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/40 py-2.5 text-xs font-medium text-muted-foreground transition-colors duration-300 hover:border-destructive/40 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            }
+          >
+            <Trash2 className="size-3.5" strokeWidth={1.75} />
+            {dataDeleting ? '正在删除…' : '清除匿名资料数据'}
+          </AlertDialogTrigger>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive">
+                <Trash2 />
+              </AlertDialogMedia>
+              <AlertDialogTitle>清除当前匿名 profile 的资料？</AlertDialogTitle>
+              <AlertDialogDescription>
+                这会删除命盘、对话、运行记录与当前浏览器模型设置。Beta 没有产品账号，因此这不是账号注销。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={dataDeleting}>取消</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-white hover:bg-destructive/85"
+                disabled={dataDeleting}
+                onClick={() => void deleteAnonymousData()}
+              >
+                {dataDeleting ? '正在删除…' : '确认清除'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {dataDeletionError ? (
+          <p
+            className="mt-3 rounded-xl border border-destructive/35 bg-destructive/10 px-3 py-2 text-xs leading-relaxed text-destructive"
+            role="alert"
+          >
+            {dataDeletionError}
+          </p>
+        ) : null}
       </Section>
     </aside>
   )

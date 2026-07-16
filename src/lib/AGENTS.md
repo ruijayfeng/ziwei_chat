@@ -3,7 +3,7 @@
 
 Member List
 chart-data.ts: Reference palace presentation contract, explicitly labelled demo fallback, four-transform tones, and three-way/four-direction geometry.
-workspace-data.ts: Temporary reference UI themes, records, reflections, weekly letter, and patterns pending real service adapters.
+workspace-data.ts: Temporary reference UI themes plus presentation-only insights reflections, weekly letter, and patterns; records use the real conversation adapter.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-scoped caches, primary-chart persistence recovery, and tool event recording.
 agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, safety, and follow-up count.
@@ -36,11 +36,14 @@ ui/chat-client.ts: Abortable static/event-stream chat transport with evidence an
 ui/chat-session.ts: Per-message evidence state machine with single-flight, retry, and empty-answer handling.
 ui/reference-chat.ts: Pure real-session-to-reference-presentation adapter for chat phase, thinking, streaming, and failure messages.
 ui/reference-chart.ts: Pure sanitized iztro display-to-reference-palace adapter; preserves real indices, stars, four transforms, brightness, and sourced empty interpretation fields.
-ui/conversation-records.ts: Validated persisted/current-browser conversation adapter with unavailable-storage fallback.
+ui/conversation-records.ts: Validated persisted/current-browser conversation records controller, detail-state reducer, timeline adapter, and unavailable-storage fallback.
 ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds.
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.
 ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.
+ui/sidebar-chart.ts: Pure WorkspaceProvider chart-state adapter for truthful sidebar loading, error, empty, and ready presentation.
+ui/current-calendar.ts: Shanghai-time current-date formatter and exact next-midnight refresh calculation for the home header.
+ui/profile-operation.ts: Profile/revision operation tokens that prevent stale chart restore and save mutations from winning.
 ui/chart-display.ts: Pure stable-id lookup and real-index three-way/four-direction geometry for the redesigned chart.
 ui/chart-visual.ts: Pure deterministic fact-to-disc model mapping and evidence-backed active palace selection.
 ui/topic-entry-layout.ts: Stable responsive grid policy for equal-weight quick-topic entries.
