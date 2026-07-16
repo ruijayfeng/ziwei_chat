@@ -4,7 +4,18 @@ import { describe, expect, test } from "vitest";
 
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
+const header = source("src/components/hero-header.tsx");
+const composer = source("src/components/chat-composer.tsx");
+
 describe("reference chat presentation", () => {
+  test("uses a mounted deterministic calendar and supported composer controls", () => {
+    expect(header).toContain("currentCalendarDisplay");
+    expect(header).not.toContain("2025骞?5鏈?4鏃?");
+    expect(header).not.toContain("鑳屾櫙闊充箰");
+    expect(composer).not.toContain("娣诲姞闄勪欢");
+    expect(composer).not.toContain("Paperclip");
+  });
+
   test("uses the reference hero composition", () => {
     const experience = source("src/components/chat/chat-experience.tsx");
 

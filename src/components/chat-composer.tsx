@@ -1,12 +1,10 @@
 'use client'
 
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUp, Paperclip } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { useState } from 'react'
 import { THEMES } from '@/lib/workspace-data'
 
-// A curated set of theme-guided starting points — the old standalone
-// "主题分析" page collapsed into the one place users actually ask questions.
 const GUIDED = THEMES.slice(0, 6)
 
 export function ChatComposer({
@@ -42,7 +40,7 @@ export function ChatComposer({
             className="overflow-hidden"
           >
             <div className="mb-3 px-1 text-[11px] text-muted-foreground">
-              不知从何问起？从一个主题开始
+              {'\u4e0d\u77e5\u4ece\u4f55\u95ee\u8d77\uff1f\u4ece\u4e00\u4e2a\u4e3b\u9898\u5f00\u59cb'}
             </div>
             <div className="mb-3 flex flex-wrap gap-2">
               {GUIDED.map((t) => {
@@ -55,11 +53,7 @@ export function ChatComposer({
                     onClick={() => setValue(t.question)}
                     className="surface group flex items-center gap-1.5 rounded-full py-1.5 pl-2 pr-3.5 text-xs text-muted-foreground transition-colors duration-300 hover:border-primary/40 hover:text-foreground"
                   >
-                    <Icon
-                      className="size-3.5 transition-colors"
-                      style={{ color: t.accent }}
-                      strokeWidth={2}
-                    />
+                    <Icon className="size-3.5 transition-colors" style={{ color: t.accent }} strokeWidth={2} />
                     {t.label}
                   </button>
                 )
@@ -70,36 +64,23 @@ export function ChatComposer({
       </AnimatePresence>
 
       <div className="surface group relative flex items-end gap-3 rounded-2xl p-3 transition-colors duration-300 focus-within:border-primary/45">
-        <button
-          type="button"
-          aria-label="添加附件"
-          disabled={disabled}
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <Paperclip className="size-[18px]" strokeWidth={1.75} />
-        </button>
         <textarea
           disabled={disabled}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (
-              e.key === 'Enter' &&
-              !e.shiftKey &&
-              !e.nativeEvent.isComposing &&
-              e.keyCode !== 229
-            ) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
               e.preventDefault()
               submit()
             }
           }}
           rows={1}
-          placeholder="向紫微知道提问，探索属于你的答案…"
+          placeholder={'\u5411\u7d2b\u5fae\u77e5\u9053\u63d0\u95ee\uff0c\u63a2\u7d22\u5c5e\u4e8e\u4f60\u7684\u7b54\u6848\u2026'}
           className="max-h-40 flex-1 resize-none bg-transparent py-2 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
         <button
           type="button"
-          aria-label="发送"
+          aria-label={'\u53d1\u9001'}
           onClick={submit}
           disabled={disabled || !value.trim()}
           className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all duration-300 hover:opacity-90 disabled:opacity-30"
@@ -109,7 +90,7 @@ export function ChatComposer({
       </div>
 
       <div className="mt-2.5 text-center text-[11px] text-muted-foreground">
-        回答仅供参考，不构成决策依据
+        {'\u56de\u7b54\u4ec5\u4f9b\u53c2\u8003\uff0c\u4e0d\u6784\u6210\u51b3\u7b56\u4f9d\u636e'}
       </div>
     </div>
   )

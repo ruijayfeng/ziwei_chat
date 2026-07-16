@@ -1,8 +1,13 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { Moon, Music2, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { Moon, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useInspectorToggle } from '@/components/inspector-context'
+import {
+  currentCalendarDisplay,
+  type CurrentCalendarDisplay,
+} from '@/lib/ui/current-calendar'
 import { cn } from '@/lib/utils'
 
 const fade = {
@@ -12,6 +17,13 @@ const fade = {
 
 export function HeroHeader() {
   const inspector = useInspectorToggle()
+  const [calendar, setCalendar] = useState<CurrentCalendarDisplay | null>(null)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCalendar(currentCalendarDisplay(new Date())), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   return (
     <div className="flex items-start justify-between gap-6">
       <div>
@@ -20,7 +32,7 @@ export function HeroHeader() {
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="text-balance font-serif text-[26px] font-medium leading-tight tracking-tight text-foreground sm:text-[34px] md:text-[40px]"
         >
-          今天 · 你的能量正在流动
+          {'\u4eca\u5929 \u00b7 \u4f60\u7684\u80fd\u91cf\u6b63\u5728\u6d41\u52a8'}
         </motion.h1>
         <motion.p
           {...fade}
@@ -28,7 +40,7 @@ export function HeroHeader() {
           className="mt-3 flex items-center gap-2 text-[15px] text-muted-foreground"
         >
           <span className="size-1.5 shrink-0 rounded-full bg-cinnabar" aria-hidden />
-          把握当下的节奏，顺势而为
+          {'\u628a\u63e1\u5f53\u4e0b\u7684\u8282\u594f\uff0c\u987a\u52bf\u800c\u4e3a'}
         </motion.p>
       </div>
 
@@ -37,27 +49,17 @@ export function HeroHeader() {
         transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
         className="flex items-center gap-4"
       >
-        <div className="hidden text-right leading-relaxed sm:block">
+        <div className="hidden min-w-40 text-right leading-relaxed sm:block">
           <p className="flex items-center justify-end gap-1.5 text-sm text-foreground">
             <Moon className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
-            2025年05月14日 · 周三
-          </p>
-          <p className="font-mono text-xs tracking-wide text-muted-foreground">
-            乙巳年 辛巳月 戊申日
+            {calendar?.dateLabel}
           </p>
         </div>
-        <button
-          type="button"
-          aria-label="背景音乐"
-          className="flex size-10 items-center justify-center rounded-full border border-border bg-card/50 text-muted-foreground backdrop-blur-md transition-colors duration-300 hover:text-primary"
-        >
-          <Music2 className="size-[18px]" strokeWidth={1.75} />
-        </button>
         {inspector && (
           <button
             type="button"
             onClick={inspector.toggle}
-            aria-label={inspector.open ? '收起分析助手' : '展开分析助手'}
+            aria-label={inspector.open ? '\u6536\u8d77\u5206\u6790\u52a9\u624b' : '\u5c55\u5f00\u5206\u6790\u52a9\u624b'}
             aria-expanded={inspector.open}
             className={cn(
               'hidden size-10 items-center justify-center rounded-full border backdrop-blur-md transition-colors duration-300 xl:flex',
