@@ -28,7 +28,7 @@ workspace/life-timeline.tsx: Reference records timeline currently driven by stat
 workspace/pattern-list.tsx: Reference insights pattern list currently driven by static workspace data.
 workspace/weekly-letter.tsx: Reference weekly-letter surface currently driven by static workspace data.
 workspace/app-layout.tsx, sidebar.tsx, mobile-chrome.tsx, motion-provider.tsx, nav-items.ts: Previous approximate shell retained temporarily and no longer used by routes.
-chat/: Reference chat experience, message presentation, inspector, and temporary demo ChatProvider; prior real evidence component remains available for adapter work.
+chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; the reference inspector rail renders real Agent evidence and critic state.
 records/: Previous real conversation timeline retained temporarily for adapter work.
 insights/: Previous explicit empty state retained temporarily for later service integration.
 chart/chart-context.tsx: Reference selected/hovered palace state.

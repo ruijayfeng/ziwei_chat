@@ -14,7 +14,6 @@
 
 | Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `/` | Send a question and receive a streamed answer | `ChatProvider` streams `DEMO_REPLY` with timers; `/api/chat` is not called | `WorkspaceProvider.sendMessage`, `sendChatRequest`, `/api/chat` | Make the reference `ChatProvider` expose the existing chat-session reducer/transport while preserving its public UI API | High: chat appears functional but does not reach the Agent |
 | `/chart` | Display the current iztro chart | Radial chart consumes static `PALACES` | `/api/chart`, `WorkspaceProvider.chartDisplay`, `ChartDisplayModel` | Add `ChartDisplayModel -> Palace[]` adapter and feed reference `ChartProvider` | High: displayed palaces are not the user's chart |
 | `/chart` | Create or edit a chart | Reference chart page has no entry point for `ChartOnboarding` | `/api/chart` POST, `WorkspaceProvider.saveChart`, `ChartOnboarding` | Place onboarding/edit flow behind a reference-style sheet or route action without changing radial chart composition | High: a new user cannot create the chart shown by the UI |
 
@@ -22,10 +21,8 @@
 
 | Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `/` | Analysis evidence and critic status | `ChatInspector` displays static `DEMO_REFS` | Per-message evidence in `WorkspaceProvider`, `EvidenceInspector`, Agent evidence events | Map tools, facts, knowledge, critic, generation, and runs into the reference inspector sections | High: analysis basis is not the basis used by the service |
 | `/records` | Conversation history | Timeline consumes static `RECORDS` and `MONTHLY_REFLECTION` | `/api/conversations`, `loadConversationList`, `loadConversationMessages` | Convert conversation list/messages into reference timeline items and expanded detail content | Medium: route does not show persisted conversations |
 | Global sidebar | Current chart summary | Sidebar contains a fixed sexagenary date and fixed chart card | `WorkspaceProvider.chartDisplay`, stored chart input | Add a small view-model adapter for the existing reference card | Medium: global chart identity is disconnected |
-| Mobile/tablet | Evidence inspector | Reference sheet opens the supplied inspector, but home supplies mock `ChatInspector` | Existing per-message evidence state and mobile inspector-open state | Preserve the reference sheet motion and replace only its content source | Medium: responsive shell works but evidence is not real |
 | `/chart` inspector | Palace facts and analysis | Palace content, traits, ratings, basis, and "实时生成" text come from static `PALACES` | Sanitized iztro display DTO plus Agent tools/evidence | Separate deterministic palace facts from optional Agent analysis and map both into the existing inspector sections | Medium: visual interaction works, content is static |
 | Global | Anonymous profile chart restore | `WorkspaceProvider` fetches `/api/chart` in the background, but reference pages do not consume the result | `/api/chart` GET and browser chart session | Bind restored state to sidebar, chart route, and home ring after chart adapter exists | Medium: service work occurs without visible effect |
 
@@ -48,7 +45,8 @@
 | Model settings | Connected | `/settings` consumes `WorkspaceProvider.modelSettings`, persists through the existing localStorage helpers, and keeps API keys browser-local |
 | Anonymous-data deletion on settings | Connected | `/settings` calls `WorkspaceProvider.deleteAnonymousData`, which invokes `DELETE /api/chat` before clearing local state |
 | Chart service | Available, not displayed by transplanted chart | `/api/chart` route tests pass; provider restore/save code remains present |
-| Chat/Agent service | Available, not used by transplanted chat | `/api/chat` and UI transport/session tests pass; reference `ChatProvider` currently owns the page instead |
+| Chat/Agent service | Connected | Reference `ChatProvider` adapts `WorkspaceProvider.chatSession`, `sendMessage`, retry, reset, busy, streaming, and failure states without changing the accepted UI |
+| Chat evidence and critic | Connected | Reference `ChatInspector` renders the existing `EvidenceInspector` inside the accepted rail and mobile sheet, including runs, tools, chart facts, knowledge, critic, generation, and model status |
 | Conversation service | Available, not used by transplanted records | `/api/conversations` and conversation adapter tests pass |
 | Deterministic fallback, planner, tools, skills, RAG, analyst, critic | Preserved server-side | Agent evaluation and route code remain unchanged |
 
@@ -63,9 +61,7 @@
 
 ## Recommended Integration Order
 
-1. Replace reference chat timers with the existing chat transport while preserving `ChatProvider` and the reference components.
-2. Adapt `ChartDisplayModel` into the reference `Palace[]` model and restore chart creation/edit access.
-3. Map real evidence into `ChatInspector` and mobile inspector content.
-4. Adapt persisted conversations into the reference records timeline.
-5. Connect global sidebar chart state.
-6. Leave insights and auxiliary controls until their service contracts exist.
+1. Adapt `ChartDisplayModel` into the reference `Palace[]` model and restore chart creation/edit access.
+2. Adapt persisted conversations into the reference records timeline.
+3. Connect global sidebar chart state.
+4. Leave insights and auxiliary controls until their service contracts exist.

@@ -9,7 +9,7 @@
 - `/`, `/chart`, `/records`, and `/insights` intentionally use the reference presentation data during visual acceptance.
 - Existing chart, chat/Agent, evidence, conversation, model-settings, and anonymous-profile services remain in the repository and continue to pass their targeted contracts.
 - The settings route is still connected to real browser-local model settings and anonymous-data deletion.
-- Real chat, chart, evidence, and conversation data are not yet wired into the transplanted views. The exact integration backlog is maintained in `docs/development/ui-backend-gap-list.md`.
+- Real chat streaming and evidence are wired into the transplanted reference views through `WorkspaceProvider`; chart and conversation data remain tracked in `docs/development/ui-backend-gap-list.md`.
 - Backend adaptation must preserve the accepted reference UI instead of replacing its component structure.
 
 ## Current Branch State
