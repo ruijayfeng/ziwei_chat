@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import type { ChartDisplayModel } from "../../src/lib/domain/chart-display";
@@ -31,5 +33,17 @@ describe("chart display geometry", () => {
 
   test("returns null for a palace outside the current chart", () => {
     expect(getRelatedPalaceIds(display, "unknown")).toBeNull();
+  });
+
+  test("keeps the reference radial chart renderer", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "src/components/chart/destiny-chart.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("三方四正 connections");
+    expect(source).toContain("radial-gradient(circle at 50% 42%");
+    expect(source).toContain("<motion.path");
+    expect(source).toContain("OUTER_RING");
   });
 });
