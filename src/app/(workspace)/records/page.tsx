@@ -15,7 +15,7 @@ export default function RecordsPage() {
               正在一点一点被记录。
             </>
           }
-          subtitle="AI 不只记住你的问题，也记住你的成长。点击任意一条，展开当时的解读。"
+          subtitle="这里保留当前匿名空间中的真实对话。点击任意一条，展开当时的完整交流。"
           aside={<RingGlyph className="size-28 opacity-80" />}
         />
 

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  conversationTimelineItem,
   currentSessionConversation,
   loadConversationList,
 } from "../../src/lib/ui/conversation-records";
@@ -21,5 +22,31 @@ describe("conversation records UI adapter", () => {
 
     expect(result?.conversation.title).toBe("事业问题");
     expect(result?.messages.map((message) => message.content)).toEqual(["事业问题", "真实回答"]);
+  });
+  test("builds a timeline item only from real conversation messages", () => {
+    const item = conversationTimelineItem(
+      { id: "conversation-1", title: "\u4e8b\u4e1a\u65b9\u5411", lastMessageAt: "2026-07-16T12:30:00.000Z" },
+      [
+        { id: "u1", conversationId: "conversation-1", role: "user", content: "\u6211\u8be5\u6362\u5de5\u4f5c\u5417\uff1f", createdAt: "2026-07-16T12:00:00.000Z" },
+        { id: "a1", conversationId: "conversation-1", role: "assistant", content: "\u5148\u770b\u5b98\u7984\u5bab\u3002", createdAt: "2026-07-16T12:30:00.000Z" },
+      ],
+    );
+
+    expect(item).toMatchObject({
+      id: "conversation-1",
+      title: "\u4e8b\u4e1a\u65b9\u5411",
+      kind: "career",
+      preview: "\u5148\u770b\u5b98\u7984\u5bab\u3002",
+    });
+    expect(item.messages).toHaveLength(2);
+  });
+
+  test("uses a neutral kind when the first prompt has no supported topic", () => {
+    const item = conversationTimelineItem(
+      { id: "conversation-2", title: "\u968f\u4fbf\u804a\u804a", lastMessageAt: "" },
+      [{ id: "u2", conversationId: "conversation-2", role: "user", content: "\u4f60\u597d", createdAt: "" }],
+    );
+
+    expect(item.kind).toBe("conversation");
   });
 });
