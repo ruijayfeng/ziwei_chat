@@ -366,10 +366,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           // Save failures are represented by saveChart's resolved false result.
         }
       }
-      revisionRef.current += 1;
-      chartOperationRevisionRef.current += 1;
       const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
       if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
+      revisionRef.current += 1;
+      chartOperationRevisionRef.current += 1;
 
       chatAbortRef.current?.abort();
       chatAbortRef.current = null;
@@ -392,7 +392,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setSelectedEvidenceMessageId(null);
       return true;
     } catch (error) {
-      setChartLoading(false);
       setDataDeletionError(error instanceof Error ? error.message : "匿名资料删除失败。");
       return false;
     } finally {

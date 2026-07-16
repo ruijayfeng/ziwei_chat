@@ -73,11 +73,11 @@ describe("reference redesign visual contract", () => {
     const provider = source("src/components/workspace/workspace-provider.tsx");
     const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
     const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
-    const deletionCatch = deletion.slice(deletion.indexOf("} catch"), deletion.indexOf("} finally"));
+    const deletionCatch = deletion.slice(deletion.indexOf("} catch (error)"), deletion.indexOf("} finally"));
 
     expect(save).toContain("if (dataDeletingRef.current) return Promise.resolve(false);");
     expect(save).toContain("}, [profileId]);");
-    expect(deletionCatch).toContain("setChartLoading(false);");
+    expect(deletionCatch).toContain("setDataDeletionError");
   });
 
   test("serializes chart saves before deletion requests", () => {
@@ -130,5 +130,19 @@ describe("reference redesign visual contract", () => {
     expect(saveCatch).toContain("isCurrentProfileOperation(saveToken, currentOperation)");
     expect(saveCatch).toContain("setSettledProfileId(profileId);");
     expect(saveCatch).toContain("setChartError");
+  });
+
+  test("invalidates chart state only after deletion succeeds", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
+    const deleteRequestIndex = deletion.indexOf("fetch(`/api/chat");
+    const invalidationIndex = deletion.indexOf("revisionRef.current += 1;");
+    const deletionCatch = deletion.slice(deletion.indexOf("} catch (error)"), deletion.indexOf("} finally"));
+
+    expect(deleteRequestIndex).toBeGreaterThanOrEqual(0);
+    expect(invalidationIndex).toBeGreaterThan(deleteRequestIndex);
+    expect(deletionCatch).not.toContain("setChartLoading(false);");
+    expect(deletionCatch).not.toContain("setSettledProfileId");
+    expect(deletionCatch).not.toContain("setChartError");
   });
 });
