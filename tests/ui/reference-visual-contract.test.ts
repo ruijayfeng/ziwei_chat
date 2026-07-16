@@ -68,4 +68,15 @@ describe("reference redesign visual contract", () => {
     const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
     expect(deletion).toContain("revisionRef.current += 1");
   });
+
+  test("blocks saves during deletion and recovers loading after deletion failure", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
+    const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
+    const deletionCatch = deletion.slice(deletion.indexOf("} catch"), deletion.indexOf("} finally"));
+
+    expect(save).toContain("if (dataDeleting) return false;");
+    expect(save).toContain("}, [dataDeleting, profileId])");
+    expect(deletionCatch).toContain("setChartLoading(false);");
+  });
 });

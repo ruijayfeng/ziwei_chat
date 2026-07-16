@@ -179,6 +179,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => () => chatAbortRef.current?.abort(), []);
 
   const saveChart = useCallback(async (nextChart: CreateChartInput) => {
+    if (dataDeleting) return false;
     const operation = { profileId, revision: revisionRef.current };
     setChartLoading(true);
     setChartError(null);
@@ -213,7 +214,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
       if (isCurrentProfileOperation(operation, currentOperation)) setChartLoading(false);
     }
-  }, [profileId]);
+  }, [dataDeleting, profileId]);
 
   const resetLocalChart = useCallback(() => {
     if (!profileId) return;
@@ -310,6 +311,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setSelectedEvidenceMessageId(null);
       return true;
     } catch (error) {
+      setChartLoading(false);
       setDataDeletionError(error instanceof Error ? error.message : "匿名资料删除失败。");
       return false;
     } finally {
