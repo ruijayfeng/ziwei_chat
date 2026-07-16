@@ -66,13 +66,11 @@ export function LifeTimeline() {
   })
   const [loadState, setLoadState] = useState<ProfileLoadState>({ profileId: '', state: { phase: 'loading' } })
   const listRequestId = useRef(0)
-  const detailRequestId = useRef(0)
   const requestProfileId = useRef(profileId)
 
   if (requestProfileId.current !== profileId) {
     requestProfileId.current = profileId
     listRequestId.current += 1
-    detailRequestId.current += 1
   }
 
   const activeRecords = records.profileId === profileId ? records : emptyProfileRecords(profileId)
@@ -133,11 +131,9 @@ export function LifeTimeline() {
     if (!ready || !profileId || !activeId || activeId === current?.conversation.id) return
     const detail = activeRecords.details[activeId]
     if (detail && detail.phase !== 'idle') return
-    const requestId = ++detailRequestId.current
 
     void (async () => {
       await Promise.resolve()
-      if (requestId !== detailRequestId.current) return
       setRecords((previous) => {
         if (previous.profileId !== profileId) return previous
         const previousDetail = previous.details[activeId]
@@ -151,7 +147,6 @@ export function LifeTimeline() {
       })
       try {
         const messages = await loadConversationMessages(profileId, activeId)
-        if (requestId !== detailRequestId.current) return
         setRecords((previous) => {
           if (previous.profileId !== profileId) return previous
           return {
@@ -160,7 +155,6 @@ export function LifeTimeline() {
           }
         })
       } catch (error) {
-        if (requestId !== detailRequestId.current) return
         setRecords((previous) => {
           if (previous.profileId !== profileId) return previous
           const previousDetail = previous.details[activeId]
