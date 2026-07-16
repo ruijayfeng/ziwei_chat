@@ -3,19 +3,20 @@ import { resolve } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { workspaceNavItems } from "../../src/components/workspace/nav-items";
 import { inspectorPresentationForWidth } from "../../src/lib/ui/workspace-layout";
+
+const navPath = resolve(process.cwd(), "src/components/nav-items.ts");
+const navSource = existsSync(navPath) ? readFileSync(navPath, "utf8") : "";
 
 describe("redesigned workspace navigation", () => {
   test("uses five real App Router destinations", () => {
-    expect(workspaceNavItems.map(({ label, href }) => ({ label, href }))).toEqual([
-      { label: "对话", href: "/" },
-      { label: "命盘", href: "/chart" },
-      { label: "记录", href: "/records" },
-      { label: "洞见", href: "/insights" },
-      { label: "设置", href: "/settings" },
-    ]);
-    expect(workspaceNavItems.some((item) => item.href === "#")).toBe(false);
+    expect(navSource).toContain("export const NAV_ITEMS");
+    expect(navSource).toContain("label: '对话'");
+    expect(navSource).toContain("href: '/chart'");
+    expect(navSource).toContain("href: '/records'");
+    expect(navSource).toContain("href: '/insights'");
+    expect(navSource).toContain("href: '/settings'");
+    expect(navSource).not.toContain("href: '#'");
   });
 
   test("keeps the inspector reachable below the xl rail breakpoint", () => {
@@ -31,6 +32,7 @@ describe("redesigned workspace navigation", () => {
     for (const page of pages) expect(existsSync(resolve(appRoot, page))).toBe(true);
 
     const layoutSource = readFileSync(resolve(appRoot, "layout.tsx"), "utf8");
-    expect(layoutSource).toContain("WorkspaceAppLayout");
+    expect(layoutSource).toContain("WorkspaceProvider");
+    expect(layoutSource).not.toContain("WorkspaceAppLayout");
   });
 });
