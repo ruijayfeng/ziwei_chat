@@ -5,7 +5,7 @@
 
 ## Current Integration Summary
 
-- Service and contract layer is healthy: the full test gate passes 52 files / 225 tests, and Agent evaluation passes 10/10.
+- Service and contract layer is healthy: the complete automated gate passes.
 - `WorkspaceProvider` restores and saves charts with profile-scoped operation ownership, stores model settings, sends `/api/chat` requests, serializes chart persistence against anonymous-data deletion, and owns real chat/evidence state.
 - The transplanted chat, chart, records, sidebar, date header, and default inspector now consume real service state behind the accepted reference UI; insights remains presentation-only.
 - Settings and the default inspector share the same confirmed, loading/error-aware anonymous-data deletion operation.

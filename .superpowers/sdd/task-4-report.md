@@ -126,3 +126,9 @@ Results:
 - `npm run test`: 56 files / 255 tests passed.
 - `npm run eval:agent`: 10 cases passed, 0 failures.
 - `npm run build`: passed; production route generation completed.
+
+## Documentation Accuracy Follow-up
+
+- Replaced the volatile test-file/test-count and evaluation-count claim in `docs/development/ui-backend-gap-list.md` with the durable statement that the complete automated gate passes.
+- Focused source check confirmed the old `52 files / 225 tests` and `10/10` claims are absent from that document.
+- `git diff --check` passed.
