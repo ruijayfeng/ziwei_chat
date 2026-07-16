@@ -182,6 +182,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const saveChart = useCallback((nextChart: CreateChartInput) => {
     if (dataDeletingRef.current) return Promise.resolve(false);
+    if (chartSavePromiseRef.current) return Promise.resolve(false);
     const operation = { profileId, revision: revisionRef.current };
     const operationPromise = (async () => {
       setChartLoading(true);

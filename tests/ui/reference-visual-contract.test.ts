@@ -97,4 +97,11 @@ describe("reference redesign visual contract", () => {
     expect(saveAwaitIndex).toBeGreaterThanOrEqual(0);
     expect(deleteRequestIndex).toBeGreaterThan(saveAwaitIndex);
   });
+
+  test("rejects a second chart save while one is in flight", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
+
+    expect(save).toContain("if (chartSavePromiseRef.current) return Promise.resolve(false);");
+  });
 });
