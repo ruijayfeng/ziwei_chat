@@ -59,8 +59,8 @@ describe("reference redesign visual contract", () => {
     const provider = source("src/components/workspace/workspace-provider.tsx");
 
     expect(provider).toContain("isCurrentProfileOperation");
-    expect(provider).toContain("const operation = { profileId, revision: revisionRef.current }");
-    expect(provider).toContain("isCurrentProfileOperation(operation, currentOperation)");
+    expect(provider).toContain("const saveToken");
+    expect(provider).toContain("isCurrentProfileOperation(saveToken, currentOperation)");
     expect(provider).toContain("revisionRef.current += 1");
     expect(provider).toContain("setProfileId(nextProfileId)");
     expect(provider).toContain("return false");
@@ -103,5 +103,22 @@ describe("reference redesign visual contract", () => {
     const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
 
     expect(save).toContain("if (chartSavePromiseRef.current) return Promise.resolve(false);");
+  });
+
+  test("unifies restore and save chart operation ownership", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const restore = provider.slice(provider.indexOf("const restoreTimer"), provider.indexOf("useEffect(() => () => chatAbortRef.current"));
+    const save = provider.slice(provider.indexOf("const saveChart"), provider.indexOf("const resetLocalChart"));
+    const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
+
+    expect(provider).toContain("chartOperationRevisionRef");
+    expect(restore).toContain("chartOperationRevisionRef.current += 1");
+    expect(restore).toContain("const restoreToken");
+    expect(restore).toContain("isCurrentProfileOperation(restoreToken, currentOperation)");
+    expect(restore).toContain("if (chartSavePromiseRef.current) return;");
+    expect(save).toContain("chartOperationRevisionRef.current += 1");
+    expect(save).toContain("const saveToken");
+    expect(save).toContain("isCurrentProfileOperation(saveToken, currentOperation)");
+    expect(deletion).toContain("chartOperationRevisionRef.current += 1");
   });
 });

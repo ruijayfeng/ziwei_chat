@@ -84,6 +84,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [chartLoading, setChartLoading] = useState(false);
   const [settledProfileId, setSettledProfileId] = useState("");
   const revisionRef = useRef(0);
+  const chartOperationRevisionRef = useRef(0);
   const profileIdRef = useRef("");
   const chartSavePromiseRef = useRef<Promise<boolean> | null>(null);
   const dataDeletingRef = useRef(false);
@@ -102,9 +103,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const bootstrapTimer = window.setTimeout(() => {
       const storedProfileId = window.localStorage.getItem("ziwei-chat-profile-id");
       const nextProfileId = isUuid(storedProfileId) ? storedProfileId : crypto.randomUUID();
-      window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
-      revisionRef.current += 1;
-      profileIdRef.current = nextProfileId;
+        window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
+        revisionRef.current += 1;
+        chartOperationRevisionRef.current += 1;
+        profileIdRef.current = nextProfileId;
       setProfileId(nextProfileId);
       setConversationId(crypto.randomUUID());
       setModelSettings(modelSettingsDraftFromStorage(window.localStorage.getItem(modelSettingsStorageKey)));
@@ -124,6 +126,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!profileId) return;
     let cancelled = false;
     const restoreTimer = window.setTimeout(() => {
+      if (chartSavePromiseRef.current) return;
+      chartOperationRevisionRef.current += 1;
+      const restoreToken = {
+        profileId,
+        profileRevision: revisionRef.current,
+        chartOperationRevision: chartOperationRevisionRef.current,
+      };
+      const currentOperation = {
+        profileId: profileIdRef.current,
+        profileRevision: revisionRef.current,
+        chartOperationRevision: chartOperationRevisionRef.current,
+      };
+      if (cancelled || !isCurrentProfileOperation(restoreToken, currentOperation)) return;
       setChartError(null);
       setChartInput(null);
       setChartDisplay(null);
@@ -133,9 +148,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const storedChart = chartSessionFromStorage(storedValue, profileId);
       const storedDisplay = chartDisplayModelFromStorage(storedValue, profileId);
 
-      if (storedChart) setChartInput(storedChart);
-      if (storedChart && storedDisplay) {
-        setChartDisplay(storedDisplay);
+        if (storedChart) setChartInput(storedChart);
+        if (storedChart && storedDisplay) {
+          if (cancelled || !isCurrentProfileOperation(restoreToken, {
+            profileId: profileIdRef.current,
+            profileRevision: revisionRef.current,
+            chartOperationRevision: chartOperationRevisionRef.current,
+          })) return;
+          setChartDisplay(storedDisplay);
         setChartSynced(true);
         setChartLoading(false);
         setSettledProfileId(profileId);
@@ -143,15 +163,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       setChartLoading(true);
-      void fetch(`/api/chart?profileId=${encodeURIComponent(profileId)}`)
+        void fetch(`/api/chart?profileId=${encodeURIComponent(profileId)}`)
         .then(async (response) => {
           if (response.status === 404) return null;
           if (!response.ok) throw new Error("命盘恢复暂时不可用，请稍后重试。");
           return (await response.json()) as ChartApiPayload;
-        })
-        .then((payload) => {
-          if (cancelled || !payload || !payload.chart) return;
-          if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
+          })
+          .then((payload) => {
+            const currentOperation = {
+              profileId: profileIdRef.current,
+              profileRevision: revisionRef.current,
+              chartOperationRevision: chartOperationRevisionRef.current,
+            };
+            if (cancelled || !isCurrentProfileOperation(restoreToken, currentOperation) || !payload || !payload.chart) return;
+            if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
           const primaryChart = { ...payload.chart, profileId, isPrimary: true };
           setChartInput(primaryChart);
           setChartDisplay(payload.display);
@@ -160,13 +185,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             storageKey,
             chartSessionStorageValue(primaryChart, null, payload.display),
           );
-        })
-        .catch((error: unknown) => {
-          if (!cancelled) setChartError(error instanceof Error ? error.message : "命盘恢复失败。");
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setChartLoading(false);
+          })
+          .catch((error: unknown) => {
+            const currentOperation = {
+              profileId: profileIdRef.current,
+              profileRevision: revisionRef.current,
+              chartOperationRevision: chartOperationRevisionRef.current,
+            };
+            if (!cancelled && isCurrentProfileOperation(restoreToken, currentOperation)) {
+              setChartError(error instanceof Error ? error.message : "命盘恢复失败。");
+            }
+          })
+          .finally(() => {
+            const currentOperation = {
+              profileId: profileIdRef.current,
+              profileRevision: revisionRef.current,
+              chartOperationRevision: chartOperationRevisionRef.current,
+            };
+            if (!cancelled && isCurrentProfileOperation(restoreToken, currentOperation)) {
+              setChartLoading(false);
             setSettledProfileId(profileId);
           }
         });
@@ -183,7 +220,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const saveChart = useCallback((nextChart: CreateChartInput) => {
     if (dataDeletingRef.current) return Promise.resolve(false);
     if (chartSavePromiseRef.current) return Promise.resolve(false);
-    const operation = { profileId, revision: revisionRef.current };
+    chartOperationRevisionRef.current += 1;
+    const saveToken = {
+      profileId,
+      profileRevision: revisionRef.current,
+      chartOperationRevision: chartOperationRevisionRef.current,
+    };
     const operationPromise = (async () => {
       setChartLoading(true);
       setChartError(null);
@@ -196,8 +238,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (!response.ok) throw new Error("命盘保存失败，请检查出生信息后重试。");
         const payload = (await response.json()) as ChartApiPayload;
         if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
-        const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
-        if (!isCurrentProfileOperation(operation, currentOperation)) return false;
+        const currentOperation = {
+          profileId: profileIdRef.current,
+          profileRevision: revisionRef.current,
+          chartOperationRevision: chartOperationRevisionRef.current,
+        };
+        if (!isCurrentProfileOperation(saveToken, currentOperation)) return false;
         const primaryChart = { ...nextChart, profileId, isPrimary: true };
         setChartInput(primaryChart);
         setChartDisplay(payload.display);
@@ -209,14 +255,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         );
         return true;
       } catch (error) {
-        const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
-        if (!isCurrentProfileOperation(operation, currentOperation)) return false;
+        const currentOperation = {
+          profileId: profileIdRef.current,
+          profileRevision: revisionRef.current,
+          chartOperationRevision: chartOperationRevisionRef.current,
+        };
+        if (!isCurrentProfileOperation(saveToken, currentOperation)) return false;
         setChartError(error instanceof Error ? error.message : "命盘保存失败。");
         setChartSynced(false);
         return false;
       } finally {
-        const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
-        if (isCurrentProfileOperation(operation, currentOperation)) setChartLoading(false);
+        const currentOperation = {
+          profileId: profileIdRef.current,
+          profileRevision: revisionRef.current,
+          chartOperationRevision: chartOperationRevisionRef.current,
+        };
+        if (isCurrentProfileOperation(saveToken, currentOperation)) setChartLoading(false);
       }
     })();
 
@@ -312,6 +366,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
       }
       revisionRef.current += 1;
+      chartOperationRevisionRef.current += 1;
       const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
       if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
 
@@ -321,9 +376,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       window.localStorage.removeItem(modelSettingsStorageKey);
       window.localStorage.removeItem(chartSessionStorageKey(profileId));
       const nextProfileId = crypto.randomUUID();
-      window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
-      revisionRef.current += 1;
-      profileIdRef.current = nextProfileId;
+       window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
+       revisionRef.current += 1;
+       chartOperationRevisionRef.current += 1;
+       profileIdRef.current = nextProfileId;
       setProfileId(nextProfileId);
       setConversationId(crypto.randomUUID());
       setChartInput(null);
