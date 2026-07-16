@@ -33,4 +33,13 @@ describe("reference redesign visual contract", () => {
     expect(layout).toContain("--font-fraunces");
     expect(layout).toContain("--font-noto-serif");
   });
+
+  test("binds the sidebar chart card to the active workspace chart", () => {
+    const sidebar = source("src/components/sidebar.tsx");
+
+    expect(sidebar).toContain("useWorkspace()");
+    expect(sidebar).toContain("sidebarChartSummary");
+    expect(sidebar).not.toContain("我的命盘");
+    expect(sidebar).not.toContain("开通 Pro");
+  });
 });

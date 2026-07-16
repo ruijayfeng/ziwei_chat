@@ -7,6 +7,8 @@ import { usePathname } from 'next/navigation'
 import { ChevronRight, Compass } from 'lucide-react'
 import { NAV_ITEMS, type NavItem } from '@/components/nav-items'
 import { ZiweiLogotype } from '@/components/brand/logotype'
+import { useWorkspace } from '@/components/workspace/workspace-provider'
+import { sidebarChartSummary } from '@/lib/ui/sidebar-chart'
 
 function NavigationItem({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon
@@ -42,6 +44,12 @@ function NavigationItem({ item, active }: { item: NavItem; active: boolean }) {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { ready, chartLoading, chartDisplay } = useWorkspace()
+  const chartSummary = sidebarChartSummary({
+    ready,
+    loading: chartLoading,
+    chart: chartDisplay,
+  })
 
   return (
     <aside className="hidden h-full w-[264px] shrink-0 flex-col gap-6 overflow-y-auto px-5 py-6 lg:flex">
@@ -70,37 +78,37 @@ export function Sidebar() {
           <div className="surface-well flex size-8 items-center justify-center rounded-lg">
             <Compass className="size-4 text-primary" strokeWidth={1.75} />
           </div>
-          <span className="text-sm font-medium text-foreground">我的命盘</span>
+          <span className="text-sm font-medium text-foreground">
+            {chartSummary.phase === 'loading'
+              ? '正在读取命盘…'
+              : chartSummary.phase === 'empty'
+                ? '尚未创建命盘'
+                : chartSummary.displayName}
+          </span>
         </div>
         <p className="mb-3.5 font-mono text-xs tracking-wide text-muted-foreground">
-          己巳年 · 戊辰月 · 戊寅日
+          {chartSummary.phase === 'ready' ? chartSummary.detail : ' '}
         </p>
-        <Link
-          href="/chart"
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 py-2 text-xs font-medium text-primary transition-colors duration-300 hover:bg-primary/15"
-        >
-          查看命盘
-          <ChevronRight className="size-3.5" strokeWidth={2} />
-        </Link>
+        {chartSummary.phase === 'loading' ? (
+          <button
+            type="button"
+            disabled
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/15 bg-primary/5 py-2 text-xs font-medium text-primary/60"
+          >
+            正在读取命盘…
+          </button>
+        ) : (
+          <Link
+            href="/chart"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 py-2 text-xs font-medium text-primary transition-colors duration-300 hover:bg-primary/15"
+          >
+            {chartSummary.phase === 'empty' ? '创建命盘' : '查看命盘'}
+            <ChevronRight className="size-3.5" strokeWidth={2} />
+          </Link>
+        )}
       </div>
 
       <div className="flex-1" />
-
-      {/* Pro card */}
-      <div className="surface relative overflow-hidden rounded-2xl p-4">
-        <div className="mb-1.5 flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">解锁更多能力</span>
-        </div>
-        <p className="mb-3.5 text-xs leading-relaxed text-muted-foreground">
-          畅享深度分析与高级功能
-        </p>
-        <button
-          type="button"
-          className="relative w-full rounded-lg bg-primary py-2 text-xs font-semibold text-primary-foreground transition-opacity duration-300 hover:opacity-90"
-        >
-          开通 Pro
-        </button>
-      </div>
 
       {/* Footer */}
       <div className="px-1.5 leading-relaxed">
