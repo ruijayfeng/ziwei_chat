@@ -18,7 +18,7 @@ const EASE = [0.16, 1, 0.3, 1] as const
  * a solid, full-bleed composer anchored to the foot of the view.
  */
 export function ChatExperience() {
-  const { phase, messages, thinking, send, retry, reset } = useChatSession()
+  const { phase, messages, thinking, busy, send, retry, reset } = useChatSession()
   const lastAssistantId = [...messages].reverse().find((m) => m.role === 'assistant')?.id
   const active = phase === 'active'
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -92,7 +92,7 @@ export function ChatExperience() {
 
           {/* Solid, full-bleed composer footer — nothing shows through it. */}
           <div className="flex-none bg-background pb-6 pt-3">
-            <ChatComposer variant="docked" onSend={send} />
+            <ChatComposer variant="docked" disabled={busy} onSend={send} />
           </div>
         </div>
       ) : (
@@ -101,7 +101,7 @@ export function ChatExperience() {
           <div className="flex justify-center py-2">
             <DestinyRing />
           </div>
-          <ChatComposer variant="hero" onSend={send} />
+          <ChatComposer variant="hero" disabled={busy} onSend={send} />
         </div>
       )}
     </div>

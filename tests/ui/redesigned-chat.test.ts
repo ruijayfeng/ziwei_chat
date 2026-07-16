@@ -28,4 +28,21 @@ describe("reference chat presentation", () => {
     expect(bubble.indexOf("const reduceMotion = useReducedMotion()"))
       .toBeLessThan(bubble.indexOf("if (isUser)"));
   });
+
+  test("backs the reference provider with the real workspace transport", () => {
+    const session = source("src/components/chat/chat-session.tsx");
+
+    expect(session).toContain("useWorkspace()");
+    expect(session).toContain("referenceChatMessages(chatSession)");
+    expect(session).not.toMatch(/DEMO_REPLY|DEMO_REFS|setInterval|setTimeout/);
+  });
+
+  test("disables the unchanged composer while a real request is active", () => {
+    const composer = source("src/components/chat-composer.tsx");
+    const experience = source("src/components/chat/chat-experience.tsx");
+
+    expect(composer).toContain("disabled = false");
+    expect(composer).toContain("disabled={disabled || !value.trim()}");
+    expect(experience).toContain("disabled={busy}");
+  });
 });

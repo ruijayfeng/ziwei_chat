@@ -11,15 +11,18 @@ const GUIDED = THEMES.slice(0, 6)
 
 export function ChatComposer({
   variant = 'hero',
+  disabled = false,
   onSend,
 }: {
   variant?: 'hero' | 'docked'
+  disabled?: boolean
   onSend?: (text: string) => void
 }) {
   const [value, setValue] = useState('')
   const isHero = variant === 'hero'
 
   function submit() {
+    if (disabled) return
     const text = value.trim()
     if (!text) return
     onSend?.(text)
@@ -48,6 +51,7 @@ export function ChatComposer({
                   <button
                     key={t.id}
                     type="button"
+                    disabled={disabled}
                     onClick={() => setValue(t.question)}
                     className="surface group flex items-center gap-1.5 rounded-full py-1.5 pl-2 pr-3.5 text-xs text-muted-foreground transition-colors duration-300 hover:border-primary/40 hover:text-foreground"
                   >
@@ -69,11 +73,13 @@ export function ChatComposer({
         <button
           type="button"
           aria-label="添加附件"
+          disabled={disabled}
           className="flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:text-foreground"
         >
           <Paperclip className="size-[18px]" strokeWidth={1.75} />
         </button>
         <textarea
+          disabled={disabled}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -95,7 +101,7 @@ export function ChatComposer({
           type="button"
           aria-label="发送"
           onClick={submit}
-          disabled={!value.trim()}
+          disabled={disabled || !value.trim()}
           className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all duration-300 hover:opacity-90 disabled:opacity-30"
         >
           <ArrowUp className="size-[18px]" strokeWidth={2} />

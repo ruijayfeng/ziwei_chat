@@ -164,7 +164,7 @@ export function MessageBubble({
             ))}
         </div>
         {!message.streaming && message.content && (
-          <AssistantActions content={message.content} canRetry={isLast} onRetry={onRetry} />
+          <AssistantActions content={message.content} canRetry={message.failed || isLast} onRetry={onRetry} />
         )}
       </div>
     </motion.div>
