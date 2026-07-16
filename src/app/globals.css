@@ -1,153 +1,310 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
-
-:root {
-  color-scheme: dark;
-  --background: #11101d;
-  --foreground: #f5f1ea;
-  --card: #1a1828;
-  --card-foreground: #f5f1ea;
-  --popover: #1d1b2c;
-  --popover-foreground: #f5f1ea;
-  --surface: #1a1828;
-  --surface-muted: #242134;
-  --border: #343044;
-  --input: #454055;
-  --muted: #242134;
-  --muted-foreground: #aaa3b8;
-  --primary: #b6a6dc;
-  --primary-foreground: #191622;
-  --primary-strong: #d1c3ee;
-  --secondary: #29263a;
-  --secondary-foreground: #f5f1ea;
-  --accent: #302a48;
-  --accent-foreground: #eee8fb;
-  --destructive: #e57373;
-  --warning: #e6a066;
-  --warning-muted: #35251f;
-  --success: #7ec7a5;
-  --success-muted: #1d332b;
-  --focus: #d1c3ee;
-  --ring: #b6a6dc;
-  --cinnabar: #cf634f;
-  --chart-1: #b6a6dc;
-  --chart-2: #7fa7cf;
-  --chart-3: #d9ad64;
-  --chart-4: #cf634f;
-  --chart-5: #7ec7a5;
-  --radius: 0.9rem;
-  --sidebar: #151321;
-  --sidebar-foreground: #f5f1ea;
-  --sidebar-primary: #b6a6dc;
-  --sidebar-primary-foreground: #191622;
-  --sidebar-accent: #2d2941;
-  --sidebar-accent-foreground: #f5f1ea;
-  --sidebar-border: #343044;
-  --sidebar-ring: #b6a6dc;
-}
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-primary: var(--primary);
-  --color-primary-strong: var(--primary-strong);
-  --color-cinnabar: var(--cinnabar);
-  --color-warning: var(--warning);
-  --color-warning-muted: var(--warning-muted);
-  --color-success: var(--success);
-  --color-success-muted: var(--success-muted);
-  --font-sans: "LXGW WenKai", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-heading: "LXGW WenKai", "Microsoft YaHei", ui-serif, serif;
-  --font-serif: "LXGW WenKai", "Microsoft YaHei", ui-serif, serif;
-  --font-display: "LXGW WenKai", "Microsoft YaHei", ui-serif, serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* life dimension accents */
+  --color-violet: var(--violet);
+  --color-blue: var(--blue);
+  --color-gold: var(--gold);
+  --color-emerald: var(--emerald);
+  /* cinnabar — the seal-red brand punctuation, reserved for ~10% moments */
+  --color-cinnabar: var(--cinnabar);
+  --color-border-strong: var(--border-strong);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-3xl: calc(var(--radius) * 2.4);
 }
 
-body {
-  font-family: "LXGW WenKai", "Microsoft YaHei", system-ui, sans-serif;
-  font-synthesis: none;
+/* Fonts must be a NON-inline @theme so the utilities emit a runtime `var()`
+   reference. The next/font variables (--font-geist-sans, --font-noto-serif, …)
+   are injected on <html> at runtime, so build-time `inline` resolution would
+   drop them. One logical family per role: a Latin face + a Chinese face, so CJK
+   text is intentional instead of per-platform system fallback. */
+@theme {
+  --font-sans: var(--font-geist-sans), var(--font-noto-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Classical brush-kai (LXGW WenKai) leads, with Noto Serif SC as fallback —
+     antique warmth and thick/thin stroke contrast, never a flat sans look. */
+  --font-serif: 'LXGW WenKai', var(--font-noto-serif), ui-serif, Georgia, serif;
+  /* Latin display voice (Fraunces) — falls through to the Chinese kai so a
+     mixed CJK/Latin heading keeps one continuous serif texture. */
+  --font-display: var(--font-fraunces), 'LXGW WenKai', var(--font-noto-serif), ui-serif, Georgia, serif;
+
+  /* Brand typographic scale — display headings breathe with slightly negative
+     tracking (never below the -0.04em floor); labels track open. */
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-label: 0.14em;
 }
 
-::selection {
-  background: color-mix(in srgb, var(--primary) 18%, white);
-  color: var(--foreground);
-}
+:root {
+  color-scheme: dark;
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+  /* Deep warm-indigo night — lifted off pure black and nudged toward a warmer
+     violet hue so the app reads as a breathing twilight sky, not cold soot. */
+  --background: oklch(0.158 0.03 292);
+  --foreground: oklch(0.97 0.006 292);
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
+  /* Cards lift clearly off the base and carry a subtle warm-violet tint */
+  --card: oklch(0.222 0.032 293);
+  --card-foreground: oklch(0.97 0.006 292);
+  --card-top: oklch(0.262 0.034 294);
+  --card-bottom: oklch(0.192 0.03 292);
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
+  --popover: oklch(0.212 0.032 293);
+  --popover-foreground: oklch(0.97 0.006 292);
+
+  --primary: oklch(0.74 0.17 300);
+  --primary-foreground: oklch(0.99 0.004 292);
+
+  --secondary: oklch(0.282 0.03 293);
+  --secondary-foreground: oklch(0.97 0.006 292);
+
+  --muted: oklch(0.272 0.028 293);
+  --muted-foreground: oklch(0.745 0.026 292);
+
+  --accent: oklch(0.34 0.055 298);
+  --accent-foreground: oklch(0.98 0.004 292);
+
+  --destructive: oklch(0.62 0.2 20);
+
+  /* Crisper hairline borders + a brighter top-edge highlight for cards */
+  --border: oklch(0.99 0.012 292 / 11%);
+  --border-strong: oklch(0.99 0.012 292 / 17%);
+  --edge-highlight: oklch(1 0 0 / 13%);
+  --input: oklch(0.99 0.012 292 / 15%);
+  --ring: oklch(0.74 0.17 300 / 60%);
+
+  /* Life dimension accents — jewel-toned, higher chroma */
+  --violet: oklch(0.72 0.18 300);
+  --blue: oklch(0.72 0.15 248);
+  --gold: oklch(0.83 0.14 82);
+  --emerald: oklch(0.76 0.15 163);
+  /* Cinnabar seal-red — the single warm punctuation in a cool palette. Used
+     sparingly: live/now markers, a wordmark seal, one decisive CTA. */
+  --cinnabar: oklch(0.64 0.19 31);
+
+  --radius: 0.9rem;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply bg-background;
+  }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: 'liga' 1, 'calt' 1;
   }
-  html {
-    @apply font-sans;
+}
+
+/* Slow, elegant orbital rotation for the destiny ring */
+@keyframes ziwei-spin {
+  from {
+    transform: rotate(0deg);
   }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ziwei-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ziwei-breathe {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.ziwei-orbit-slow {
+  animation: ziwei-spin 220s linear infinite;
+  transform-origin: center;
+}
+.ziwei-orbit-slower {
+  animation: ziwei-spin-reverse 340s linear infinite;
+  transform-origin: center;
+}
+
+/* Flowing light sweeping across the "thinking" label — a calm, literary
+   substitute for the usual bouncing dots. */
+@keyframes ziwei-shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.ziwei-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    oklch(0.62 0.02 279) 0%,
+    oklch(0.62 0.02 279) 35%,
+    oklch(0.9 0.05 300) 50%,
+    oklch(0.62 0.02 279) 65%,
+    oklch(0.62 0.02 279) 100%
+  );
+  background-size: 200% auto;
+  animation: ziwei-shimmer 2.4s linear infinite;
+}
+
+/* Reduced-motion contract: users who ask for less motion get a calm, static
+   surface. Neutralizes the infinite CSS keyframe loops (orbital spin, breathe,
+   shimmer) and collapses transitions to a near-instant crossfade. The paired
+   JS (motion/react) animations respect this via <MotionConfig reducedMotion>
+   plus useReducedMotion guards on the looping star/cursor. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ziwei-shimmer {
+    background-image: none;
+    color: oklch(0.78 0.03 286) !important;
+    -webkit-text-fill-color: oklch(0.78 0.03 286) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Ziwei logotype — a classical brush-kai wordmark.
+   Set in LXGW WenKai (via --font-serif): the brush strokes carry natural
+   thick/thin modulation and an antique, hand-inked character, so the mark
+   reads古色古香 rather than thin and flimsy. Warm white (never pure white),
+   regular weight (the typeface, not the weight, supplies the contrast), open
+   optical spacing, and a subliminal moonlight.
+   ───────────────────────────────────────────────────────────────────────── */
+.ziwei-logotype {
+  display: inline-flex;
+  align-items: baseline;
+  /* Regular weight (400) — a real WenKai face. The brush already gives
+     confident, varied strokes, so the wordmark reads substantial without bold. */
+  font-weight: 400 !important;
+  line-height: 1;
+  /* Slightly tighter than a typed default, optically balanced. */
+  letter-spacing: 0.04em !important;
+  /* Warm white — #F7F5F2 — the single brand tone. */
+  color: oklch(0.965 0.004 85) !important;
+  -webkit-text-fill-color: oklch(0.965 0.004 85);
+  /* Proportional CJK metrics = handcrafted, designed spacing, not typed. */
+  font-feature-settings: 'palt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Almost invisible celestial light: 14px radius, ~5% — moonlight, not glow. */
+  text-shadow: 0 0 14px oklch(0.92 0.03 255 / 0.05);
+}
+
+/* Hide scrollbars entirely across the app while keeping scroll functional —
+   a clean, undistracted reading surface. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Premium card surface: subtle top-lit gradient, luminous top edge, layered depth shadow */
+.surface {
+  background-image: linear-gradient(180deg, var(--card-top), var(--card-bottom));
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 0 var(--edge-highlight) inset,
+    0 0 0 1px oklch(0 0 0 / 0.15),
+    0 24px 48px -28px oklch(0 0 0 / 0.9),
+    0 2px 8px -4px oklch(0 0 0 / 0.6);
+}
+
+.surface-hover {
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.surface-hover:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 0 0 oklch(1 0 0 / 0.16) inset,
+    0 0 0 1px oklch(0 0 0 / 0.15),
+    0 32px 60px -28px oklch(0 0 0 / 0.95),
+    0 4px 14px -4px oklch(0 0 0 / 0.6);
+}
+
+/* Featured surface: violet-tinted, the primary action */
+.ziwei-featured {
+  background-image: linear-gradient(
+    160deg,
+    oklch(0.4 0.14 300),
+    oklch(0.25 0.08 293) 55%,
+    oklch(0.185 0.04 288)
+  );
+  border-color: oklch(0.72 0.17 298 / 0.42);
+  box-shadow:
+    0 1px 0 0 oklch(1 0 0 / 0.18) inset,
+    0 0 0 1px oklch(0 0 0 / 0.15),
+    0 24px 52px -26px oklch(0.32 0.14 300 / 0.9),
+    0 2px 8px -4px oklch(0 0 0 / 0.6);
+}
+.ziwei-featured.surface-hover:hover {
+  border-color: oklch(0.72 0.17 298 / 0.58);
+  box-shadow:
+    0 1px 0 0 oklch(1 0 0 / 0.22) inset,
+    0 0 0 1px oklch(0 0 0 / 0.15),
+    0 34px 64px -26px oklch(0.36 0.15 300 / 0.95),
+    0 4px 14px -4px oklch(0 0 0 / 0.6);
+}
+
+/* Inner well: recessed surface for inputs / palettes sitting on a card */
+.surface-well {
+  background-image: linear-gradient(180deg, oklch(0.145 0.024 281), oklch(0.17 0.026 283));
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 0 var(--edge-highlight) inset,
+    0 8px 24px -18px oklch(0 0 0 / 0.9) inset;
 }
