@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useInspectorToggle } from '@/components/inspector-context'
 import {
   currentCalendarDisplay,
+  millisecondsUntilNextShanghaiDay,
   type CurrentCalendarDisplay,
 } from '@/lib/ui/current-calendar'
 import { cn } from '@/lib/utils'
@@ -20,7 +21,15 @@ export function HeroHeader() {
   const [calendar, setCalendar] = useState<CurrentCalendarDisplay | null>(null)
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setCalendar(currentCalendarDisplay(new Date())), 0)
+    let timer: number
+
+    const refresh = () => {
+      const now = new Date()
+      setCalendar(currentCalendarDisplay(now))
+      timer = window.setTimeout(refresh, millisecondsUntilNextShanghaiDay(now) + 50)
+    }
+
+    timer = window.setTimeout(refresh, 0)
     return () => window.clearTimeout(timer)
   }, [])
 

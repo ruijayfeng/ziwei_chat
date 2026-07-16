@@ -10,10 +10,16 @@ const composer = source("src/components/chat-composer.tsx");
 describe("reference chat presentation", () => {
   test("uses a mounted deterministic calendar and supported composer controls", () => {
     expect(header).toContain("currentCalendarDisplay");
-    expect(header).not.toContain("2025骞?5鏈?4鏃?");
-    expect(header).not.toContain("鑳屾櫙闊充箰");
-    expect(composer).not.toContain("娣诲姞闄勪欢");
+    expect(header).not.toContain("2025年05月14日");
+    expect(header).not.toContain("背景音乐");
+    expect(composer).not.toContain("添加附件");
+    expect(header).not.toContain("Music2");
     expect(composer).not.toContain("Paperclip");
+  });
+
+  test("refreshes the mounted date at the Shanghai day boundary", () => {
+    expect(header).toContain("millisecondsUntilNextShanghaiDay");
+    expect(header).toContain("clearTimeout");
   });
 
   test("uses the reference hero composition", () => {
@@ -49,7 +55,6 @@ describe("reference chat presentation", () => {
   });
 
   test("disables the unchanged composer while a real request is active", () => {
-    const composer = source("src/components/chat-composer.tsx");
     const experience = source("src/components/chat/chat-experience.tsx");
 
     expect(composer).toContain("disabled = false");

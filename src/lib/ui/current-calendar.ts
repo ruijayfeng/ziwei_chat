@@ -2,6 +2,17 @@ export type CurrentCalendarDisplay = {
   dateLabel: string
 }
 
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+
+export function millisecondsUntilNextShanghaiDay(date: Date): number {
+  const nextShanghaiMidnight =
+    (Math.floor((date.getTime() + SHANGHAI_OFFSET_MS) / DAY_MS) + 1) * DAY_MS -
+    SHANGHAI_OFFSET_MS
+
+  return nextShanghaiMidnight - date.getTime()
+}
+
 export function currentCalendarDisplay(date: Date): CurrentCalendarDisplay {
   const parts = new Intl.DateTimeFormat('zh-CN', {
     timeZone: 'Asia/Shanghai',
