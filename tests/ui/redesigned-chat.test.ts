@@ -45,4 +45,14 @@ describe("reference chat presentation", () => {
     expect(composer).toContain("disabled={disabled || !value.trim()}");
     expect(experience).toContain("disabled={busy}");
   });
+
+  test("renders real evidence inside the reference inspector rail", () => {
+    const session = source("src/components/chat/chat-session.tsx");
+    const inspector = source("src/components/chat/chat-inspector.tsx");
+
+    expect(session).toContain("selectedEvidence");
+    expect(session).toContain("modelSettings");
+    expect(inspector).toContain("<EvidenceInspector");
+    expect(inspector).not.toContain("refs.map");
+  });
 });

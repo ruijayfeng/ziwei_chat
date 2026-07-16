@@ -1,12 +1,10 @@
 'use client'
 
-import { AnimatePresence, motion } from 'motion/react'
-import { Compass, Shield } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import { BrandMark } from '@/components/brand-mark'
+import { EvidenceInspector } from '@/components/chat/evidence-inspector'
 import { InspectorPanel } from '@/components/inspector-panel'
 import { useChatSession } from '@/components/chat/chat-session'
-
-const EASE = [0.16, 1, 0.3, 1] as const
 
 /**
  * Right rail for the 对话 page. While idle it shows the quiet default panel;
@@ -14,7 +12,7 @@ const EASE = [0.16, 1, 0.3, 1] as const
  * exact palaces / stars each reply draws on — the product's honesty promise.
  */
 export function ChatInspector() {
-  const { phase, refs, thinking } = useChatSession()
+  const { phase, evidence, modelSettings } = useChatSession()
 
   if (phase === 'idle') return <InspectorPanel />
 
@@ -32,35 +30,8 @@ export function ChatInspector() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2.5">
-        <AnimatePresence>
-          {refs.map((r, i) => (
-            <motion.div
-              key={r.palace}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: i * 0.05, ease: EASE }}
-              className="surface rounded-xl p-3.5"
-            >
-              <div className="flex items-center gap-2">
-                <Compass className="size-3.5 shrink-0 text-primary/70" strokeWidth={1.75} />
-                <span className="text-xs font-medium text-foreground">{r.palace}</span>
-              </div>
-              <p className="mt-1.5 font-serif text-sm text-foreground/90">{r.star}</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{r.note}</p>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {thinking && refs.length === 0 && (
-          <motion.p
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            className="px-1 text-xs text-muted-foreground"
-          >
-            正在读取命盘线索…
-          </motion.p>
-        )}
+      <div className="surface overflow-hidden rounded-2xl px-4">
+        <EvidenceInspector evidence={evidence} modelSettings={modelSettings} />
       </div>
 
       <div className="mt-auto pt-6">

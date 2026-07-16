@@ -9,6 +9,8 @@
 
 import { createContext, useContext } from 'react'
 import { useWorkspace } from '@/components/workspace/workspace-provider'
+import type { EvidenceState } from '@/lib/ui/chat-evidence'
+import type { ModelSettingsDraft } from '@/lib/ui/model-settings'
 import {
   referenceChatMessages,
   referenceChatPhase,
@@ -19,18 +21,13 @@ import {
 export type ChatRole = 'user' | 'assistant'
 export type ChatMessage = ReferenceChatMessage
 
-export type AnalysisRef = {
-  palace: string
-  star: string
-  note: string
-}
-
 type ChatSession = {
   phase: 'idle' | 'active'
   messages: ChatMessage[]
   thinking: boolean
   busy: boolean
-  refs: AnalysisRef[]
+  evidence: EvidenceState
+  modelSettings: ModelSettingsDraft
   send: (text: string) => void
   retry: () => void
   reset: () => void
@@ -50,6 +47,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     retryLastMessage,
     resetChat,
+    selectedEvidence,
+    modelSettings,
   } = useWorkspace()
 
   const value: ChatSession = {
@@ -57,7 +56,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     messages: referenceChatMessages(chatSession),
     thinking: referenceChatThinking(chatSession),
     busy: chatSession.activeRequestId !== null,
-    refs: [],
+    evidence: selectedEvidence,
+    modelSettings,
     send: (text) => void sendMessage(text),
     retry: () => void retryLastMessage(),
     reset: resetChat,
