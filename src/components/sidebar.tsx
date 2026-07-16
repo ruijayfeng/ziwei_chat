@@ -84,7 +84,7 @@ export function Sidebar() {
             {chartSummary.phase === 'loading'
               ? '正在读取命盘…'
               : chartSummary.phase === 'error'
-                ? '命盘恢复失败'
+                ? '命盘暂时不可用'
               : chartSummary.phase === 'empty'
                 ? '尚未创建命盘'
                 : chartSummary.displayName}

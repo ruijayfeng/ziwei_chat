@@ -14,6 +14,7 @@ import type { ChartDisplayModel } from "@/lib/domain/chart-display";
 import { ChatClientError, sendChatRequest } from "@/lib/ui/chat-client";
 import { initialEvidence, type EvidenceState } from "@/lib/ui/chat-evidence";
 import { classifyChatError, type ChatErrorState } from "@/lib/ui/chat-errors";
+import { isCurrentProfileOperation } from "@/lib/ui/profile-operation";
 import {
   chatRequestMessages,
   chatSessionReducer,
@@ -82,6 +83,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [chartDisplay, setChartDisplay] = useState<ChartDisplayModel | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
   const [settledProfileId, setSettledProfileId] = useState("");
+  const revisionRef = useRef(0);
+  const profileIdRef = useRef("");
   const [chartSynced, setChartSynced] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
   const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(defaultModelSettingsDraft);
@@ -98,6 +101,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const storedProfileId = window.localStorage.getItem("ziwei-chat-profile-id");
       const nextProfileId = isUuid(storedProfileId) ? storedProfileId : crypto.randomUUID();
       window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
+      revisionRef.current += 1;
+      profileIdRef.current = nextProfileId;
       setProfileId(nextProfileId);
       setConversationId(crypto.randomUUID());
       setModelSettings(modelSettingsDraftFromStorage(window.localStorage.getItem(modelSettingsStorageKey)));
@@ -174,6 +179,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => () => chatAbortRef.current?.abort(), []);
 
   const saveChart = useCallback(async (nextChart: CreateChartInput) => {
+    const operation = { profileId, revision: revisionRef.current };
     setChartLoading(true);
     setChartError(null);
     try {
@@ -185,6 +191,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) throw new Error("命盘保存失败，请检查出生信息后重试。");
       const payload = (await response.json()) as ChartApiPayload;
       if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
+      const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
+      if (!isCurrentProfileOperation(operation, currentOperation)) return false;
       const primaryChart = { ...nextChart, profileId, isPrimary: true };
       setChartInput(primaryChart);
       setChartDisplay(payload.display);
@@ -196,11 +204,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       );
       return true;
     } catch (error) {
+      const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
+      if (!isCurrentProfileOperation(operation, currentOperation)) return false;
       setChartError(error instanceof Error ? error.message : "命盘保存失败。");
       setChartSynced(false);
       return false;
     } finally {
-      setChartLoading(false);
+      const currentOperation = { profileId: profileIdRef.current, revision: revisionRef.current };
+      if (isCurrentProfileOperation(operation, currentOperation)) setChartLoading(false);
     }
   }, [profileId]);
 
@@ -272,6 +283,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAnonymousData = useCallback(async () => {
     if (!profileId || dataDeleting) return false;
+    revisionRef.current += 1;
     setDataDeleting(true);
     setDataDeletionError(null);
     try {
@@ -285,6 +297,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       window.localStorage.removeItem(chartSessionStorageKey(profileId));
       const nextProfileId = crypto.randomUUID();
       window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
+      revisionRef.current += 1;
+      profileIdRef.current = nextProfileId;
       setProfileId(nextProfileId);
       setConversationId(crypto.randomUUID());
       setChartInput(null);

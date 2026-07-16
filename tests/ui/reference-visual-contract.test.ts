@@ -42,6 +42,7 @@ describe("reference redesign visual contract", () => {
     expect(sidebar).toContain("chartRestoreSettled");
     expect(sidebar).toContain("chartError");
     expect(sidebar).toContain("查看命盘状态");
+    expect(sidebar).not.toContain("命盘恢复失败");
     expect(sidebar).not.toContain("我的命盘");
     expect(sidebar).not.toContain("开通 Pro");
   });
@@ -52,5 +53,19 @@ describe("reference redesign visual contract", () => {
     expect(provider).toContain("chartRestoreSettled");
     expect(provider).toContain("settledProfileId");
     expect(provider).toContain("settledProfileId === profileId");
+  });
+
+  test("guards profile-scoped chart saves before async mutations", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+
+    expect(provider).toContain("isCurrentProfileOperation");
+    expect(provider).toContain("const operation = { profileId, revision: revisionRef.current }");
+    expect(provider).toContain("isCurrentProfileOperation(operation, currentOperation)");
+    expect(provider).toContain("revisionRef.current += 1");
+    expect(provider).toContain("setProfileId(nextProfileId)");
+    expect(provider).toContain("return false");
+
+    const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
+    expect(deletion).toContain("revisionRef.current += 1");
   });
 });

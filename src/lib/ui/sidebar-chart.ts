@@ -21,7 +21,7 @@ export function sidebarChartSummary(input: {
   chart: ChartDisplayModel | null;
 }): SidebarChartSummary {
   if (!input.ready || !input.settled || input.loading) return { phase: "loading" };
-  if (input.error) return { phase: "error", message: "命盘恢复暂时不可用" };
+  if (input.error) return { phase: "error", message: "命盘暂时不可用" };
   if (!input.chart) return { phase: "empty" };
 
   return {

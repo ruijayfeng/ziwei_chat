@@ -9,7 +9,7 @@ describe("sidebar chart summary", () => {
   test("shows a settled restore error", () => {
     expect(sidebarChartSummary({ ready: true, settled: true, loading: false, error: "恢复失败", chart: null })).toEqual({
       phase: "error",
-      message: "命盘恢复暂时不可用",
+      message: "命盘暂时不可用",
     });
   });
 
