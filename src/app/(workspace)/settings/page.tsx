@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 
+import { AppLayout } from "@/components/app-layout";
 import { ModelSettingsPanel } from "@/components/model-settings-panel";
 import {
   AlertDialog,
@@ -16,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { PageHeader, RingGlyph } from "@/components/workspace/page-header";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
 
 export default function SettingsPage() {
@@ -29,25 +31,29 @@ export default function SettingsPage() {
   } = useWorkspace();
 
   return (
-    <section className="mx-auto max-w-3xl py-8">
-      <p className="text-sm text-cinnabar">设置</p>
-      <h1 className="mt-3 font-serif text-4xl font-bold">模型与匿名资料</h1>
-      <p className="mt-4 max-w-2xl leading-7 text-muted-foreground">
-        API Key 只保存在当前浏览器，并在发起分析时随请求发送；服务端不会把它写入数据库或日志。
-      </p>
-      <div className="mt-8">
-        <ModelSettingsPanel loaded={modelSettingsLoaded} onChange={setModelSettings} value={modelSettings} />
-      </div>
+    <AppLayout inspector={null}>
+      <div className="mx-auto w-full max-w-3xl py-8 lg:py-12">
+        <PageHeader
+          aside={<RingGlyph className="size-24 opacity-80" />}
+          eyebrow="settings"
+          subtitle="模型配置只保存在当前浏览器，用于连接 OpenAI 兼容服务。"
+          title={<>连接你的模型服务</>}
+        />
 
-      <section className="mt-10 border-t border-border pt-8">
-        <h2 className="font-serif text-2xl font-bold">清除匿名资料</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-          命盘与对话会在当前浏览器保留；部署端配置数据库时，也可能为匿名 profile 持久化。确认后会同时请求服务端删除，再清理本地资料与模型设置。
-        </p>
-        {dataDeletionError ? <p className="mt-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{dataDeletionError}</p> : null}
-        <div className="mt-5"><ClearDataDialog disabled={dataDeleting} onConfirm={() => void deleteAnonymousData()} /></div>
-      </section>
-    </section>
+        <div className="mt-10">
+          <ModelSettingsPanel loaded={modelSettingsLoaded} onChange={setModelSettings} value={modelSettings} />
+        </div>
+
+        <section className="surface mt-10 rounded-2xl p-6 sm:p-8">
+          <h2 className="font-serif text-2xl font-medium">清除匿名资料</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+            命盘与对话会在当前浏览器保留；部署端配置数据库时，也可能为匿名 profile 持久化。确认后会同时请求服务端删除，再清理本地资料与模型设置。
+          </p>
+          {dataDeletionError ? <p className="mt-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{dataDeletionError}</p> : null}
+          <div className="mt-5"><ClearDataDialog disabled={dataDeleting} onConfirm={() => void deleteAnonymousData()} /></div>
+        </section>
+      </div>
+    </AppLayout>
   );
 }
 
