@@ -2,24 +2,39 @@
 > L2 | Parent: AGENTS.md
 
 Member List
-chart-onboarding.tsx: Client chart/profile management form with summary, sync state, save, and reset controls.
-report-message.tsx: Structured response-protocol renderer with ordinary-prose fallback.
-markdown-message.tsx: HTML-free Markdown renderer for ordinary and progressively revealed model answers.
-model-settings-panel.tsx: Browser-local OpenAI-compatible model provider settings panel for Base URL, API key, and model name.
-ui/: shadcn/Base UI component primitives owned by the project, used for buttons, cards, inputs, sheets, badges, separators, textareas, selects, and alert dialogs.
-brand/ziwei-logotype.tsx: LXGW WenKai wordmark and restrained cinnabar seal used by desktop and mobile navigation.
-workspace/app-layout.tsx: Shared App Router workspace shell with persistent sidebar, responsive inspector access, main scroll surface, and mobile tabs.
-workspace/sidebar.tsx: Desktop route navigation and anonymous product identity.
-workspace/mobile-chrome.tsx: Mobile/tablet top bar, accessible evidence sheet, and bottom route navigation.
-workspace/motion-provider.tsx: Motion configuration that respects the operating-system reduced-motion preference.
-workspace/nav-items.ts: Single typed source of truth for the five real workspace routes.
-workspace/workspace-provider.tsx: Persistent anonymous profile, chart restore/save, model settings, and cross-route browser state boundary.
-chat/: Redesigned real chat experience, controlled composer/messages, truthful chart ring, and per-message evidence inspector.
-records/: Profile-scoped real conversation list and message timeline presentation.
-insights/: Explicit empty boundary used until a sourced aggregation and critic pipeline exists.
-chart/chart-provider.tsx: Stable-id selection and hover state for the current sanitized chart display model.
-chart/destiny-chart.tsx: Interactive twelve-palace chart driven only by iztro display facts and real-index geometry.
-chart/palace-inspector.tsx: Deterministic star, transformation, body-palace, Laiyin-palace, and relationship details for the selected palace.
-chart/chart-page.tsx: Real chart route composition with loading, error, onboarding, chart, and local-reset states.
+app-layout.tsx: Reference-owned viewport shell with ambient background, desktop sidebar, responsive inspector, and mobile chrome.
+sidebar.tsx: Reference-owned desktop navigation, chart summary card, and visual product footer.
+mobile-chrome.tsx: Reference-owned mobile top bar, bottom tabs, and animated inspector sheet.
+nav-items.ts: Reference route order and icons; settings href is corrected to the real `/settings` route.
+gradient-background.tsx: Reference ambient background, stars, vignette, and texture.
+glass-card.tsx: Reference surface wrapper.
+hero-header.tsx: Reference home editorial header and date/music controls.
+destiny-ring.tsx: Reference home destiny-ring renderer.
+chat-composer.tsx: Reference home/docked composer presentation and theme prompts.
+inspector-context.tsx: Inspector open/close contract used by reference shell controls.
+inspector-panel.tsx: Reference default inspector presentation; real evidence binding remains pending.
+motion-provider.tsx: Reference MotionConfig boundary respecting reduced-motion preferences.
+brand/logotype.tsx: Reference LXGW WenKai/Fraunces wordmark.
+brand-mark.tsx: Reference circular compass mark used by inspector surfaces.
+brand/ziwei-logotype.tsx: Previous wordmark retained temporarily until old approximate shell cleanup.
+chart-onboarding.tsx: Previous real chart/profile form retained for the future reference-style create/edit entry point.
+report-message.tsx: Structured response-protocol renderer retained for real chat adaptation.
+markdown-message.tsx: HTML-free Markdown renderer retained for real chat adaptation.
+model-settings-panel.tsx: Real browser-local model provider controls, restyled with reference surfaces.
+ui/: Project-owned shadcn/Base UI primitives.
+workspace/workspace-provider.tsx: Persistent anonymous profile, real chart restore/save, model settings, real chat transport/evidence, and anonymous-data deletion boundary.
+workspace/page-header.tsx: Reference editorial page header and ring glyph.
+workspace/life-timeline.tsx: Reference records timeline currently driven by static workspace data.
+workspace/pattern-list.tsx: Reference insights pattern list currently driven by static workspace data.
+workspace/weekly-letter.tsx: Reference weekly-letter surface currently driven by static workspace data.
+workspace/app-layout.tsx, sidebar.tsx, mobile-chrome.tsx, motion-provider.tsx, nav-items.ts: Previous approximate shell retained temporarily and no longer used by routes.
+chat/: Reference chat experience, message presentation, inspector, and temporary demo ChatProvider; prior real evidence component remains available for adapter work.
+records/: Previous real conversation timeline retained temporarily for adapter work.
+insights/: Previous explicit empty state retained temporarily for later service integration.
+chart/chart-context.tsx: Reference selected/hovered palace state.
+chart/chart-hero.tsx: Reference editorial chart header and quick-locate controls.
+chart/destiny-chart.tsx: Reference radial twelve-palace renderer currently driven by static `PALACES`.
+chart/palace-inspector.tsx: Reference palace inspector currently driven by static `PALACES`.
+chart/chart-provider.tsx, chart-page.tsx: Previous real chart presentation retained temporarily for iztro adapter work.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

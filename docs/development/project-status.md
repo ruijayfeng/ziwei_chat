@@ -1,7 +1,16 @@
 # Project Status
 
 > Version: 2026-07-16
-> Purpose: redesigned App Router UI migration handoff with real chart, chat/evidence, settings, and conversation records.
+> Purpose: UI-first reference transplant status and service-integration handoff.
+
+## UI-First Reference Transplant Status
+
+- The presentation from `ziwei-chat-redesign` is now the active source for the global shell, home/chat, radial chart, records, insights, and settings visual language.
+- `/`, `/chart`, `/records`, and `/insights` intentionally use the reference presentation data during visual acceptance.
+- Existing chart, chat/Agent, evidence, conversation, model-settings, and anonymous-profile services remain in the repository and continue to pass their targeted contracts.
+- The settings route is still connected to real browser-local model settings and anonymous-data deletion.
+- Real chat, chart, evidence, and conversation data are not yet wired into the transplanted views. The exact integration backlog is maintained in `docs/development/ui-backend-gap-list.md`.
+- Backend adaptation must preserve the accepted reference UI instead of replacing its component structure.
 
 ## Current Branch State
 
