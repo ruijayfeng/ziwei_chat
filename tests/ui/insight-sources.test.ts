@@ -109,6 +109,26 @@ describe("insight source loader", () => {
     }] });
   });
 
+  test("canonicalizes valid timestamps and clears invalid timestamps at the loader boundary", async () => {
+    const result = await loadInsightSourceBundle(profileId, null, async (input) => {
+      if (!String(input).includes("conversationId=")) {
+        return Response.json({ conversations: [{ id: "conversation-1", title: "Saved", lastMessageAt: "2026-07-16T08:00:00+08:00" }] });
+      }
+      return Response.json({ messages: [
+        { id: "user-1", conversationId: "conversation-1", role: "user", content: "Prompt", createdAt: "2026-07-16T08:30:00+08:00" },
+        { id: "assistant-1", conversationId: "conversation-1", role: "assistant", content: "Answer", createdAt: "invalid" },
+      ] });
+    });
+
+    expect(result.conversations[0]).toMatchObject({
+      updatedAt: "2026-07-16T00:00:00.000Z",
+      messages: [
+        { id: "user-1", createdAt: "2026-07-16T00:30:00.000Z" },
+        { id: "assistant-1", createdAt: "" },
+      ],
+    });
+  });
+
   test("merges the current browser session by stable conversation and message ids without inventing timestamps", async () => {
     const result = await loadInsightSourceBundle(profileId, {
       conversationId: "conversation-1",
@@ -178,12 +198,24 @@ describe("insight source loader", () => {
   });
 
   test("rejects extra list and detail fields instead of silently dropping hidden metadata", async () => {
+    await expect(loadInsightSourceBundle(profileId, null, async () => Response.json({
+      conversations: [],
+      hidden: "metadata",
+    }))).rejects.toThrow("Invalid insight source response");
+
     await expect(loadInsightSourceBundle(profileId, null, async () => Response.json({ conversations: [{
       id: "conversation-1",
       title: "Saved",
       lastMessageAt: "",
       apiKey: "sk-hidden",
     }] }))).rejects.toThrow("Invalid insight source response");
+
+    await expect(loadInsightSourceBundle(profileId, null, async (input) => {
+      if (!String(input).includes("conversationId=")) {
+        return Response.json({ conversations: [{ id: "conversation-1", title: "Saved", lastMessageAt: "" }] });
+      }
+      return Response.json({ messages: [], hidden: "metadata" });
+    })).rejects.toThrow("Invalid insight source response");
 
     await expect(loadInsightSourceBundle(profileId, null, async (input) => {
       if (!String(input).includes("conversationId=")) {
@@ -198,5 +230,25 @@ describe("insight source loader", () => {
         hidden: { rawChart: true },
       }] });
     })).rejects.toThrow("Invalid insight source response");
+  });
+
+  test("canonicalizes detail ownership ids before comparing them", async () => {
+    await expect(loadInsightSourceBundle(profileId, null, async (input) => {
+      if (!String(input).includes("conversationId=")) {
+        return Response.json({ conversations: [{ id: " conversation-1 ", title: "Saved", lastMessageAt: "" }] });
+      }
+      return Response.json({ messages: [{
+        id: " message-1 ",
+        conversationId: " conversation-1 ",
+        role: "user",
+        content: "Body",
+        createdAt: "",
+      }] });
+    })).resolves.toEqual({ conversations: [{
+      id: "conversation-1",
+      title: "Saved",
+      updatedAt: "",
+      messages: [{ id: "message-1", role: "user", content: "Body", createdAt: "" }],
+    }] });
   });
 });

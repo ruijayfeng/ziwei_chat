@@ -28,9 +28,9 @@ export function readInsightCache(
     if (exact) return { status: "hit", report: exact };
 
     const profilePrefix = `${cachePrefix}${profileId}:`;
-    for (let index = 0; index < storage.length; index += 1) {
-      const key = storage.key(index);
-      if (!key?.startsWith(profilePrefix)) continue;
+    const profileKeys = Array.from({ length: storage.length }, (_, index) => storage.key(index))
+      .filter((key): key is string => Boolean(key?.startsWith(profilePrefix)));
+    for (const key of profileKeys) {
       const report = readCacheEntry(storage, key, key.slice(profilePrefix.length));
       if (report) return { status: "stale", report };
     }

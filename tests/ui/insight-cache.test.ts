@@ -27,6 +27,16 @@ describe("insight report cache", () => {
     expect(storage.getItem(cacheKey(profileA, fingerprintA))).toBeNull();
   });
 
+  test("finds a valid stale report after evicting an earlier malformed profile entry", () => {
+    const storage = createStorage();
+    storage.setItem(cacheKey(profileA, "0".repeat(64)), "{bad-json");
+    const staleReport = approvedReport(fingerprintB);
+    storage.setItem(cacheKey(profileA, fingerprintB), JSON.stringify({ version: 1, report: staleReport }));
+
+    expect(readInsightCache(profileA, fingerprintA, storage)).toEqual({ status: "stale", report: staleReport });
+    expect(storage.getItem(cacheKey(profileA, "0".repeat(64)))).toBeNull();
+  });
+
   test("evicts envelopes that contain anything besides the versioned report", () => {
     const storage = createStorage();
     storage.setItem(cacheKey(profileA, fingerprintA), JSON.stringify({

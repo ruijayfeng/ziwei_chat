@@ -18,6 +18,8 @@ export type CurrentInsightSession = {
 const MAX_CONVERSATIONS = 20;
 const DETAIL_CONCURRENCY = 4;
 const invalidResponseMessage = "Invalid insight source response";
+const listEnvelopeKeys = ["conversations"];
+const detailEnvelopeKeys = ["messages"];
 const summaryKeys = ["id", "title", "lastMessageAt"];
 const messageKeys = ["id", "conversationId", "role", "content", "createdAt"];
 
@@ -43,12 +45,12 @@ async function loadSummaries(profileId: string, fetchImpl: FetchImplementation, 
   if (response.status === 503) return null;
   if (!response.ok) throw new Error("Insight conversation list request failed");
   const payload = await response.json() as unknown;
-  if (!isRecord(payload) || !Array.isArray(payload.conversations)) invalidResponse();
+  if (!hasExactKeys(payload, listEnvelopeKeys) || !Array.isArray(payload.conversations)) invalidResponse();
 
   const summaries = payload.conversations.map((value) => {
     if (!hasExactKeys(value, summaryKeys) || !isString(value.id) || !isString(value.title) || !isString(value.lastMessageAt)) invalidResponse();
     const id = normalizeSourceId(value.id);
-    return { id, title: value.title.trim(), updatedAt: value.lastMessageAt.trim() };
+    return { id, title: value.title.trim(), updatedAt: normalizeTimestamp(value.lastMessageAt) };
   });
   if (new Set(summaries.map((summary) => summary.id)).size !== summaries.length) invalidResponse();
   return summaries;
@@ -66,13 +68,14 @@ async function loadConversation(
   );
   if (!response.ok) throw new Error("Insight conversation detail request failed");
   const payload = await response.json() as unknown;
-  if (!isRecord(payload) || !Array.isArray(payload.messages)) invalidResponse();
+  if (!hasExactKeys(payload, detailEnvelopeKeys) || !Array.isArray(payload.messages)) invalidResponse();
 
   const messages = payload.messages.map((value) => {
     if (
       !hasExactKeys(value, messageKeys)
       || !isString(value.id)
-      || value.conversationId !== summary.id
+      || !isString(value.conversationId)
+      || normalizeSourceId(value.conversationId) !== summary.id
       || !isConversationRole(value.role)
       || !isString(value.content)
       || !isString(value.createdAt)
@@ -81,7 +84,7 @@ async function loadConversation(
       id: normalizeSourceId(value.id),
       role: value.role,
       content: value.content.trim(),
-      createdAt: value.createdAt.trim(),
+      createdAt: normalizeTimestamp(value.createdAt),
     };
   });
   if (new Set(messages.map((message) => message.id)).size !== messages.length) invalidResponse();
@@ -155,6 +158,11 @@ function normalizeSourceId(value: string) {
   const id = value.trim();
   if (!id || id.includes(":")) invalidResponse();
   return id;
+}
+
+function normalizeTimestamp(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : "";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
