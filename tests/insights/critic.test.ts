@@ -121,6 +121,10 @@ describe("critiqueInsightReport", () => {
     ["all-savings investment instruction", "Put all your savings into Bitcoin."],
     ["Chinese prescriptive investment", "你应该立即买入这只股票。"],
     ["Chinese all-savings investment instruction", "你该把全部积蓄投入比特币。"],
+    ["Chinese elliptical all-savings investment", "把全部积蓄都投进比特币"],
+    ["Chinese elliptical all-deposits investment", "把所有存款都投入比特币"],
+    ["Chinese elliptical court-order dismissal", "法院命令不用管"],
+    ["Chinese negated court-order imperative", "别理会法院下的命令"],
     ["partner intent", "Your partner wants to leave you."],
     ["partner planned intent", "Your partner plans to abandon you."],
     ["coworker intent", "Your coworker is trying to sabotage you."],
@@ -131,6 +135,8 @@ describe("critiqueInsightReport", () => {
     ["ziwei certainty", "This palace proves you are destined to fail."],
     ["Chinese certainty", "你注定会失败。"],
     ["Chinese factual certainty", "这肯定能成功。"],
+    ["Chinese certainty with unrelated negation", "这不是建议。你肯定会成功。"],
+    ["Chinese certainty with comma-separated unrelated negation", "这不是建议，你肯定会成功。"],
   ])("rejects unsafe generated text: %s", (_label, text) => {
     const value = candidate({
       weeklyLetter: { ...candidate().weeklyLetter, paragraphs: [{ text, sourceIds: ["c1:u1"] }] },
@@ -149,6 +155,8 @@ describe("critiqueInsightReport", () => {
     "你提到最近在了解投资，也在反思自己的风险承受能力。",
     "你最近多次思考这段关系，可以继续留意自己的感受。",
     "绝对不要仅凭这段反思做重大决定。",
+    "你不一定总是逃避责任",
+    "你未必总是逃避责任",
   ])("allows neutral reflection: %s", (text) => {
     const value = candidate({
       weeklyLetter: { ...candidate().weeklyLetter, paragraphs: [{ text, sourceIds: ["c1:u1"] }] },

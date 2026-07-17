@@ -146,10 +146,21 @@ function containsUnsafeClaim(text: string) {
 }
 
 function containsCertainty(text: string) {
-  const hasEnglishAssertion = /\b(?:you|he|she|they|this|that|it|the \w+)\b.{0,24}\b(?:always|never|definitely|certainly|inevitably|destined|guaranteed|without doubt|proves?)\b/i.test(text)
-    || /\b(?:definitely|certainly|inevitably|destined|guaranteed|without doubt)\b.{0,24}\b(?:is|are|will|can|has|have|succeed|fail|happen|occur)\b/i.test(text);
-  const hasChineseAssertion = /(?:\u4f60|\u60a8|\u4ed6|\u5979|\u4ed6\u4eec|\u8fd9|\u90a3|\u6b64).{0,12}(?:\u4e00\u5b9a|\u5fc5\u7136|\u6ce8\u5b9a|\u7edd\u5bf9|\u5fc5\u5b9a|\u80af\u5b9a|\u4fdd\u8bc1).{0,12}(?:\u662f|\u4f1a|\u80fd|\u6709|\u6210\u529f|\u5931\u8d25|\u53d1\u751f)/.test(text);
-  return (hasEnglishAssertion || hasChineseAssertion) && !containsProtectiveNegation(text);
+  return text.split(/[.!?。！？]/).some(containsCertainAssertion);
+}
+
+function containsCertainAssertion(clause: string) {
+  const hasEnglishAssertion = /\b(?:you|he|she|they|this|that|it|the \w+)\b.{0,24}\b(?:always|never|definitely|certainly|inevitably|destined|guaranteed|without doubt|proves?)\b/i.test(clause)
+    || /\b(?:definitely|certainly|inevitably|destined|guaranteed|without doubt)\b.{0,24}\b(?:is|are|will|can|has|have|succeed|fail|happen|occur)\b/i.test(clause);
+  const hasChineseAssertion = /(?:\u4f60|\u60a8|\u4ed6|\u5979|\u4ed6\u4eec|\u8fd9|\u90a3|\u6b64).{0,12}(?:\u4e00\u5b9a|\u5fc5\u7136|\u6ce8\u5b9a|\u7edd\u5bf9|\u5fc5\u5b9a|\u80af\u5b9a|\u4fdd\u8bc1).{0,12}(?:\u662f|\u4f1a|\u80fd|\u6709|\u6210\u529f|\u5931\u8d25|\u53d1\u751f)/.test(clause);
+  return (hasEnglishAssertion || hasChineseAssertion) && !hasLocalCertaintyQualifier(clause);
+}
+
+function hasLocalCertaintyQualifier(clause: string) {
+  return /\b(?:not|never|cannot|can't|isn't|aren't|doesn't|don't)\s+(?:always|definitely|certainly|inevitably|guaranteed)\b/i.test(clause)
+    || /(?:\u4e0d\u4e00\u5b9a|\u672a\u5fc5)(?:.{0,4})(?:\u603b\u662f|\u5fc5\u7136|\u6ce8\u5b9a|\u7edd\u5bf9|\u5fc5\u5b9a|\u80af\u5b9a|\u4fdd\u8bc1)?/.test(clause)
+    || /\u5e76\u975e(?:.{0,2})(?:\u603b\u662f|\u5fc5\u7136|\u6ce8\u5b9a|\u7edd\u5bf9|\u5fc5\u5b9a|\u80af\u5b9a|\u4fdd\u8bc1)/.test(clause)
+    || /(?:\u7edd\u5bf9|\u4e00\u5b9a|\u80af\u5b9a)(?:\u4e0d\u8981|\u4e0d\u80fd|\u4e0d\u53ef)/.test(clause);
 }
 
 function containsMedicalOrDiagnosticClaim(text: string) {
@@ -184,10 +195,16 @@ function containsLegalClaim(text: string) {
       /(?:\u6cd5\u5f8b|\u6cd5\u9662\u547d\u4ee4|\u4f20\u7968|\u5408\u540c|\u534f\u8bae)/,
       /(?:\u8fdd\u53cd|\u8fdd\u6cd5|\u5ffd\u7565|\u9003\u907f|\u8fdd\u80cc)/,
     );
+  const chineseEllipticalDirective = hasDomainAction(
+    text,
+    /(?:\u6cd5\u9662(?:\u4e0b\u7684)?\u547d\u4ee4|\u4f20\u7968|\u6cd5\u5f8b)/,
+    /(?:\u4e0d\u7528\u7ba1|\u4e0d\u5fc5\u7ba1|\u522b\u7406\u4f1a|\u4e0d\u8981\u7406\u4f1a|\u65e0\u89c6|\u4e0d\u5fc5\u9075\u5b88|\u8fdd\u6297)/,
+  );
   return /\b(?:this|that|the) (?:contract|agreement|action|conduct) (?:is|constitutes) (?:illegal|unlawful|a crime|a breach)\b/i.test(text)
     || englishDirective
     || /(?:\u5408\u540c|\u534f\u8bae|\u884c\u4e3a|\u505a\u6cd5|\u8fd9|\u90a3)(?:\u662f|\u5c5e\u4e8e|\u6784\u6210)?(?:\u8fdd\u6cd5|\u975e\u6cd5|\u72af\u7f6a|\u8fdd\u7ea6)/.test(text)
-    || chineseDirective;
+    || chineseDirective
+    || chineseEllipticalDirective;
 }
 
 function containsInvestmentInstruction(text: string) {
@@ -203,8 +220,10 @@ function containsInvestmentInstruction(text: string) {
       /(?:\u6295\u8d44|\u7406\u8d22|\u80a1\u7968|\u57fa\u91d1|\u6bd4\u7279\u5e01|\u865a\u62df\u5e01|\u79ef\u84c4)/,
       /(?:\u4e70\u5165|\u5356\u51fa|\u6295\u5165|\u52a0\u4ed3|\u6e05\u4ed3|\u52a0\u6760\u6746|\u501f\u94b1|\u5168\u90e8|\u5168\u4ed3)/,
     );
+  const chineseEllipticalDirective = /(?:\u5168\u90e8|\u6240\u6709)(?:\u79ef\u84c4|\u5b58\u6b3e|\u50a8\u84c4).{0,8}(?:\u6295\u8fdb|\u6295\u5165|\u6295\u8d44|\u4e70\u5165).{0,8}(?:\u6bd4\u7279\u5e01|\u865a\u62df\u5e01|\u80a1\u7968|\u57fa\u91d1)/.test(text);
   return englishDirective
     || chineseDirective
+    || chineseEllipticalDirective
     || /\b(?:investment|stock|fund).{0,24}\b(?:guaranteed returns?|risk-free returns?)\b/i.test(text)
     || /(?:\u6295\u8d44|\u7406\u8d22|\u80a1\u7968|\u57fa\u91d1).{0,12}(?:\u4fdd\u8bc1\u6536\u76ca|\u7a33\u8d5a|\u4fdd\u672c\u4fdd\u6536\u76ca)/.test(text);
 }
@@ -228,11 +247,6 @@ function hasDirective(text: string) {
 
 function hasDomainAction(text: string, domain: RegExp, action: RegExp) {
   return domain.test(text) && action.test(text);
-}
-
-function containsProtectiveNegation(text: string) {
-  return /\b(?:not|never|do not|don't|cannot|can't|shouldn't|mustn't)\b/i.test(text)
-    || /(?:\u4e0d\u8981|\u4e0d\u80fd|\u4e0d\u53ef|\u5207\u52ff|\u522b|\u5e76\u975e|\u672a\u5fc5|\u65e0\u6cd5)/.test(text);
 }
 
 function hasExactKeys(value: unknown, expected: string[]): value is Record<string, unknown> {
