@@ -58,6 +58,8 @@ knowledge/embedding-provider.ts: Time-bounded OpenAI-compatible embedding adapte
 knowledge/embedding-index.ts: Local JSON embedding index loader and cosine ranking helpers for no-database semantic retrieval.
 knowledge/ziwei-doushu-importer.ts: Offline Renhuai123/ziwei-doushu importer with source metadata, topic inference, and Markdown chunk formatting.
 insights/contracts.ts: Strict privacy-safe source bundle, aggregation, provenance, and approved report contracts.
+insights/critic.ts: Deterministic generated-report gate for exact shape, provenance, trend support, safety language, and sanitized approval.
+insights/generation.ts: Privacy-minimal model prompt, bounded provider generation, strict JSON wrapper parsing, and critic-approved report production.
 insights/source.ts: Deterministic newest-first source limits, Shanghai-day eligibility inputs, routed topic counts, user excerpts, and browser-safe SHA-256 fingerprints.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

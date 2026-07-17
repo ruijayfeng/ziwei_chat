@@ -9,6 +9,7 @@ import {
   normalizeModelSettings,
   type IncomingModelSettings,
 } from "../../../lib/agent/model-provider";
+import { parseInsightSourceBundle, type InsightSourceBundle } from "../../../lib/insights/contracts";
 import { generateApprovedInsightReport } from "../../../lib/insights/generation";
 import { aggregateInsightSources, insightEligibility } from "../../../lib/insights/source";
 
@@ -44,12 +45,19 @@ export function createInsightsPostHandler(dependencies: HandlerDependencies = {}
     }
 
     if (!hasExactKeys(body, ["sourceBundle", "modelSettings"])) return invalidRequest();
-    if (isGrosslyOversizedSourceBundle(body.sourceBundle)) return tooLarge();
     if (!isStrictModelSettings(body.modelSettings)) return invalidRequest();
+
+    let sourceBundle: InsightSourceBundle;
+    try {
+      sourceBundle = parseInsightSourceBundle(body.sourceBundle);
+    } catch {
+      return invalidRequest();
+    }
+    if (isGrosslyOversizedSourceBundle(sourceBundle)) return tooLarge();
 
     let aggregation;
     try {
-      aggregation = await aggregateInsightSources(body.sourceBundle);
+      aggregation = await aggregateInsightSources(sourceBundle);
     } catch {
       return invalidRequest();
     }
@@ -100,19 +108,13 @@ function isClearlyOversized(value: string | null) {
   return BigInt(value.trim()) > BigInt(MAX_CONTENT_LENGTH_BYTES);
 }
 
-function isGrosslyOversizedSourceBundle(value: unknown) {
-  if (!hasExactKeys(value, ["conversations"]) || !Array.isArray(value.conversations)) return false;
-  if (value.conversations.length > MAX_ENVELOPE_CONVERSATIONS) return true;
-
-  let totalMessages = 0;
-  for (const conversation of value.conversations) {
-    if (typeof conversation !== "object" || conversation === null || Array.isArray(conversation)) continue;
-    const messages = (conversation as Record<string, unknown>).messages;
-    if (!Array.isArray(messages)) continue;
-    totalMessages += messages.length;
-    if (totalMessages > MAX_ENVELOPE_MESSAGES) return true;
-  }
-  return false;
+function isGrosslyOversizedSourceBundle(sourceBundle: InsightSourceBundle) {
+  if (sourceBundle.conversations.length > MAX_ENVELOPE_CONVERSATIONS) return true;
+  const messageCount = sourceBundle.conversations.reduce(
+    (count, conversation) => count + conversation.messages.length,
+    0,
+  );
+  return messageCount > MAX_ENVELOPE_MESSAGES;
 }
 
 function isStrictModelSettings(value: unknown): value is IncomingModelSettings {

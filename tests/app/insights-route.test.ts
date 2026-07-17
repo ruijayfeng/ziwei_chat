@@ -141,6 +141,34 @@ describe("POST /api/insights", () => {
     expect(fetchImplementation).not.toHaveBeenCalled();
   });
 
+  test("rejects 41 null conversations as malformed instead of oversized", async () => {
+    const handler = createInsightsPostHandler({ fetchImplementation: vi.fn() });
+    const sourceBundle = { conversations: Array.from({ length: 41 }, () => null) };
+
+    expect(await payload(await handler(request({ sourceBundle, modelSettings })))).toEqual({
+      status: 400,
+      body: { code: "INVALID_REQUEST", message: "请求格式不正确。", canRetry: false },
+    });
+  });
+
+  test("rejects more than 400 messages containing a malformed message as invalid", async () => {
+    const bundle = sourceBundle();
+    const messages: unknown[] = Array.from({ length: 400 }, (_, index) => ({
+      id: `m-${index}`,
+      role: "user",
+      content: "x",
+      createdAt: "2026-07-15T15:00:00.000Z",
+    }));
+    messages.push(null);
+    bundle.conversations[0]!.messages = messages as typeof bundle.conversations[0]["messages"];
+    const handler = createInsightsPostHandler({ fetchImplementation: vi.fn() });
+
+    expect(await payload(await handler(request({ sourceBundle: bundle, modelSettings })))).toEqual({
+      status: 400,
+      body: { code: "INVALID_REQUEST", message: "请求格式不正确。", canRetry: false },
+    });
+  });
+
   test("allows exactly 40 conversations and 400 messages into bounded aggregation", async () => {
     const conversations = Array.from({ length: 40 }, (_, conversationIndex) => ({
       id: `conversation-${String(conversationIndex).padStart(2, "0")}`,
