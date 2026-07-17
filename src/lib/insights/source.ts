@@ -79,28 +79,31 @@ function truncateSources(bundle: InsightSourceBundle): InsightSourceBundle {
   const orderedConversations = [...bundle.conversations]
     .sort(compareConversations)
     .slice(0, MAX_CONVERSATIONS);
-  const conversations: InsightSourceConversation[] = [];
+  const orderedMessages = orderedConversations
+    .flatMap((conversation) => conversation.messages.map((message) => ({ conversationId: conversation.id, message })))
+    .sort(compareSourcedMessages);
+  const selectedMessages = new Map<string, InsightSourceMessage[]>();
   let messageCount = 0;
   let characterCount = 0;
 
-  for (const conversation of orderedConversations) {
+  for (const { conversationId, message } of orderedMessages) {
     if (messageCount >= MAX_MESSAGES || characterCount >= MAX_CHARACTERS) break;
-    const messages: InsightSourceMessage[] = [];
-
-    for (const message of [...conversation.messages].sort(compareMessages)) {
-      if (messageCount >= MAX_MESSAGES || characterCount >= MAX_CHARACTERS) break;
-      const remaining = MAX_CHARACTERS - characterCount;
-      const content = Array.from(message.content).slice(0, remaining).join("");
-      if (!content) break;
-      messages.push({ ...message, content });
-      messageCount += 1;
-      characterCount += Array.from(content).length;
-    }
-
-    if (messages.length > 0) conversations.push({ ...conversation, messages });
+    const remaining = MAX_CHARACTERS - characterCount;
+    const content = Array.from(message.content).slice(0, remaining).join("");
+    if (!content) break;
+    const messages = selectedMessages.get(conversationId) ?? [];
+    messages.push({ ...message, content });
+    selectedMessages.set(conversationId, messages);
+    messageCount += 1;
+    characterCount += Array.from(content).length;
   }
 
-  return { conversations };
+  return {
+    conversations: orderedConversations.flatMap((conversation) => {
+      const messages = selectedMessages.get(conversation.id);
+      return messages ? [{ ...conversation, messages }] : [];
+    }),
+  };
 }
 
 function compareConversations(left: InsightSourceConversation, right: InsightSourceConversation) {
@@ -113,9 +116,12 @@ function effectiveConversationTime(conversation: InsightSourceConversation) {
   return Math.max(...timestamps);
 }
 
-function compareMessages(left: InsightSourceMessage, right: InsightSourceMessage) {
-  const timeDifference = timestamp(right.createdAt) - timestamp(left.createdAt);
-  return timeDifference || compareIds(left.id, right.id);
+function compareSourcedMessages(
+  left: { conversationId: string; message: InsightSourceMessage },
+  right: { conversationId: string; message: InsightSourceMessage },
+) {
+  const timeDifference = timestamp(right.message.createdAt) - timestamp(left.message.createdAt);
+  return timeDifference || compareIds(left.conversationId, right.conversationId) || compareIds(left.message.id, right.message.id);
 }
 
 function compareIds(left: string, right: string) {

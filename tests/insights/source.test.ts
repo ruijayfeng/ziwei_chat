@@ -61,6 +61,21 @@ describe("insight source contracts", () => {
     }).conversations).toHaveLength(2);
   });
 
+  test("trims ids before collision checks and rejects ids containing the source-id separator", () => {
+    const message = { id: "m1", role: "user" as const, content: "valid", createdAt: "" };
+
+    expect(() => parseInsightSourceBundle({
+      conversations: [conversation(" c1 ", "", [message]), conversation("c1", "", [{ ...message, id: "m2" }])],
+    })).toThrow("Invalid insight source bundle");
+    expect(() => parseInsightSourceBundle({
+      conversations: [conversation("c1", "", [{ ...message, id: " m1 " }, message])],
+    })).toThrow("Invalid insight source bundle");
+    expect(() => parseInsightSourceBundle({ conversations: [conversation("c:1", "", [message])] }))
+      .toThrow("Invalid insight source bundle");
+    expect(() => parseInsightSourceBundle({ conversations: [conversation("c1", "", [{ ...message, id: "m:1" }])] }))
+      .toThrow("Invalid insight source bundle");
+  });
+
   test("rejects hidden-role injection instead of filtering it at the API boundary", () => {
     expect(() => parseInsightSourceBundle({
       conversations: [conversation("c1", "", [
@@ -78,20 +93,46 @@ describe("insight source contracts", () => {
 
   test("normalizes visible display text without carrying extra data", () => {
     const parsed = parseInsightSourceBundle({
-      conversations: [conversation("c1", "", [
-        { id: "u1", role: "user", content: " question ", createdAt: "" },
-        { id: "a1", role: "assistant", content: " answer ", createdAt: "" },
-      ])],
+      conversations: [conversation(" c1 ", "2026-07-16T08:00:00+08:00", [
+        { id: " u1 ", role: "user", content: " question ", createdAt: "2026-07-16T08:30:00+08:00" },
+        { id: "a1", role: "assistant", content: " answer ", createdAt: "invalid" },
+      ], " title ")],
     });
 
-    expect(parsed.conversations[0].messages).toEqual([
-      { id: "u1", role: "user", content: "question", createdAt: "" },
-      { id: "a1", role: "assistant", content: "answer", createdAt: "" },
-    ]);
+    expect(parsed.conversations[0]).toEqual({
+      id: "c1",
+      title: "title",
+      updatedAt: "2026-07-16T00:00:00.000Z",
+      messages: [
+        { id: "u1", role: "user", content: "question", createdAt: "2026-07-16T00:30:00.000Z" },
+        { id: "a1", role: "assistant", content: "answer", createdAt: "" },
+      ],
+    });
   });
 });
 
 describe("deterministic insight aggregation", () => {
+  test("applies message and character limits globally newest-first across selected conversations", async () => {
+    const oldestInNewestConversation = Array.from({ length: 200 }, (_, index) => ({
+      id: `old-${String(index).padStart(3, "0")}`,
+      role: "user" as const,
+      content: "old",
+      createdAt: `2026-07-16T00:${String(Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}.000Z`,
+    }));
+    const result = await aggregateInsightSources({ conversations: [
+      conversation("newest-conversation", "2026-07-18T00:00:00.000Z", oldestInNewestConversation),
+      conversation("second-conversation", "2026-07-17T00:00:00.000Z", [
+        { id: "actually-newest", role: "assistant", content: "wins globally", createdAt: "2026-07-17T23:00:00.000Z" },
+      ]),
+    ] });
+
+    const selected = result.sources.conversations.flatMap((item) => item.messages.map((message) => message.id));
+    expect(selected).toHaveLength(200);
+    expect(selected).toContain("actually-newest");
+    expect(selected).not.toContain("old-000");
+    expect(result.sources.conversations.map((item) => item.id)).toEqual(["newest-conversation", "second-conversation"]);
+  });
+
   test("caps conversations before other limits and omits conversations with no visible messages", async () => {
     const conversations = Array.from({ length: 22 }, (_, index) => conversation(
       `c-${String(index).padStart(2, "0")}`,
@@ -199,5 +240,26 @@ describe("deterministic insight aggregation", () => {
     expect(second.sourceFingerprint).toBe(first.sourceFingerprint);
     expect(first.sources).toEqual(second.sources);
     expect(first.sources.conversations[1].messages.map((message) => message.id)).toEqual(["same-time-a", "same-time-b"]);
+  });
+
+  test("fingerprints equivalent timestamps identically and uses stable mixed-id tie-breakers", async () => {
+    const first = await aggregateInsightSources({ conversations: [
+      conversation(" z ", "2026-07-16T08:00:00+08:00", [
+        { id: " ä ", role: "user", content: " same ", createdAt: "2026-07-16T08:00:00+08:00" },
+        { id: "Z", role: "assistant", content: "same", createdAt: "2026-07-16T00:00:00.000Z" },
+        { id: "10", role: "assistant", content: "same", createdAt: "2026-07-16T00:00:00Z" },
+      ], " Mixed IDs "),
+    ] });
+    const second = await aggregateInsightSources({ conversations: [
+      conversation("z", "2026-07-16T00:00:00.000Z", [
+        { id: "10", role: "assistant", content: "same", createdAt: "2026-07-16T00:00:00.000Z" },
+        { id: "Z", role: "assistant", content: "same", createdAt: "2026-07-16T00:00:00+00:00" },
+        { id: "ä", role: "user", content: "same", createdAt: "2026-07-16T00:00:00.000Z" },
+      ], "Mixed IDs"),
+    ] });
+
+    expect(first.sourceFingerprint).toBe(second.sourceFingerprint);
+    expect(first.sources).toEqual(second.sources);
+    expect(first.sources.conversations[0].messages.map((message) => message.id)).toEqual(["10", "Z", "ä"]);
   });
 });

@@ -86,10 +86,16 @@ function parseConversation(value: unknown): InsightSourceConversation {
     !Array.isArray(value.messages)
   ) fail();
 
+  const id = normalizeId(value.id);
   const parsedMessages = value.messages.map(parseMessage);
   assertUnique(parsedMessages.map((message) => message.id));
   const messages = parsedMessages.filter(isVisibleMessage);
-  return { id: value.id, title: value.title, updatedAt: value.updatedAt, messages };
+  return {
+    id,
+    title: value.title.trim(),
+    updatedAt: normalizeTimestamp(value.updatedAt),
+    messages,
+  };
 }
 
 function parseMessage(value: unknown): InsightSourceMessage & { content: string } {
@@ -101,9 +107,13 @@ function parseMessage(value: unknown): InsightSourceMessage & { content: string 
     typeof value.createdAt !== "string"
   ) fail();
 
-  const content = value.content.trim();
-  if (content.length === 0) return { id: value.id, role: value.role, content: "", createdAt: value.createdAt };
-  return { id: value.id, role: value.role, content, createdAt: value.createdAt };
+  const message = {
+    id: normalizeId(value.id),
+    role: value.role,
+    content: value.content.trim(),
+    createdAt: normalizeTimestamp(value.createdAt),
+  };
+  return message;
 }
 
 function hasExactKeys(value: unknown, expected: string[]): value is Record<string, unknown> {
@@ -114,6 +124,17 @@ function hasExactKeys(value: unknown, expected: string[]): value is Record<strin
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeId(value: string) {
+  const id = value.trim();
+  if (id.includes(":")) fail();
+  return id;
+}
+
+function normalizeTimestamp(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : "";
 }
 
 function isSourceRole(value: unknown): value is "user" | "assistant" {
