@@ -3,9 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowUp } from 'lucide-react'
 import { useState } from 'react'
-import { THEMES } from '@/lib/workspace-data'
-
-const GUIDED = THEMES.slice(0, 6)
+import { ACTIVE_TOPICS } from '@/lib/ui/active-topics'
 
 export function ChatComposer({
   variant = 'hero',
@@ -43,7 +41,7 @@ export function ChatComposer({
               {'\u4e0d\u77e5\u4ece\u4f55\u95ee\u8d77\uff1f\u4ece\u4e00\u4e2a\u4e3b\u9898\u5f00\u59cb'}
             </div>
             <div className="mb-3 flex flex-wrap gap-2">
-              {GUIDED.map((t) => {
+              {ACTIVE_TOPICS.map((t) => {
                 const Icon = t.icon
                 return (
                   <button

@@ -62,6 +62,12 @@ describe("reference chat presentation", () => {
     expect(experience).toContain("disabled={busy}");
   });
 
+  test("renders the canonical active catalog without positional theme slicing", () => {
+    expect(composer).toContain("ACTIVE_TOPICS.map");
+    expect(composer).not.toContain("THEMES.slice");
+    expect(composer).not.toContain("workspace-data");
+  });
+
   test("renders real evidence inside the reference inspector rail", () => {
     const session = source("src/components/chat/chat-session.tsx");
     const inspector = source("src/components/chat/chat-inspector.tsx");

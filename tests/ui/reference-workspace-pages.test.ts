@@ -28,7 +28,6 @@ describe("reference workspace pages", () => {
     const controller = source("src/components/insights/insights-controller.tsx");
     const weeklyLetter = source("src/components/insights/weekly-letter.tsx");
     const patterns = source("src/components/insights/pattern-list.tsx");
-    const workspaceData = source("src/lib/workspace-data.ts");
 
     expect(page).toContain("<InsightsController />");
     expect(page).not.toContain("<InsightsEmptyState />");
@@ -47,10 +46,5 @@ describe("reference workspace pages", () => {
     expect(sources).toContain("source.createdAt ? <time");
     expect(sources).toContain("时间未持久化");
     expect(sources).not.toContain("当前浏览器会话，时间未持久化");
-    expect(workspaceData).not.toContain("WEEKLY_LETTER");
-    expect(workspaceData).not.toContain("PATTERNS");
-    expect(workspaceData).not.toContain("MONTHLY_REFLECTION");
-    expect(workspaceData).not.toContain("RECORDS");
-    expect(workspaceData).toContain("THEMES");
   });
 });

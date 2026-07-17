@@ -3,7 +3,7 @@
 
 Member List
 chart-data.ts: Reference palace presentation contract, explicitly labelled demo fallback, four-transform tones, and three-way/four-direction geometry.
-workspace-data.ts: Reference quick-topic entry metadata only; personalized records and insights fixtures are removed.
+ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including its routed intent and required skill.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-scoped caches, primary-chart persistence recovery, and tool event recording.
 agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, safety, and follow-up count.

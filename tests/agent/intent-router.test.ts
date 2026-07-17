@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { routeIntent } from "../../src/lib/agent/intent-router";
+import { ACTIVE_TOPICS } from "../../src/lib/ui/active-topics";
 
 describe("routeIntent", () => {
   test("routes ordinary career questions to the career intent", () => {
@@ -31,5 +32,14 @@ describe("routeIntent", () => {
       intent: "safety_sensitive",
       safetyLevel: "refusal",
     });
+  });
+
+  test("routes every canonical starter question to its declared chart-backed intent", () => {
+    for (const topic of ACTIVE_TOPICS) {
+      expect(routeIntent(topic.question), topic.id).toMatchObject({
+        intent: topic.intent,
+        requiresChart: true,
+      });
+    }
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { buildAnalysisPlan } from "../../src/lib/agent/planner";
+import { ACTIVE_TOPICS } from "../../src/lib/ui/active-topics";
 
 describe("buildAnalysisPlan", () => {
   test("plans a serious career question with chart, skill, knowledge, and critic requirements", () => {
@@ -58,5 +59,19 @@ describe("buildAnalysisPlan", () => {
     });
 
     expect(plan.requiredSkills).toEqual(["chart_explanation"]);
+  });
+
+  test("selects each canonical entry's declared skill", () => {
+    for (const topic of ACTIVE_TOPICS) {
+      const plan = buildAnalysisPlan({
+        intent: topic.intent,
+        confidence: 0.82,
+        requiresChart: true,
+        safetyLevel: "normal",
+        rationale: "canonical active topic",
+      });
+
+      expect(plan.requiredSkills, topic.id).toEqual([topic.skillId]);
+    }
   });
 });
