@@ -18,6 +18,8 @@ export type CurrentInsightSession = {
 const MAX_CONVERSATIONS = 20;
 const DETAIL_CONCURRENCY = 4;
 const invalidResponseMessage = "Invalid insight source response";
+const summaryKeys = ["id", "title", "lastMessageAt"];
+const messageKeys = ["id", "conversationId", "role", "content", "createdAt"];
 
 export async function loadInsightSourceBundle(
   profileId: string,
@@ -44,7 +46,7 @@ async function loadSummaries(profileId: string, fetchImpl: FetchImplementation, 
   if (!isRecord(payload) || !Array.isArray(payload.conversations)) invalidResponse();
 
   const summaries = payload.conversations.map((value) => {
-    if (!isRecord(value) || !isString(value.id) || !isString(value.title) || !isString(value.lastMessageAt)) invalidResponse();
+    if (!hasExactKeys(value, summaryKeys) || !isString(value.id) || !isString(value.title) || !isString(value.lastMessageAt)) invalidResponse();
     const id = normalizeSourceId(value.id);
     return { id, title: value.title.trim(), updatedAt: value.lastMessageAt.trim() };
   });
@@ -68,7 +70,7 @@ async function loadConversation(
 
   const messages = payload.messages.map((value) => {
     if (
-      !isRecord(value)
+      !hasExactKeys(value, messageKeys)
       || !isString(value.id)
       || value.conversationId !== summary.id
       || !isConversationRole(value.role)
@@ -156,6 +158,12 @@ function normalizeSourceId(value: string) {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function hasExactKeys(value: unknown, expected: string[]): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  const actual = Object.keys(value).sort();
+  const sortedExpected = [...expected].sort();
+  return actual.length === sortedExpected.length && actual.every((key, index) => key === sortedExpected[index]);
+}
 function isString(value: unknown): value is string { return typeof value === "string"; }
 function isConversationRole(value: unknown): value is "user" | "assistant" | "system" | "tool" {
   return value === "user" || value === "assistant" || value === "system" || value === "tool";

@@ -176,4 +176,27 @@ describe("insight source loader", () => {
       }] });
     })).rejects.toThrow("Invalid insight source response");
   });
+
+  test("rejects extra list and detail fields instead of silently dropping hidden metadata", async () => {
+    await expect(loadInsightSourceBundle(profileId, null, async () => Response.json({ conversations: [{
+      id: "conversation-1",
+      title: "Saved",
+      lastMessageAt: "",
+      apiKey: "sk-hidden",
+    }] }))).rejects.toThrow("Invalid insight source response");
+
+    await expect(loadInsightSourceBundle(profileId, null, async (input) => {
+      if (!String(input).includes("conversationId=")) {
+        return Response.json({ conversations: [{ id: "conversation-1", title: "Saved", lastMessageAt: "" }] });
+      }
+      return Response.json({ messages: [{
+        id: "message-1",
+        conversationId: "conversation-1",
+        role: "user",
+        content: "Body",
+        createdAt: "",
+        hidden: { rawChart: true },
+      }] });
+    })).rejects.toThrow("Invalid insight source response");
+  });
 });
