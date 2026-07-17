@@ -55,37 +55,48 @@ describe("InsightsController mounted lifecycle", () => {
     expect(signals.every((signal) => signal instanceof AbortSignal)).toBe(true);
   });
 
-  test("aborts and hides an owned report on stream start, profile replacement, deletion, and unmount", async () => {
+  test.each(["stream", "profile", "deletion", "unmount"] as const)(
+    "aborts an in-flight generation on %s and suppresses its deferred response",
+    async (transition) => {
     workspace.current = workspaceValue();
-    const requestSignals: AbortSignal[] = [];
+    let generationSignal: AbortSignal | null = null;
+    let generationBody: { sourceBundle: Parameters<typeof aggregateInsightSources>[0] } | null = null;
+    let resolveGeneration!: (response: Response) => void;
+    const generation = new Promise<Response>((resolve) => { resolveGeneration = resolve; });
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      requestSignals.push(init?.signal as AbortSignal);
       const url = String(input);
       if (url.startsWith("/api/conversations?") && !url.includes("conversationId=")) return Response.json({ conversations: summaries() });
       if (url.includes("conversationId=")) return conversationDetail(url);
-      const request = JSON.parse(String(init?.body)) as { sourceBundle: Parameters<typeof aggregateInsightSources>[0] };
-      const aggregation = await aggregateInsightSources(request.sourceBundle);
-      return Response.json(reportFor(aggregation.sourceFingerprint));
+      generationSignal = init?.signal as AbortSignal;
+      generationBody = JSON.parse(String(init?.body)) as { sourceBundle: Parameters<typeof aggregateInsightSources>[0] };
+      return generation;
     }));
 
     const view = render(<InsightsController />);
-    expect(await screen.findByRole("heading", { name: "给你的本周信" })).toBeTruthy();
+    await waitFor(() => expect(generationSignal).not.toBeNull());
+    const activeGenerationSignal = generationSignal as AbortSignal | null;
 
-    workspace.current = workspaceValue({ chatSession: { ...initialChatSessionState, activeRequestId: "request-1" } });
-    view.rerender(<InsightsController />);
+    if (transition === "stream") {
+      workspace.current = workspaceValue({ chatSession: { ...initialChatSessionState, activeRequestId: "request-1" } });
+      view.rerender(<InsightsController />);
+    } else if (transition === "profile") {
+      workspace.current = workspaceValue({ ready: false, profileId: "00000000-0000-4000-8000-000000000002" });
+      view.rerender(<InsightsController />);
+    } else if (transition === "deletion") {
+      workspace.current = workspaceValue({ dataDeleting: true });
+      view.rerender(<InsightsController />);
+    } else {
+      view.unmount();
+    }
+
+    expect(activeGenerationSignal?.aborted).toBe(true);
+    const aggregation = await aggregateInsightSources(generationBody!.sourceBundle);
+    resolveGeneration(Response.json(reportFor(aggregation.sourceFingerprint)));
+    await Promise.resolve();
+    await Promise.resolve();
+
     expect(screen.queryByRole("heading", { name: "给你的本周信" })).toBeNull();
-    expect(screen.getByRole("status")).toBeTruthy();
-
-    workspace.current = workspaceValue({ profileId: "00000000-0000-4000-8000-000000000002" });
-    view.rerender(<InsightsController />);
-    expect(screen.queryByRole("heading", { name: "给你的本周信" })).toBeNull();
-
-    workspace.current = workspaceValue({ dataDeleting: true });
-    view.rerender(<InsightsController />);
-    expect(screen.queryByRole("heading", { name: "给你的本周信" })).toBeNull();
-
-    view.unmount();
-    await waitFor(() => expect(requestSignals.some((signal) => signal.aborted)).toBe(true));
+    expect(window.localStorage.length).toBe(0);
   });
 });
 

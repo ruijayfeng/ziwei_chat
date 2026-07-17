@@ -77,17 +77,31 @@ describe("insight lifecycle coordinator", () => {
       fetchImpl: vi.fn<typeof fetch>(async () => Response.json(report())),
     });
 
-    await runInsightLifecycle(lifecycleInput({ refreshAuthorizationFingerprint: fingerprint }), dependencies);
+    await runInsightLifecycle(lifecycleInput({ refreshAuthorization: { profileId, fingerprint } }), dependencies);
     const next = lifecycleDependencies({
       aggregation: aggregation({ sourceFingerprint: refreshedFingerprint }),
       readCache: () => ({ status: "stale", report: stale }),
       fetchImpl: dependencies.fetchImpl,
     });
-    await runInsightLifecycle(lifecycleInput({ refreshAuthorizationFingerprint: fingerprint }), next.dependencies);
+    await runInsightLifecycle(lifecycleInput({ refreshAuthorization: { profileId, fingerprint } }), next.dependencies);
 
     expect(dependencies.fetchImpl).toHaveBeenCalledTimes(1);
     expect(actions.map((action) => action.type)).toEqual(["generated"]);
     expect(next.actions.map((action) => action.type)).toEqual(["stale"]);
+  });
+
+  test("does not reuse refresh authorization across profiles", async () => {
+    const stale = report(refreshedFingerprint);
+    const nextProfile = "00000000-0000-4000-8000-000000000002";
+    const { actions, dependencies } = lifecycleDependencies({ readCache: () => ({ status: "stale", report: stale }) });
+
+    await runInsightLifecycle(lifecycleInput({
+      profileId: nextProfile,
+      refreshAuthorization: { profileId, fingerprint },
+    }), dependencies);
+
+    expect(dependencies.fetchImpl).not.toHaveBeenCalled();
+    expect(actions[0]).toMatchObject({ type: "stale", profileId: nextProfile });
   });
 
   test("renders ineligible current sources even when a stale cache entry exists", async () => {
@@ -251,7 +265,7 @@ function lifecycleInput(overrides: Partial<Parameters<typeof runInsightLifecycle
     profileId,
     currentSession: null,
     modelSettings: modelSettings(),
-    refreshAuthorizationFingerprint: null,
+    refreshAuthorization: null,
     signal: new AbortController().signal,
     isCurrent: () => true,
     ...inputOverrides,

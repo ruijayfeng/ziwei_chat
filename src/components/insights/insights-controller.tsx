@@ -95,7 +95,7 @@ export type InsightLifecycleInput = {
   profileId: string;
   currentSession: CurrentInsightSession | null;
   modelSettings: ModelSettingsDraft;
-  refreshAuthorizationFingerprint: string | null;
+  refreshAuthorization: { profileId: string; fingerprint: string } | null;
   signal: AbortSignal;
   isCurrent: () => boolean;
 };
@@ -111,7 +111,7 @@ const insightLifecycleDependencies: Omit<InsightLifecycleDependencies, "emit"> =
 };
 
 export async function runInsightLifecycle(input: InsightLifecycleInput, dependencies: InsightLifecycleDependencies): Promise<void> {
-  const { profileId, currentSession, modelSettings, refreshAuthorizationFingerprint, signal, isCurrent } = input;
+  const { profileId, currentSession, modelSettings, refreshAuthorization, signal, isCurrent } = input;
   const emit = (action: InsightControllerAction) => { if (isCurrent()) dependencies.emit(action); };
   try {
     const sourceBundle = await dependencies.loadSourceBundle(profileId, currentSession, dependencies.fetchImpl, signal);
@@ -127,7 +127,8 @@ export async function runInsightLifecycle(input: InsightLifecycleInput, dependen
     }
     if (resolution.status === "stale"
       && reportMatchesAggregation(resolution.report, aggregation)
-      && refreshAuthorizationFingerprint !== aggregation.sourceFingerprint) {
+      && (refreshAuthorization?.profileId !== profileId
+        || refreshAuthorization.fingerprint !== aggregation.sourceFingerprint)) {
       return emit({ type: "stale", profileId, aggregation, report: resolution.report });
     }
     if (!dependencies.modelSettingsReady(modelSettings)) {
@@ -189,7 +190,7 @@ function currentInsightSessionSnapshotFromKey(
 export function InsightsController() {
   const { ready, profileId, conversationId, chatSession, modelSettings, modelSettingsLoaded, dataDeleting } = useWorkspace();
   const [state, dispatch] = useReducer(insightControllerReducer, initialInsightControllerState);
-  const [refreshAuthorizationFingerprint, setRefreshAuthorizationFingerprint] = useState<string | null>(null);
+  const [refreshAuthorization, setRefreshAuthorization] = useState<{ profileId: string; fingerprint: string } | null>(null);
   const [retryRevision, setRetryRevision] = useState(0);
   const requestRevision = useRef(0);
   const completedSessionKey = useMemo(() => JSON.stringify(chatSession.messages
@@ -202,9 +203,9 @@ export function InsightsController() {
   const staleFingerprint = state.status === "stale" ? state.aggregation.sourceFingerprint : null;
 
   const refresh = useCallback(() => {
-    if (staleFingerprint) setRefreshAuthorizationFingerprint(staleFingerprint);
+    if (staleFingerprint) setRefreshAuthorization({ profileId, fingerprint: staleFingerprint });
     setRetryRevision((revision) => revision + 1);
-  }, [staleFingerprint]);
+  }, [profileId, staleFingerprint]);
 
   useEffect(() => {
     if (!ready || !profileId || !modelSettingsLoaded || dataDeleting || chatSession.activeRequestId) return;
@@ -217,13 +218,13 @@ export function InsightsController() {
       profileId,
       currentSession,
       modelSettings,
-      refreshAuthorizationFingerprint,
+      refreshAuthorization,
       signal: controller.signal,
       isCurrent,
     }, { ...insightLifecycleDependencies, emit: dispatch });
 
     return () => controller.abort();
-  }, [chatSession.activeRequestId, currentSession, dataDeleting, modelSettings, modelSettingsLoaded, profileId, ready, refreshAuthorizationFingerprint, retryRevision]);
+  }, [chatSession.activeRequestId, currentSession, dataDeleting, modelSettings, modelSettingsLoaded, profileId, ready, refreshAuthorization, retryRevision]);
 
   if (!insightPresentationOwned(state, {
     ready,

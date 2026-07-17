@@ -85,3 +85,11 @@ Result: 64 files passed, 1 skipped; 439 tests passed, 2 skipped.
 - Empty timestamps use the neutral label `时间未持久化`; persisted records are never mislabeled as browser-only.
 - Focused gate passed 5 files / 53 tests; full suite passed 65 files / 1 skipped and 444 tests / 2 skipped.
 - Typecheck, scoped ESLint, diff check, and production build passed.
+
+## Ownership Closure
+
+- Refresh authorization is now scoped by both anonymous profile id and source fingerprint; a matching fingerprint in a replacement profile remains stale.
+- Mounted cancellation tests now keep provider generation pending and separately trigger stream start, profile replacement, deletion, and unmount.
+- Each mounted case proves its own request signal is aborted, then resolves the delayed provider response and proves no report renders and no cache entry is written.
+- Focused Task 5 gate passed 5 files / 57 tests; full suite passed 65 files / 1 skipped and 448 tests / 2 skipped.
+- Typecheck, scoped ESLint, production build, and diff check passed.
