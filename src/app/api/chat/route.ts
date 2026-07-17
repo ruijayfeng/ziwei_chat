@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Depends on Vercel AI SDK text streaming, deterministic agent core, chart tools, skills, and local knowledge
- * [OUTPUT]: Provides POST /api/chat streaming response and evidence metadata for the MVP chat surface
+ * [OUTPUT]: Provides POST /api/chat critic-gated streaming, real supplemental evidence, and safe chart errors
  * [POS]: App Router API boundary that wires session context, tool-grounded analysis, critic, evidence, and persistence
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
@@ -41,6 +41,7 @@ import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
 import { searchKnowledge, type KnowledgeSource } from "../../../lib/knowledge/search";
 import type { EvidenceGeneration } from "../../../lib/ui/chat-evidence";
 import type { ChatEvidence, ChatRequestBody } from "../../../lib/ui/chat-contract";
+import { formatShanghaiDateKey } from "../../../lib/ui/current-calendar";
 
 type StaticChartAnswer = {
   kind: "static";
@@ -144,7 +145,10 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
 
   if (body.chartInput) {
     diagnostics.stage = "create_chart";
-    await tools.createChart({ ...body.chartInput, profileId });
+    const created = await tools.createChart({ ...body.chartInput, profileId });
+    if (!created.ok) {
+      return Response.json({ error: created.error }, { status: 422 });
+    }
   }
 
   const route = routeIntent(userContent);
@@ -157,7 +161,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
     const currentChart = await tools.getCurrentChart({ profileId, conversationId });
     if (!currentChart.ok) {
       return await streamAndPersist({
-        stores,
         profileId,
         conversationId,
         content:
@@ -208,7 +211,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
             modelSettings: answer.modelSettings,
           })
         : await streamAndPersist({
-            stores,
             profileId,
             conversationId,
             content: answer.content,
@@ -225,7 +227,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
         ? "Ziwei Chat 首版只处理紫微斗数相关问题，暂不做八字、塔罗、风水或其他体系。你可以问我事业、感情、财富、性格或近期运势。"
         : "这个问题涉及高风险领域，我不适合给出具体建议。";
     return await streamAndPersist({
-      stores,
       profileId,
       conversationId,
       content: refusal,
@@ -274,7 +275,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
   const fallback = "我在。你想聊什么？";
 
   return await streamAndPersist({
-    stores,
     profileId,
     conversationId,
     content: fallback,
@@ -334,7 +334,8 @@ async function answerWithChartContext({
     chartId,
     topics: [topic],
   });
-  const chartFacts = summary.ok ? summary.data.facts : [];
+  if (!summary.ok) throw new Error(`chart_facts: ${summary.error.code}`);
+  const chartFacts = summary.data.facts;
   const firstFact = chartFacts[0];
   onStage("planner");
   const planStartedAt = Date.now();
@@ -366,7 +367,13 @@ async function answerWithChartContext({
   );
 
   onStage("supplemental_tools");
-  await runSupplementalTools({ tools, chartId, topic, plan: agentPlan, firstFact });
+  const supplementalEvidence = await runSupplementalTools({
+    tools,
+    chartId,
+    topic,
+    plan: agentPlan,
+    firstFact,
+  });
 
   onStage("skill");
   const skillStartedAt = Date.now();
@@ -414,7 +421,7 @@ async function answerWithChartContext({
     conclusion: buildConclusion(topic),
     chartBasis:
       firstFact !== undefined
-        ? [formatChartFact(firstFact)]
+        ? [formatChartFact(firstFact), ...supplementalEvidence]
         : ["当前命盘事实不足，回答需要保持保守。"],
     plainExplanation: buildPlainExplanation(topic, firstFact, skill !== null, knowledgeSources),
     suggestion: buildSuggestion(topic),
@@ -477,7 +484,7 @@ async function answerWithChartContext({
       analysisContext: {
         userContent,
         deterministicDraft: deterministicContent,
-        chartFacts: chartFacts.map(formatChartFact),
+        chartFacts: [...chartFacts.map(formatChartFact), ...supplementalEvidence],
         skillSteps: skill?.analysisSteps ?? [],
         skillResponseRules: skill?.responseRules ?? [],
         skillConservativeConditions: skill?.conservativeConditions ?? [],
@@ -538,35 +545,43 @@ async function runSupplementalTools({
   plan: ReturnType<typeof buildAnalysisPlan>;
   firstFact: ChartFact | undefined;
 }) {
+  const evidence: string[] = [];
   if (plan.requiredTools.includes("getPalaceAnalysis") && firstFact) {
-    await tools.getPalaceAnalysis({
+    const result = await tools.getPalaceAnalysis({
       chartId,
       palace: firstFact.palace,
       topic,
     });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
   }
 
   if (plan.requiredTools.includes("getStarAnalysis") && firstFact?.stars.length) {
-    await tools.getStarAnalysis({
+    const result = await tools.getStarAnalysis({
       chartId,
       stars: firstFact.stars.slice(0, 3),
       palace: firstFact.palace,
       topic,
     });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
   }
 
   if (plan.requiredTools.includes("getPatternAnalysis")) {
-    await tools.getPatternAnalysis({ chartId, topic });
+    const result = await tools.getPatternAnalysis({ chartId, topic });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
   }
 
   if (plan.requiredTools.includes("getLuckCycle")) {
-    await tools.getLuckCycle({
+    const result = await tools.getLuckCycle({
       chartId,
-      date: new Date().toISOString().slice(0, 10),
+      date: formatShanghaiDateKey(new Date()),
       range: topic === "recent_fortune" ? "three_months" : "current",
       topic,
     });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
+    evidence.push(`运限范围：${result.data.range}；${result.data.activePeriods.join("；")}`);
   }
+
+  return evidence;
 }
 
 async function loadRouteSkill(skillId: string | undefined) {
@@ -604,14 +619,12 @@ async function searchRouteKnowledge(
 }
 
 async function streamAndPersist({
-  stores,
   profileId,
   conversationId,
   content,
   metadata,
   evidence,
 }: {
-  stores: InMemoryToolStores;
   profileId: string;
   conversationId: string;
   content: string;

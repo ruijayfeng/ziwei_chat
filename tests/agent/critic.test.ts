@@ -200,6 +200,33 @@ describe("runResponseCritic", () => {
     );
   });
 
+  test("accepts a chart-setup prompt that makes no chart claim", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: "请先创建一张命盘，我才能基于确定性排盘继续分析。你愿意先补充出生资料吗？",
+      toolsUsed: [],
+      chartFacts: [],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result).toEqual({ passed: true, issues: [], requiredRevision: false });
+  });
+
+  test("does not let a chart-setup phrase excuse an invented chart claim", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: "请先创建一张命盘，不过你官禄宫有天同。你愿意补充出生资料吗？",
+      toolsUsed: [],
+      chartFacts: [],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContain("Serious Ziwei analysis must include chart facts.");
+  });
+
   test("enforces topic-specific skill prohibitions", () => {
     const result = runResponseCritic({
       intent: "relationship",

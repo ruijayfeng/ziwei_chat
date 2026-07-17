@@ -243,6 +243,13 @@ type LuckCycleOutput = {
 };
 ```
 
+`activePeriods` is derived from iztro `astrolabe.horoscope(date)` output. It
+contains deterministic 大限/流年/流月 scope labels, stems, branches, and the
+indexed natal palace; it must never echo the requested date/range as if that
+were a calculated period. A Postgres-restored chart is rebuilt from its stored
+birth input before horoscope use. If functional horoscope data cannot be
+recovered, the tool returns `LUCK_CYCLE_UNSUPPORTED`.
+
 Errors:
 
 - `CHART_NOT_FOUND`

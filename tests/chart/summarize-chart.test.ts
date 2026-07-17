@@ -26,12 +26,29 @@ describe("summarizeChart", () => {
           confidence: "high",
         }),
         expect.objectContaining({
+          topic: "career",
+          palace: "财帛",
+          confidence: "high",
+        }),
+        expect.objectContaining({
           topic: "wealth",
           palace: "财帛",
           confidence: "high",
         }),
       ]),
     );
+  });
+
+  test("returns multiple deterministic key palaces for chart explanation", () => {
+    const chartJson = astro.bySolar("1990-5-17", 6, "male", true, "zh-CN");
+    const summary = summarizeChart({
+      chartId: "chart-fixture",
+      chartJson,
+      topics: ["general"],
+    });
+
+    expect(new Set(summary.facts.map((fact) => fact.palace)).size).toBeGreaterThan(1);
+    expect(summary.keyPalaces).toEqual(expect.arrayContaining(["命宫", "官禄", "财帛"]));
   });
 
   test("uses the named 命宫 instead of iztro's 来因宫 marker", () => {

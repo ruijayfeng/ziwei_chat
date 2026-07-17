@@ -103,7 +103,69 @@ describe("agent tools", () => {
     expect(luck.ok && luck.data).toMatchObject({
       range: "current",
       relevantPalaces: expect.arrayContaining(["官禄"]),
+      activePeriods: expect.arrayContaining([
+        expect.stringMatching(/^大限：/),
+        expect.stringMatching(/^流年：/),
+      ]),
     });
+    expect(luck.ok && luck.data.activePeriods).not.toContain("2026-07-03:current");
+  });
+
+  test("derives three-month periods from iztro horoscope output", async () => {
+    const stores = createInMemoryToolStores();
+    const tools = createAgentTools({ stores });
+    const created = await tools.createChart({
+      profileId: "profile-1",
+      name: "Primary chart",
+      gender: "male",
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar",
+      isPrimary: true,
+    });
+    if (!created.ok) throw new Error(created.error.message);
+
+    const luck = await tools.getLuckCycle({
+      chartId: created.data.chartId,
+      date: "2026-07-17",
+      range: "three_months",
+      topic: "recent_fortune",
+    });
+
+    expect(luck.ok).toBe(true);
+    if (!luck.ok) return;
+    expect(luck.data.activePeriods.filter((item) => item.startsWith("流月："))).toHaveLength(3);
+    expect(luck.data.activePeriods.join("\n")).toContain("2026-07-17");
+    expect(luck.data.activePeriods.join("\n")).not.toContain(":three_months");
+  });
+
+  test("keeps three-month horoscope dates in consecutive months at month end", async () => {
+    const tools = createAgentTools();
+    const created = await tools.createChart({
+      profileId: "profile-month-end",
+      name: "Primary chart",
+      gender: "female",
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar",
+      isPrimary: true,
+    });
+    if (!created.ok) throw new Error(created.error.message);
+
+    const luck = await tools.getLuckCycle({
+      chartId: created.data.chartId,
+      date: "2026-01-31",
+      range: "three_months",
+      topic: "recent_fortune",
+    });
+
+    expect(luck.ok).toBe(true);
+    if (!luck.ok) return;
+    expect(luck.data.activePeriods).toEqual([
+      expect.stringContaining("2026-01-31"),
+      expect.stringContaining("2026-02-28"),
+      expect.stringContaining("2026-03-31"),
+    ]);
   });
 
   test("knowledge and memory tools use storage interfaces and preserve source metadata", async () => {
@@ -287,6 +349,44 @@ describe("agent tools", () => {
     }).getCurrentChart({ profileId });
 
     expect(restored).toMatchObject({ ok: true, data: { chartId: created.data.chartId } });
+  });
+
+  test("rebuilds iztro horoscope behavior from a persisted chart record", async () => {
+    const input = {
+      profileId: "profile-persisted-horoscope",
+      name: "Primary chart",
+      gender: "male" as const,
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar" as const,
+      isPrimary: true,
+    };
+    const created = await createAgentTools().createChart(input);
+    if (!created.ok) throw new Error(created.error.message);
+    const serializedOutput = JSON.parse(JSON.stringify(created.data)) as CreateChartOutput;
+    const chartPersistence = {
+      async savePrimaryChart() {},
+      async getPrimaryChart() { return serializedOutput; },
+      async getPrimaryChartRecord() { return { input, output: serializedOutput }; },
+    };
+    const tools = createAgentTools({
+      stores: createInMemoryToolStores(),
+      chartPersistence,
+    });
+
+    const restored = await tools.getCurrentChart({ profileId: input.profileId });
+    if (!restored.ok) throw new Error(restored.error.message);
+    const luck = await tools.getLuckCycle({
+      chartId: restored.data.chartId,
+      date: "2026-07-17",
+      range: "current",
+      topic: "career",
+    });
+
+    expect(luck).toMatchObject({
+      ok: true,
+      data: { activePeriods: expect.arrayContaining([expect.stringMatching(/^流年：/)]) },
+    });
   });
 
   test("bounds primary chart persistence when the database stalls", async () => {

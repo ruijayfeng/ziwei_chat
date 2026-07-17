@@ -92,13 +92,15 @@ export function runResponseCritic({
   prohibitionIds = [],
 }: RunResponseCriticInput): CritiqueResult {
   const issues: string[] = [];
+  const chartSetupPrompt = chartFacts.length === 0 && isChartSetupPrompt(draft);
 
-  if (seriousIntents.has(intent) && chartFacts.length === 0) {
+  if (seriousIntents.has(intent) && chartFacts.length === 0 && !chartSetupPrompt) {
     issues.push("Serious Ziwei analysis must include chart facts.");
   }
 
   if (
     seriousIntents.has(intent) &&
+    !chartSetupPrompt &&
     !toolsUsed.some((tool) => tool === "summarizeChartFacts" || tool === "getCurrentChart")
   ) {
     issues.push("Required chart tools did not run.");
@@ -134,6 +136,12 @@ export function runResponseCritic({
     issues,
     requiredRevision: issues.length > 0,
   };
+}
+
+function isChartSetupPrompt(draft: string) {
+  const requestsChartSetup = /(?:请先|需要先|先)(?:创建|建立|补充).{0,12}(?:命盘|出生资料|出生信息)/.test(draft);
+  const mentionsChartFact = [...palaceTerms, ...starTerms].some((term) => draft.includes(term));
+  return requestsChartSetup && !mentionsChartFact;
 }
 
 const skillProhibitionPatterns: Record<SkillProhibitionId, RegExp[]> = {

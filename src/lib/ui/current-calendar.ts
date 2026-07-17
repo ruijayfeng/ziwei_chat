@@ -28,3 +28,14 @@ export function currentCalendarDisplay(date: Date): CurrentCalendarDisplay {
     dateLabel: `${values.year}\u5e74${values.month}\u6708${values.day}\u65e5 \u00b7 ${values.weekday}`,
   }
 }
+
+export function formatShanghaiDateKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]))
+  return `${values.year}-${values.month}-${values.day}`
+}

@@ -1,7 +1,7 @@
 /**
- * [INPUT]: Depends on chart services, chart domain contracts, and storage-style interfaces
- * [OUTPUT]: Provides structured agent tool functions and in-memory stores for tests/local MVP wiring
- * [POS]: Tool runner boundary used by the future AI SDK route and agent core
+ * [INPUT]: Depends on iztro chart services, chart persistence, domain contracts, and storage-style interfaces
+ * [OUTPUT]: Provides structured chart/domain tools, real horoscope scopes, recovery, and request-local telemetry
+ * [POS]: Deterministic tool runner boundary used by the chat route, agent core, and evaluations
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
@@ -208,19 +208,40 @@ export function createAgentTools({
 
         if (chartPersistence) {
           let restored: CreateChartOutput | null;
+          let restoredInput: CreateChartInput | undefined;
           try {
-            restored = await withTimeout(
-              chartPersistence.getPrimaryChart(input.profileId),
-              persistenceTimeoutMs,
-            );
+            if (chartPersistence.getPrimaryChartRecord) {
+              const record = await withTimeout(
+                chartPersistence.getPrimaryChartRecord(input.profileId),
+                persistenceTimeoutMs,
+              );
+              restored = record?.output ?? null;
+              restoredInput = record?.input;
+            } else {
+              restored = await withTimeout(
+                chartPersistence.getPrimaryChart(input.profileId),
+                persistenceTimeoutMs,
+              );
+            }
           } catch {
             return toolError("PERSISTENCE_FAILED", "The primary chart could not be restored.");
           }
           if (restored) {
+            if (restoredInput) {
+              const rebuilt = createChartWithIztro(restoredInput);
+              if (!rebuilt.ok) {
+                return toolError("PERSISTENCE_FAILED", "The primary chart could not be rebuilt.");
+              }
+              restored = {
+                ...restored,
+                chartJson: rebuilt.data.chartJson,
+              };
+            }
             stores.charts.set(restored.chartId, {
               ...restored,
               profileId: input.profileId,
               isPrimary: true,
+              input: restoredInput,
             });
             stores.primaryChartByProfileId.set(input.profileId, restored.chartId);
             return toolOk(restored);
@@ -326,13 +347,28 @@ export function createAgentTools({
       const topic = normalizeTopic(input.topic);
       const summary = summarizeStoredChart(stores, input.chartId, [topic]);
       if (!summary.ok) return summary;
+      const chart = stores.charts.get(input.chartId);
+      if (!chart || !hasHoroscope(chart.chartJson)) {
+        return toolError(
+          "LUCK_CYCLE_UNSUPPORTED",
+          "The restored chart does not expose deterministic horoscope data.",
+        );
+      }
 
-      return toolOk({
-        range: input.range,
-        activePeriods: [`${input.date}:${input.range}`],
-        relevantPalaces: summary.data.keyPalaces,
-        facts: summary.data.facts,
-      });
+      try {
+        const scopes = readHoroscopeScopes(chart.chartJson, input.date, input.range);
+        return toolOk({
+          range: input.range,
+          activePeriods: scopes.periods,
+          relevantPalaces: unique([...summary.data.keyPalaces, ...scopes.palaces]),
+          facts: summary.data.facts,
+        });
+      } catch {
+        return toolError(
+          "LUCK_CYCLE_UNSUPPORTED",
+          "The requested horoscope range could not be calculated by iztro.",
+        );
+      }
     }),
 
     loadSkill: withToolEvent(stores, "loadSkill", async (input: { skillId: string }) => {
@@ -423,6 +459,95 @@ async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise
   } finally {
     if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
+}
+
+type HoroscopeScope = {
+  index: number;
+  name: string;
+  heavenlyStem: string;
+  earthlyBranch: string;
+};
+
+type HoroscopeResult = {
+  solarDate: string;
+  decadal: HoroscopeScope;
+  yearly: HoroscopeScope;
+  monthly: HoroscopeScope;
+};
+
+type HoroscopeChart = {
+  palaces: Array<{ name: string }>;
+  horoscope: (date: string) => HoroscopeResult;
+};
+
+function hasHoroscope(value: unknown): value is HoroscopeChart {
+  if (!isRecord(value) || typeof value.horoscope !== "function") return false;
+  return Array.isArray(value.palaces) && value.palaces.every(
+    (palace) => isRecord(palace) && typeof palace.name === "string",
+  );
+}
+
+function readHoroscopeScopes(
+  chart: HoroscopeChart,
+  date: string,
+  range: LuckCycleInput["range"],
+) {
+  const targetDates = range === "three_months"
+    ? [0, 1, 2].map((offset) => addUtcMonths(date, offset))
+    : [date];
+  const horoscopes = targetDates.map((targetDate) => chart.horoscope(targetDate));
+  const first = horoscopes[0];
+  if (!first) throw new Error("Missing horoscope output.");
+
+  const periods = range === "year"
+    ? [formatHoroscopePeriod("流年", first.yearly, first.solarDate, chart)]
+    : range === "three_months"
+      ? horoscopes.map((item) =>
+          formatHoroscopePeriod("流月", item.monthly, item.solarDate, chart),
+        )
+      : [
+          formatHoroscopePeriod("大限", first.decadal, first.solarDate, chart),
+          formatHoroscopePeriod("流年", first.yearly, first.solarDate, chart),
+          formatHoroscopePeriod("流月", first.monthly, first.solarDate, chart),
+        ];
+  const scopes = range === "year"
+    ? [first.yearly]
+    : range === "three_months"
+      ? horoscopes.map((item) => item.monthly)
+      : [first.decadal, first.yearly, first.monthly];
+
+  return {
+    periods,
+    palaces: unique(scopes.map((scope) => chart.palaces[scope.index]?.name).filter(Boolean)),
+  };
+}
+
+function formatHoroscopePeriod(
+  label: string,
+  scope: HoroscopeScope,
+  solarDate: string,
+  chart: HoroscopeChart,
+) {
+  const palace = chart.palaces[scope.index]?.name;
+  if (!palace) throw new Error("Horoscope scope points outside the chart.");
+  return `${label}：${normalizeSolarDate(solarDate)} ${scope.heavenlyStem}${scope.earthlyBranch} · 本命落宫：${palace}`;
+}
+
+function normalizeSolarDate(date: string) {
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date);
+  if (!match) throw new Error("Horoscope returned an invalid solar date.");
+  return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
+}
+
+function addUtcMonths(date: string, offset: number) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new Error("Luck-cycle date must be YYYY-MM-DD.");
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1 + offset;
+  const day = Number(match[3]);
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const target = new Date(Date.UTC(year, monthIndex, Math.min(day, lastDay)));
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, "0")}-${String(target.getUTCDate()).padStart(2, "0")}`;
 }
 
 function withToolEvent<TInput, TOutput>(

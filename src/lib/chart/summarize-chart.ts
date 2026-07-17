@@ -28,12 +28,12 @@ type SummarizeChartInput = {
 };
 
 const topicPalaces: Record<ChartTopic, string[]> = {
-  career: ["官禄", "命宫", "迁移"],
+  career: ["官禄", "命宫", "财帛", "迁移"],
   relationship: ["夫妻", "命宫", "福德"],
   wealth: ["财帛", "官禄", "田宅"],
   personality: ["命宫", "身宫", "福德"],
   recent_fortune: ["命宫", "迁移", "官禄", "财帛"],
-  general: ["命宫", "身宫"],
+  general: ["命宫", "身宫", "官禄", "财帛"],
 };
 
 export function summarizeChart({

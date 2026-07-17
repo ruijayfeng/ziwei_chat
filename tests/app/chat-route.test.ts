@@ -384,6 +384,81 @@ describe("POST /api/chat", () => {
     expect(evidence.toolsUsed).toContain("generateModelResponse");
   });
 
+  test("returns the structured chart error for invalid birth time", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Invalid chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "25:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: careerQuestion }],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_BIRTH_TIME", recoverable: true },
+    });
+  });
+
+  test("passes real iztro luck-cycle evidence into recent-fortune model context", async () => {
+    const modelAnswer =
+      "结论：近期适合按月观察节奏。\n\n命盘依据：\n- 工具提供了当前流月范围。\n\n现实解释：这些时间信息只作为观察方向。\n\n建议：按月复盘现实变化。\n\n追问：你最想观察工作、关系还是财务？";
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: modelAnswer } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: "我最近的运势重点是什么？" }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    await response.text();
+    const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
+    const payload = JSON.parse(String(requestInit?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    const modelContext = payload.messages.at(-1)?.content ?? "";
+    const monthScopes = new Set(modelContext.match(/流月：\d{4}-\d{2}-\d{2}/g) ?? []);
+    expect(monthScopes.size).toBe(3);
+    expect(modelContext).not.toContain(":three_months");
+  });
+
   test("keeps general conversation natural instead of asking for birth data", async () => {
     const modelAnswer = "当然可以。你今天想聊点什么？";
     const fetchMock = vi.fn<typeof fetch>(async () =>

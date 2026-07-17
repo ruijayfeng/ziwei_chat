@@ -5,8 +5,8 @@ Member List
 chart-data.ts: Reference palace presentation contract, explicitly labelled demo fallback, four-transform tones, and three-way/four-direction geometry.
 ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including its routed intent and required skill.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
-agent/tools.ts: Agent tool runner functions, request-scoped caches, primary-chart persistence recovery, and tool event recording.
-agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, safety, and follow-up count.
+agent/tools.ts: Agent tool runner functions, request-scoped caches, functional iztro chart recovery, real horoscope scopes, and tool event recording.
+agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, chart-setup prompts, safety, and follow-up count.
 agent/chat-runtime.ts: Runtime tool stores, persistence selection, 3-second best-effort chat-message saves, non-blocking tool-event telemetry, and deletion guards that reject late writes for invalidated anonymous profiles.
 agent/analysis-topic.ts: Shared active-intent mapping to deterministic chart and knowledge topics; chart explanation intentionally uses general doctrine.
 agent/chat-persistence.ts: Storage-agnostic chat persistence contract with a stateless production fallback and tombstone-aware in-memory test implementation.
@@ -29,8 +29,8 @@ db/knowledge-retrieval.ts: Optional time-bounded Postgres/pgvector knowledge ret
 domain/analysis.ts: Shared intent, plan, analysis state, safety level, and critique contracts.
 domain/chart.ts: Shared chart input, output, summary, fact, and error contracts.
 domain/chart-display.ts: Browser-safe full-chart display contracts for palaces, star categories, transformations, and stable geometry.
-evaluation/cases.ts: Seed MVP regression cases for topics, missing chart, invalid input, safety, and out-of-scope prompts.
-evaluation/run-evals.ts: Deterministic local evaluation runner that records responses, tool events, critic results, and pass/fail evidence.
+evaluation/cases.ts: Typed Final V1+ regression cases for six canonical topics, expected stages/sources/facts, missing chart, invalid input, safety, and out-of-scope prompts.
+evaluation/run-evals.ts: Real deterministic pipeline evaluator with isolated case failures, chart/tool telemetry, required-fact coverage, stage evidence, response critique, and explicit setup-required outcomes.
 http/rate-limit.ts: Fixed-window request limiter for API route abuse protection without external infrastructure.
 ui/chat-evidence.ts: Chat evidence parsing and UI-ready contracts for tool, chart, actual retrieval mode, critic, generation state, planner fallback diagnostics, and model timing display.
 ui/chat-contract.ts: Shared browser-to-chat API request and evidence wire contracts.
@@ -46,7 +46,7 @@ ui/chart-profile.ts: Chart profile label formatting and sync-state copy for curr
 ui/chart-route-state.ts: Pure chart-route state normalization for loading, empty, restore-error, and real-chart presentation.
 ui/chart-restore-payload.ts: Strict profile-owned parser for successful browser chart-restore envelopes; only HTTP 404 represents an empty chart.
 ui/sidebar-chart.ts: Pure WorkspaceProvider chart-state adapter for truthful sidebar loading, error, empty, and ready presentation.
-ui/current-calendar.ts: Shanghai-time current-date formatter and exact next-midnight refresh calculation for the home header.
+ui/current-calendar.ts: Shared Shanghai-time display/date-key formatter and exact next-midnight refresh calculation for the home header and deterministic tools.
 ui/data-deletion-dialog.ts: Pure controlled-dialog reducer that blocks pending closes and closes only after successful anonymous-data deletion.
 ui/anonymous-data-deletion.ts: Pure remote-first coordinator that runs browser cleanup only after server deletion commits.
 ui/insight-sources.ts: Bounded, abortable sanitized conversation loader that merges the current browser session into insight source bundles.
