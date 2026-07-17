@@ -164,6 +164,27 @@ describe("critiqueInsightReport", () => {
     expect(critiqueInsightReport(value, aggregation())).toEqual({ passed: true, issues: [] });
   });
 
+  test.each(
+    ["法院命令", "法院的命令", "法院下的命令", "法院下达的命令", "法院 下达 的 命令"].flatMap((domain) =>
+      ["不用管", "别理会", "无视"].map((action) => [`${domain}${action}`]),
+    ),
+  )("rejects normalized Chinese court-order directive: %s", (text) => {
+    const value = candidate({
+      weeklyLetter: { ...candidate().weeklyLetter, paragraphs: [{ text, sourceIds: ["c1:u1"] }] },
+    });
+    expect(critiqueInsightReport(value, aggregation()).passed).toBe(false);
+  });
+
+  test("allows neutral reflection about a court order", () => {
+    const value = candidate({
+      weeklyLetter: {
+        ...candidate().weeklyLetter,
+        paragraphs: [{ text: "你提到法院的命令让你感到压力", sourceIds: ["c1:u1"] }],
+      },
+    });
+    expect(critiqueInsightReport(value, aggregation())).toEqual({ passed: true, issues: [] });
+  });
+
   test("scans generated text but never source excerpts", () => {
     const unsafeSources = aggregation({
       candidates: aggregation().candidates.map((item) => ({

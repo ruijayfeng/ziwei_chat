@@ -138,11 +138,19 @@ function generatedText(candidate: InsightReportCandidate) {
 }
 
 function containsUnsafeClaim(text: string) {
-  return containsCertainty(text)
-    || containsMedicalOrDiagnosticClaim(text)
-    || containsLegalClaim(text)
-    || containsInvestmentInstruction(text)
-    || containsOtherPersonIntent(text);
+  const safetyText = normalizeSafetyText(text);
+  return containsCertainty(safetyText)
+    || containsMedicalOrDiagnosticClaim(safetyText)
+    || containsLegalClaim(safetyText)
+    || containsInvestmentInstruction(safetyText)
+    || containsOtherPersonIntent(safetyText);
+}
+
+function normalizeSafetyText(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\u6cd5\u9662\s*(?:(?:\u4e0b\s*)?(?:\u8fbe\s*)?\u7684\s*)?\u547d\u4ee4/g, "\u6cd5\u9662\u547d\u4ee4");
 }
 
 function containsCertainty(text: string) {
@@ -197,7 +205,7 @@ function containsLegalClaim(text: string) {
     );
   const chineseEllipticalDirective = hasDomainAction(
     text,
-    /(?:\u6cd5\u9662(?:\u4e0b\u7684)?\u547d\u4ee4|\u4f20\u7968|\u6cd5\u5f8b)/,
+    /(?:\u6cd5\u9662\u547d\u4ee4|\u4f20\u7968|\u6cd5\u5f8b)/,
     /(?:\u4e0d\u7528\u7ba1|\u4e0d\u5fc5\u7ba1|\u522b\u7406\u4f1a|\u4e0d\u8981\u7406\u4f1a|\u65e0\u89c6|\u4e0d\u5fc5\u9075\u5b88|\u8fdd\u6297)/,
   );
   return /\b(?:this|that|the) (?:contract|agreement|action|conduct) (?:is|constitutes) (?:illegal|unlawful|a crime|a breach)\b/i.test(text)
