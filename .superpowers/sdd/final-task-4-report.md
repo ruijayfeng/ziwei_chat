@@ -60,3 +60,10 @@ Self-review:
 
 - `git diff --check` reports existing LF-to-CRLF conversion notices for edited tracked files; it reports no whitespace errors.
 - The pre-existing untracked `ziwei-chat-redesign/` directory remains untouched and excluded from this change.
+
+## Review Closure
+
+- Independent review found that routing tests did not enforce the starter-copy safety boundary.
+- RED: `npx vitest run tests/ui/active-topics.test.ts` failed 2 of 6 tests because `starterQuestionSafetyIssues` did not exist.
+- Added a pure catalog-boundary validator and explicit regression cases for guarantees, irreversible decisions, investment, medical, and legal instructions, exact future dates, and annual or multi-year reports.
+- GREEN: the five focused files passed with 26 tests; `npm run typecheck` and scoped ESLint both exited 0.

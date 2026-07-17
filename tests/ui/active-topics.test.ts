@@ -4,7 +4,10 @@ import { describe, expect, test } from "vitest";
 
 import { routeIntent } from "../../src/lib/agent/intent-router";
 import { buildAnalysisPlan } from "../../src/lib/agent/planner";
-import { ACTIVE_TOPICS } from "../../src/lib/ui/active-topics";
+import {
+  ACTIVE_TOPICS,
+  starterQuestionSafetyIssues,
+} from "../../src/lib/ui/active-topics";
 
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
@@ -44,6 +47,28 @@ describe("active topic catalog", () => {
         requiresChart: true,
       });
       expect(plan.requiredSkills, topic.id).toEqual([topic.skillId]);
+    }
+  });
+
+  test("rejects guarantees, irreversible advice, regulated instructions, exact dates, and long reports", () => {
+    const unsafeQuestions = [
+      "保证我三年内一定升职",
+      "告诉我必须辞职还是创业",
+      "按命盘给我股票买入建议",
+      "按命盘诊断我的疾病并给治疗方案",
+      "告诉我该怎么起诉对方",
+      "预测我会在 2027 年 3 月 18 日发生什么",
+      "生成未来三年的年度运势报告",
+    ];
+
+    for (const question of unsafeQuestions) {
+      expect(starterQuestionSafetyIssues(question), question).not.toEqual([]);
+    }
+  });
+
+  test("keeps every active starter question inside the safe-copy boundary", () => {
+    for (const topic of ACTIVE_TOPICS) {
+      expect(starterQuestionSafetyIssues(topic.question), topic.id).toEqual([]);
     }
   });
 
