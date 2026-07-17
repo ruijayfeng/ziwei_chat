@@ -24,4 +24,18 @@ describe("anonymous data deletion coordinator", () => {
 
     expect(order).toEqual(["remote", "local"]);
   });
+
+  test("allows old-profile cache cleanup inside local cleanup only after remote deletion commits", async () => {
+    const order: string[] = [];
+
+    await deleteAnonymousProfileData(
+      async () => { order.push("remote"); },
+      () => {
+        order.push("cache");
+        order.push("local");
+      },
+    );
+
+    expect(order).toEqual(["remote", "cache", "local"]);
+  });
 });

@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import type { CreateChartInput } from "@/lib/domain/chart";
 import type { ChartDisplayModel } from "@/lib/domain/chart-display";
 import { deleteAnonymousProfileData } from "@/lib/ui/anonymous-data-deletion";
+import { clearInsightCache } from "@/lib/ui/insight-cache";
 import { ChatClientError, sendChatRequest } from "@/lib/ui/chat-client";
 import { initialEvidence, type EvidenceState } from "@/lib/ui/chat-evidence";
 import { classifyChatError, type ChatErrorState } from "@/lib/ui/chat-errors";
@@ -371,6 +372,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
         if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
       }, () => {
+        clearInsightCache(profileId);
         revisionRef.current += 1;
         chartOperationRevisionRef.current += 1;
 
