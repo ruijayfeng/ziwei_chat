@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import type { InsightAggregation, InsightReport, InsightSourceBundle } from "../../lib/insights/contracts";
 import { aggregateInsightSources, insightEligibility } from "../../lib/insights/source";
-import { clearInsightCache, parseInsightReport, readInsightCache, writeInsightCache, type InsightCacheRead } from "../../lib/ui/insight-cache";
+import { parseInsightReport, readInsightCache, writeInsightCache, type InsightCacheRead } from "../../lib/ui/insight-cache";
 import { loadInsightSourceBundle, type CurrentInsightSession } from "../../lib/ui/insight-sources";
 import { modelSettingsRequestFromDraft, modelSettingsStatus, type ModelSettingsDraft } from "../../lib/ui/model-settings";
 import type { ChatSessionMessage } from "../../lib/ui/chat-session";
@@ -85,7 +85,6 @@ export type InsightLifecycleDependencies = {
   aggregateSources: (sourceBundle: InsightSourceBundle) => Promise<InsightAggregation>;
   readCache: (profileId: string, sourceFingerprint: string) => InsightCacheRead;
   writeCache: (profileId: string, report: InsightReport) => boolean;
-  clearCache: (profileId: string) => boolean;
   fetchImpl: FetchImplementation;
   modelSettingsReady: (settings: ModelSettingsDraft) => boolean;
   modelSettingsRequest: (settings: ModelSettingsDraft) => unknown;
@@ -106,8 +105,7 @@ const insightLifecycleDependencies: Omit<InsightLifecycleDependencies, "emit"> =
   aggregateSources: aggregateInsightSources,
   readCache: readInsightCache,
   writeCache: writeInsightCache,
-  clearCache: clearInsightCache,
-  fetchImpl: fetch,
+  fetchImpl: (...args) => globalThis.fetch(...args),
   modelSettingsReady: (settings) => modelSettingsStatus(settings).ready,
   modelSettingsRequest: modelSettingsRequestFromDraft,
 };
@@ -126,14 +124,10 @@ export async function runInsightLifecycle(input: InsightLifecycleInput, dependen
       if (reportMatchesAggregation(resolution.report, aggregation)) {
         return emit({ type: "cache_hit", profileId, aggregation, report: resolution.report });
       }
-      dependencies.clearCache(profileId);
-      return emit({ type: "failed", profileId, error: { message: "缓存洞见的来源已失效，请重试。", canRetry: true } });
     }
-    if (resolution.status === "stale" && !reportMatchesAggregation(resolution.report, aggregation)) {
-      dependencies.clearCache(profileId);
-      return emit({ type: "failed", profileId, error: { message: "缓存洞见的来源已失效，请重试。", canRetry: true } });
-    }
-    if (resolution.status === "stale" && refreshAuthorizationFingerprint !== aggregation.sourceFingerprint) {
+    if (resolution.status === "stale"
+      && reportMatchesAggregation(resolution.report, aggregation)
+      && refreshAuthorizationFingerprint !== aggregation.sourceFingerprint) {
       return emit({ type: "stale", profileId, aggregation, report: resolution.report });
     }
     if (!dependencies.modelSettingsReady(modelSettings)) {

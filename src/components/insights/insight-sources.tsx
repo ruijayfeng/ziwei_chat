@@ -28,7 +28,7 @@ export function InsightSources({ sources }: { sources: InsightSourceReference[] 
         <ul className="mt-2 grid gap-2 border-l border-border pl-3">
           {sources.map((source) => (
             <li key={source.id}>
-              <p className="font-medium text-foreground/85">{source.title} {source.createdAt ? <time dateTime={source.createdAt}>{formatSourceTime(source.createdAt)}</time> : <span>当前浏览器会话，时间未持久化</span>}</p>
+              <p className="font-medium text-foreground/85">{source.title} {source.createdAt ? <time dateTime={source.createdAt}>{formatSourceTime(source.createdAt)}</time> : <span>时间未持久化</span>}</p>
               <p className="mt-0.5 line-clamp-2 leading-relaxed">{source.excerpt}</p>
             </li>
           ))}

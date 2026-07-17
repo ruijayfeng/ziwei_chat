@@ -68,15 +68,20 @@ Result: 64 files passed, 1 skipped; 439 tests passed, 2 skipped.
 - Cache writes are explicitly best-effort: a storage exception does not hide an already validated report; invalid/mismatched responses never reach the cache.
 - `git diff --check` reported no whitespace errors. `ziwei-chat-redesign/` remains untracked and has no diff.
 
-## Residual Concern
-
-The project intentionally has no React DOM test harness. The coordinator executes the same source/cache/API pipeline used by the effect and is covered through dependency injection; route source contracts cover its JSX wiring.
-
 ## Final Review Closure
 
 - Added `reportMatchesAggregation`: exact/stale cache reports and API reports must reference only current aggregation candidates; paragraphs require one known source and patterns require two distinct known sources.
-- Invalid provenance cache entries are cleared before returning a retryable integrity error, so retry can generate a fresh report.
+- Invalid provenance cache entries are treated as misses, so fresh generation remains recoverable even when browser storage cannot evict a damaged entry.
 - Added `insightPresentationOwned`: deletion, profile replacement, workspace/model-settings bootstrap, and active chat streaming hide prior report state immediately.
 - RED: focused controller tests failed for unknown provenance acceptance and missing workspace ownership gate.
 - GREEN: focused controller/cache/source/page gate passed 51/51; typecheck, scoped ESLint, and diff check passed.
 - Full suite passed 64 files / 1 skipped and 442 tests / 2 skipped.
+
+## Mounted Lifecycle Closure
+
+- Added `@testing-library/react` and `jsdom` as development-only dependencies.
+- Mounted the real `InsightsController` and proved provider failure -> actual retry button -> approved sourced report rendering.
+- Rerendered the mounted controller through stream start, profile replacement, deletion, and unmount; prior reports are hidden and in-flight signals are aborted.
+- Empty timestamps use the neutral label `时间未持久化`; persisted records are never mislabeled as browser-only.
+- Focused gate passed 5 files / 53 tests; full suite passed 65 files / 1 skipped and 444 tests / 2 skipped.
+- Typecheck, scoped ESLint, diff check, and production build passed.

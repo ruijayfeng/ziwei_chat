@@ -154,7 +154,7 @@ describe("insight lifecycle coordinator", () => {
     expect(mismatched.dependencies.writeCache).not.toHaveBeenCalled();
   });
 
-  test("rejects cache and API reports whose provenance is unknown to the current aggregation", async () => {
+  test("ignores invalid cache provenance and rejects invalid API provenance", async () => {
     const currentAggregation = aggregation({ candidates: candidateSources() });
     const unknown = report();
     unknown.weeklyLetter.paragraphs[0] = { text: "Unknown", sourceIds: ["conversation-9:message-9"] };
@@ -170,9 +170,8 @@ describe("insight lifecycle coordinator", () => {
     await runInsightLifecycle(lifecycleInput(), cached.dependencies);
     await runInsightLifecycle(lifecycleInput(), generated.dependencies);
 
-    expect(cached.actions[0]).toMatchObject({ type: "failed", error: { canRetry: true } });
-    expect(cached.dependencies.clearCache).toHaveBeenCalledWith(profileId);
-    expect(cached.dependencies.fetchImpl).not.toHaveBeenCalled();
+    expect(cached.actions[0]).toMatchObject({ type: "generated" });
+    expect(cached.dependencies.fetchImpl).toHaveBeenCalledTimes(1);
     expect(generated.actions[0]).toMatchObject({ type: "failed", error: { canRetry: true } });
     expect(generated.dependencies.writeCache).not.toHaveBeenCalled();
   });
@@ -268,7 +267,6 @@ function lifecycleDependencies(overrides: Partial<InsightLifecycleDependencies> 
     aggregateSources: vi.fn(async () => aggregate),
     readCache: vi.fn(() => ({ status: "miss" as const })),
     writeCache: vi.fn(() => true),
-    clearCache: vi.fn(() => true),
     fetchImpl: vi.fn<typeof fetch>(async () => Response.json(report())),
     modelSettingsReady: () => true,
     modelSettingsRequest: (settings) => settings,

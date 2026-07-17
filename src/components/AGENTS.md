@@ -29,10 +29,10 @@ workspace/life-timeline.tsx: Reference records controller rendering persisted an
 workspace/app-layout.tsx, sidebar.tsx, mobile-chrome.tsx, motion-provider.tsx, nav-items.ts: Previous approximate shell retained temporarily and no longer used by routes.
 chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; the reference inspector rail renders real Agent evidence and critic state.
 records/: Previous real conversation timeline retained temporarily for adapter work.
-insights/insights-controller.tsx: Browser effect adapter plus injectable source/cache/API lifecycle coordinator with fingerprint-scoped stale refresh authorization, strict approved-report validation, cancellation, and explicit report lifecycle states.
+insights/insights-controller.tsx: Browser effect adapter plus injectable source/cache/API lifecycle coordinator with fingerprint-scoped stale refresh, current-provenance validation, workspace ownership gating, cancellation, and explicit report lifecycle states.
 insights/weekly-letter.tsx: Accepted reference weekly-letter composition backed only by approved report content and aggregation-derived provenance.
 insights/pattern-list.tsx: Semantic sourced pattern observation articles with 40px topic-mapped Lucide icon treatment, backed only by approved report content and aggregation-derived provenance.
-insights/insight-sources.tsx: Compact keyboard-accessible source provenance disclosure derived from the active aggregation, with an explicit browser-session label when no persisted timestamp exists.
+insights/insight-sources.tsx: Compact keyboard-accessible source provenance disclosure derived from the active aggregation, with a neutral unpersisted-time label when no trusted timestamp exists.
 insights/insights-empty-state.tsx: Honest insufficient-history presentation with current aggregation eligibility details.
 chart/chart-context.tsx: Reference palace collection plus selected/hovered state; initializes against the real 命宫.
 chart/chart-hero.tsx: Reference editorial chart header, truthful data-source copy, quick-locate controls, and create/edit entry.

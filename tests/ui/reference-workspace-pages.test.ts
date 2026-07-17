@@ -45,7 +45,8 @@ describe("reference workspace pages", () => {
     expect(patterns).not.toContain("<a ");
     const sources = source("src/components/insights/insight-sources.tsx");
     expect(sources).toContain("source.createdAt ? <time");
-    expect(sources).toContain("当前浏览器会话，时间未持久化");
+    expect(sources).toContain("时间未持久化");
+    expect(sources).not.toContain("当前浏览器会话，时间未持久化");
     expect(workspaceData).not.toContain("WEEKLY_LETTER");
     expect(workspaceData).not.toContain("PATTERNS");
     expect(workspaceData).not.toContain("MONTHLY_REFLECTION");
