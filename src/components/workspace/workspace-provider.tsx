@@ -47,6 +47,8 @@ type ChartApiPayload = {
   display: ChartDisplayModel;
 };
 
+const CHART_NOT_FOUND = Symbol("chart-not-found");
+
 type WorkspaceContextValue = {
   ready: boolean;
   profileId: string;
@@ -170,7 +172,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setChartLoading(true);
         void fetch(`/api/chart?profileId=${encodeURIComponent(profileId)}`)
         .then(async (response) => {
-          if (response.status === 404) return null;
+          if (response.status === 404) return CHART_NOT_FOUND;
           if (!response.ok) throw new Error("命盘恢复暂时不可用，请稍后重试。");
           return await response.json() as unknown;
           })
@@ -180,7 +182,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
               profileRevision: revisionRef.current,
               chartOperationRevision: chartOperationRevisionRef.current,
             };
-            if (cancelled || !isCurrentProfileOperation(restoreToken, currentOperation) || !payload) return;
+            if (cancelled || !isCurrentProfileOperation(restoreToken, currentOperation)) return;
+            if (payload === CHART_NOT_FOUND) return;
           const restored = parseChartRestorePayload(payload, profileId);
           const primaryChart = { ...restored.chart, profileId, isPrimary: true };
           setChartInput(primaryChart);

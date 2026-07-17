@@ -32,6 +32,15 @@ afterEach(() => {
 });
 
 describe("WorkspaceProvider chart restore lifecycle", () => {
+  test("does not treat a null 2xx body as an empty chart", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(null)));
+
+    render(<WorkspaceProvider><Probe /></WorkspaceProvider>);
+
+    expect(await screen.findByText("命盘恢复响应格式无效，请重试。")).toBeTruthy();
+    expect(screen.getByTestId("state").textContent).not.toBe("empty");
+  });
+
   test("treats malformed 2xx as an error and retries into a real chart", async () => {
     let calls = 0;
     vi.stubGlobal("fetch", vi.fn(async () => {

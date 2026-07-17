@@ -44,6 +44,7 @@ describe("chart restore payload", () => {
   });
 
   test.each([
+    null,
     {},
     { ...validPayload(), chart: undefined },
     { ...validPayload(), chart: { ...validPayload().chart, profileId: "other" } },
