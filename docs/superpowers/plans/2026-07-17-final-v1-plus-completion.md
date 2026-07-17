@@ -19,6 +19,41 @@
 - Use TDD, one focused commit per task, and an independent spec/quality review before the next task.
 - Run verification serially where tests share database, process, or localStorage state.
 
+## Execution Status
+
+> Status reconciled on 2026-07-17 from git history, independent task reviews,
+> focused verification records, and the current working tree.
+
+| Task | State | Release meaning |
+| --- | --- | --- |
+| 1-3 Sourced Insights | Complete | Browser source loading, cache, controller, UI, provenance, and lifecycle are implemented and reviewed |
+| 4 Canonical topics | Complete | Six active entries route to matching intents and skills |
+| 5 Honest chart | Complete | Demo fallback removed; explicit loading/empty/error/retry/real states |
+| 6 Skill contracts | Complete | Executable fact/tool/order/safety contracts reach prompts and critics |
+| 7 Knowledge quality | Complete with external check | Local/provenance gates pass; configured pgvector parity runs in Task 11 |
+| 8 Real evaluation | Complete | Commit `7e670fa`; 17 cases, real iztro timing, isolated stage failures, six rubric samples, independent Spec PASS / Quality Approved |
+| 9 Dead migration cleanup | Pending | Starts only after Task 8 is reviewed and committed |
+| 10 Docs and UTF-8 audit | Pending | Runs after the final source tree is stable |
+| 11 Automated/Postgres gate | Pending | Requires configured release Postgres for mandatory persistence evidence |
+| 12 Browser/provider acceptance | Pending | Requires browser matrix and usable real model settings |
+| 13 Final audit | Pending | Only step allowed to declare Final V1+ complete |
+
+## Critical Path And Dependencies
+
+```text
+Task 8 evaluation closure
+  -> Task 9 dead-code inventory/removal
+  -> Task 10 documentation and UTF-8 audit
+  -> Task 11 automated + Postgres gate
+  -> Task 12 browser + real-provider acceptance
+  -> Task 13 G1-G10 completion audit
+```
+
+Tasks 11 and 12 may share a prepared release environment, but their evidence
+must be recorded separately. Missing `DATABASE_URL`, unusable model settings,
+or unavailable browser execution blocks release declaration; it does not
+justify weakening or skipping the gate.
+
 ---
 
 ## Batch A: Finish Sourced Insights

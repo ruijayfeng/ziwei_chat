@@ -22,21 +22,40 @@ health/family/children/home workflows.
 | Area | Status | Final state |
 | --- | --- | --- |
 | Anonymous identity and deletion | Complete | Browser-scoped profile, remote-first deletion, Postgres tombstone, no deleted-profile resurrection |
-| Primary chart lifecycle | Complete with one presentation gap | Create, restore, edit, save, and delete use iztro and real profile state; no-chart route still needs an honest active state |
-| Chat and evidence | Complete, release validation pending | Real provider/deterministic fallback, planner, tools, skills, RAG, critic, streaming protocol, evidence inspector |
+| Primary chart lifecycle | Implementation complete, release validation pending | Create, restore, edit, save, delete, loading, empty, malformed-response, and retry states use iztro and real profile state |
+| Chat and evidence | Implementation complete, release validation pending | Provider generation, planner, tools, skills, RAG, critic, streaming protocol, and evidence inspector |
 | Records, sidebar, current date | Complete | Real persisted/current-session conversations, real chart summary, Shanghai calendar date, retry/stale-request protection |
 | Sourced Insights server | Complete | Bounded aggregation, stable fingerprint, strict API parsing, provider generation, provenance/safety critic |
-| Sourced Insights browser/UI | Open | Source loading, cache, controller, source disclosure, stale/error/insufficient/ready states |
-| Active topic catalog | Open | Exactly six supported entries backed by matching intent and skill contracts |
-| Skill, knowledge, and evaluation quality | Partial | Six files exist, but final contract coverage and real-pipeline evaluation are not strong enough to close the release |
+| Sourced Insights browser/UI | Implementation complete, release validation pending | Source loading, profile cache, controller, provenance disclosure, and loading/insufficient/ready/stale/error states |
+| Active topic catalog | Complete | Exactly six supported entries backed by matching intent and skill contracts |
+| Skill and knowledge quality | Complete, Postgres parity pending | Six executable skill contracts and tool-aligned local knowledge coverage are enforced; pgvector parity still needs a configured database run |
+| Real-contract evaluation | Complete | Real deterministic stages, 17 isolated cases, required-fact coverage, six rubric samples, and independent review pass |
 | Migration cleanup and documentation | Open | Remove only proven dead migration components and align L1/L2/L3 maps |
 | Release verification | Open | Full automated, browser, Postgres, real-provider, accessibility, responsive, and Chinese-copy evidence |
 
-## Open Gaps And Designs
+## Remaining Critical Path
+
+The implementation backlog is now narrow. Final V1+ is not yet releasable
+because the remaining work is mostly proof and cleanup, but those gates are
+release requirements rather than optional polish.
+
+1. **Close G9 / Tasks 9-10:** remove only import-proven dead migration code,
+   align L1/L2/L3 documentation, and audit tracked and visible Chinese copy for
+   UTF-8 corruption.
+2. **Close G10 / Tasks 11-12:** run the complete automated gate, real Postgres
+   lifecycle, browser acceptance at four widths, and timed real-provider chat
+   and Insights scenarios.
+3. **Task 13:** audit G1-G10 against current evidence and declare Final V1+
+   complete only if every mandatory gate passes.
+
+## Gap Designs And Closure
 
 ### G1. Insights Browser Source Loading
 
-**Visible gap:** `/insights` still renders only the temporary
+**Status:** implementation closed; browser and Postgres release acceptance
+remain under G10.
+
+**Original gap:** `/insights` rendered only the temporary
 insufficient-history view even though the server aggregation and generation
 boundary now exists.
 
@@ -51,7 +70,10 @@ payloads, unavailable persistence, profile isolation, and cancellation.
 
 ### G2. Insights Profile-Scoped Cache And Deletion
 
-**Visible gap:** approved reports cannot yet survive reloads or become visibly
+**Status:** implementation closed; cross-route deletion and reload behavior
+remain part of G10 acceptance.
+
+**Original gap:** approved reports could not survive reloads or become visibly
 stale when conversation history changes.
 
 **Design:** use a versioned localStorage envelope keyed by anonymous profile id
@@ -66,8 +88,11 @@ profile isolation, secret/source absence, and deletion-order tests pass.
 
 ### G3. Insights Controller And Provenance UI
 
-**Visible gap:** the accepted weekly-letter and pattern composition has not
-been connected to real reports.
+**Status:** implementation closed; responsive browser and real-provider
+acceptance remain under G10.
+
+**Original gap:** the accepted weekly-letter and pattern composition was not
+connected to real reports.
 
 **Design:** a client controller owns five explicit states: `loading`,
 `insufficient`, `ready`, `stale`, and `error`. Presenters accept only validated
@@ -82,8 +107,11 @@ profile switch, and aborted response handling on mobile and desktop.
 
 ### G4. One Canonical Six-Topic Catalog
 
-**Visible gap:** `src/lib/workspace-data.ts` exposes twelve reference topics and
-the composer takes the first six, which currently includes unsupported growth,
+**Status:** closed at `d273e6e` and `edfdc79`; exact catalog, safe starters,
+intent, and skill alignment are covered by focused tests.
+
+**Original gap:** `src/lib/workspace-data.ts` exposed twelve reference topics and
+the composer took the first six, which included unsupported growth,
 marriage, and family entries while omitting recent fortune, personality, and
 chart explanation.
 
@@ -110,8 +138,11 @@ table proves prompt -> intent -> plan -> skill for all six entries.
 
 ### G5. Six Skill Contracts
 
-**Visible gap:** all six Markdown skills exist and are substantially structured,
-but release closure currently relies on prose inspection rather than an
+**Status:** closed at `9a285ab`; planner, prompt, and all critic passes enforce
+the executable workflow and prohibition contracts.
+
+**Original gap:** all six Markdown skills existed and were substantially structured,
+but release closure relied on prose inspection rather than an
 executable topic contract.
 
 **Design:** define table-driven requirements for each skill: deterministic
@@ -126,8 +157,11 @@ route/evaluation tests prove the plan loads the intended workflow.
 
 ### G6. Curated Knowledge Coverage And Source Quality
 
-**Visible gap:** the corpus has useful beta material, but imported chunks are
-not final doctrine and active-topic retrieval coverage is not yet a release
+**Status:** local and contract coverage closed at `6926100`; the optional
+fixture-backed pgvector parity test still requires `DATABASE_URL` in Task 11.
+
+**Original gap:** the corpus had useful beta material, but imported chunks were
+not final doctrine and active-topic retrieval coverage was not yet a release
 gate. Full star-by-palace and four-transform matrices are not available from a
 reviewed source.
 
@@ -146,8 +180,13 @@ language.
 
 ### G7. Evaluation Must Exercise The Real Contracts
 
-**Visible gap:** `eval:agent` currently creates synthetic responses and copies
-`expectedTools` into the actual event list, so its passing result cannot prove
+**Status:** closed at `7e670fa`. The evaluator executes real deterministic
+route, plan, iztro chart and horoscope tools, skill, local retrieval, composer,
+and critic stages. It isolates case failures, verifies every planner-required
+fact, records six deterministic rubric samples, and passed independent review.
+
+**Original gap:** `eval:agent` created synthetic responses and copied
+`expectedTools` into the actual event list, so its passing result could not prove
 that routing, planning, skill loading, tool choice, retrieval, and critique are
 wired correctly.
 
@@ -164,9 +203,12 @@ all six topic paths pass, and the human-review rubric has recorded samples.
 
 ### G8. Honest No-Chart Presentation
 
-**Visible gap:** `/chart` still uses an explicitly labelled demo chart when no
-real chart exists. This is safer than pretending it belongs to the user, but it
-does not meet the final rule that active surfaces show real state or an
+**Status:** closed at `370932e` and `e43a2f9`; active demo data is removed and
+loading, empty, restore-error, retry, and real-chart ownership are covered.
+
+**Original gap:** `/chart` used an explicitly labelled demo chart when no
+real chart existed. This was safer than pretending it belonged to the user, but it
+did not meet the final rule that active surfaces show real state or an
 explicit unavailable state.
 
 **Design:** preserve the accepted chart-page composition while replacing the
@@ -180,7 +222,9 @@ cover empty, loading, restore error, create, edit, restored, and deleted states.
 
 ### G9. Migration Dead Code And Documentation
 
-**Visible gap:** old approximate workspace/chart/records components remain
+**Status:** open. This is the only remaining implementation cleanup after G7.
+
+**Current gap:** old approximate workspace/chart/records components remain
 beside the accepted reference implementation, and L2 documents intentionally
 mark several as temporary.
 
@@ -198,7 +242,10 @@ tree, and full tests/build pass.
 
 ### G10. Full Release Acceptance
 
-**Visible gap:** focused unit gates have strong evidence, but the final product
+**Status:** open. Prior focused evidence is useful but does not replace one
+current end-to-end release pass.
+
+**Current gap:** focused unit gates have strong evidence, but the final product
 has not completed one current cross-environment acceptance pass.
 
 **Design:** verify serially in three environments:
@@ -237,3 +284,11 @@ unless the authoritative release design is explicitly revised.
 | G7 real-contract evaluation | Task 8 |
 | G9 migration/docs cleanup | Tasks 9-10 |
 | G10 release acceptance | Tasks 11-13 |
+
+## Final-Version Decision
+
+Final V1+ is the final target for this development cycle. Accounts, login,
+payment, subscriptions, attachments, music, community, multi-chart,
+multi-school, and advanced annual reports are deliberate non-goals, not
+deferred blockers. Any proposal to add them requires a new product spec after
+Final V1+ closes; it must not expand this release plan.

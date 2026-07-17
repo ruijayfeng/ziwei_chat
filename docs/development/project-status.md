@@ -6,7 +6,7 @@
 ## UI-First Reference Transplant Status
 
 - The presentation from `ziwei-chat-redesign` is now the active source for the global shell, home/chat, radial chart, records, insights, and settings visual language.
-- `/records` is backed by profile-scoped persisted/current-browser conversation data; `/insights` shows an honest insufficient-history state while its sourced aggregation adapter remains pending.
+- `/records` is backed by profile-scoped persisted/current-browser conversation data. `/insights` now has bounded real-history loading, profile-scoped validated report caching, generated report ownership, provenance disclosure, and explicit loading/insufficient/ready/stale/error states; final Postgres, browser, and real-provider acceptance remains pending.
 - Existing chart, chat/Agent, evidence, conversation, model-settings, and anonymous-profile services remain in the repository and continue to pass their targeted contracts.
 - The settings route and default inspector are connected to real browser-local model settings and the shared confirmed anonymous-data deletion operation.
 - Real chat streaming/evidence, persisted conversation history, and the real iztro chart are wired into the transplanted reference views through `WorkspaceProvider` and focused adapters.
