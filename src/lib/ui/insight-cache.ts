@@ -47,7 +47,11 @@ export function writeInsightCache(
 ) {
   if (!storage || !isInsightReport(report)) return false;
   try {
-    storage.setItem(cacheKey(profileId, report.sourceFingerprint), JSON.stringify({ version: cacheVersion, report }));
+    const nextKey = cacheKey(profileId, report.sourceFingerprint);
+    storage.setItem(nextKey, JSON.stringify({ version: cacheVersion, report }));
+    profileCacheKeys(storage, profileId)
+      .filter((key) => key !== nextKey)
+      .forEach((key) => storage.removeItem(key));
     return true;
   } catch {
     return false;
@@ -57,10 +61,7 @@ export function writeInsightCache(
 export function clearInsightCache(profileId: string, storage: StorageLike | null = browserStorage()) {
   if (!storage) return false;
   try {
-    const profilePrefix = `${cachePrefix}${profileId}:`;
-    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index))
-      .filter((key): key is string => Boolean(key?.startsWith(profilePrefix)));
-    keys.forEach((key) => storage.removeItem(key));
+    profileCacheKeys(storage, profileId).forEach((key) => storage.removeItem(key));
     return true;
   } catch {
     return false;
@@ -123,7 +124,7 @@ function hasDistinctSourceIds(value: unknown, minimum: number) {
 function isCanonicalSourceId(value: unknown): value is string {
   if (typeof value !== "string" || value !== value.trim()) return false;
   const parts = value.split(":");
-  return parts.length === 2 && parts.every((part) => part.length > 0);
+  return parts.length === 2 && parts.every((part) => part.length > 0 && part === part.trim());
 }
 function isCanonicalTimestamp(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -143,6 +144,11 @@ function hasExactKeys(value: unknown, expected: string[]): value is Record<strin
 }
 function cacheKey(profileId: string, sourceFingerprint: string) { return `${cachePrefix}${profileId}:${sourceFingerprint}`; }
 function browserStorage(): StorageLike | null { return typeof window === "undefined" ? null : window.localStorage; }
+function profileCacheKeys(storage: StorageLike, profileId: string) {
+  const profilePrefix = `${cachePrefix}${profileId}:`;
+  return Array.from({ length: storage.length }, (_, index) => storage.key(index))
+    .filter((key): key is string => Boolean(key?.startsWith(profilePrefix)));
+}
 function evict(storage: StorageLike, key: string) {
   try {
     storage.removeItem(key);

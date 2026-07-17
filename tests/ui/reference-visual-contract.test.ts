@@ -146,6 +146,16 @@ describe("reference redesign visual contract", () => {
     expect(deletionCatch).not.toContain("setChartError");
   });
 
+  test("does not report deletion success when old-profile insight cache cleanup fails", () => {
+    const provider = source("src/components/workspace/workspace-provider.tsx");
+    const deletion = provider.slice(provider.indexOf("const deleteAnonymousData"));
+
+    expect(deletion).toContain("if (!clearInsightCache(profileId))");
+    expect(deletion).toContain("throw new Error(\"洞见缓存未能清除，请重试。\")");
+    expect(deletion.indexOf("if (!clearInsightCache(profileId))")).toBeGreaterThan(deletion.indexOf("fetch(`/api/chat"));
+    expect(deletion.indexOf("setProfileId(nextProfileId)")).toBeGreaterThan(deletion.indexOf("if (!clearInsightCache(profileId))"));
+  });
+
   test("connects default inspector deletion to the workspace operation", () => {
     const inspector = source("src/components/inspector-panel.tsx");
 

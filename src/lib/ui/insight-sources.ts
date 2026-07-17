@@ -138,11 +138,17 @@ function currentSessionConversation(currentSession: CurrentInsightSession | null
 async function mapWithConcurrency<T, R>(values: T[], concurrency: number, mapper: (value: T) => Promise<R>) {
   const results: R[] = new Array(values.length);
   let nextIndex = 0;
+  let failed = false;
   const worker = async () => {
-    while (nextIndex < values.length) {
+    while (!failed && nextIndex < values.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await mapper(values[index]!);
+      try {
+        results[index] = await mapper(values[index]!);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker));

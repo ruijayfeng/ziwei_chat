@@ -372,7 +372,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
         if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
       }, () => {
-        clearInsightCache(profileId);
+        if (!clearInsightCache(profileId)) throw new Error("洞见缓存未能清除，请重试。");
         revisionRef.current += 1;
         chartOperationRevisionRef.current += 1;
 

@@ -84,6 +84,32 @@ describe("insight source loader", () => {
     }, detailController.signal)).rejects.toThrow("Aborted");
   });
 
+  test("stops scheduling detail requests after the first detail failure", async () => {
+    let releasePending!: () => void;
+    const pending = new Promise<void>((resolve) => { releasePending = resolve; });
+    let detailRequests = 0;
+    const loading = loadInsightSourceBundle(profileId, null, async (input) => {
+      if (!String(input).includes("conversationId=")) {
+        return Response.json({ conversations: Array.from({ length: 20 }, (_, index) => ({
+          id: `conversation-${index}`,
+          title: `Conversation ${index}`,
+          lastMessageAt: "",
+        })) });
+      }
+      detailRequests += 1;
+      if (String(input).includes("conversation-0")) return Response.json({ invalid: true });
+      await pending;
+      const id = new URL(String(input), "https://ziwei.local").searchParams.get("conversationId")!;
+      return Response.json({ messages: [{ id: `message-${id}`, conversationId: id, role: "user", content: "Body", createdAt: "" }] });
+    });
+
+    await expect(loading).rejects.toThrow("Invalid insight source response");
+    releasePending();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(detailRequests).toBeLessThanOrEqual(4);
+  });
+
   test("keeps only visible user and assistant messages with sanitized API timestamps", async () => {
     const result = await loadInsightSourceBundle(profileId, null, async (input) => {
       if (!String(input).includes("conversationId=")) {

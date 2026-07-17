@@ -63,6 +63,8 @@ describe("insight report cache", () => {
     [["conversation-1:message-1", "conversation-1:message-1 "]],
     [["conversation-1:message-1", "conversation-1:message:2"]],
     [["conversation-1:message-1", "missing-separator"]],
+    [["conversation-1:message-1", "conversation-2: message-2"]],
+    [["conversation-1:message-1", "conversation-2 :message-2"]],
   ])("rejects non-canonical provenance ids: %j", (sourceIds) => {
     const storage = createStorage();
     const report = approvedReport(fingerprintA);
@@ -124,6 +126,30 @@ describe("insight report cache", () => {
     expect(readInsightCache(profileA, fingerprintA, storage)).toEqual({ status: "miss" });
     expect(readInsightCache(profileB, fingerprintB, storage)).toMatchObject({ status: "hit" });
     expect(writeInsightCache(profileA, approvedReport(fingerprintA), null)).toBe(false);
+  });
+
+  test("reports cache removal failure", () => {
+    const storage = createStorage();
+    writeInsightCache(profileA, approvedReport(fingerprintA), storage);
+    const failingStorage: Storage = {
+      ...storage,
+      removeItem: () => { throw new Error("storage denied"); },
+    };
+
+    expect(clearInsightCache(profileA, failingStorage)).toBe(false);
+  });
+
+  test("keeps only the latest report for a profile", () => {
+    const storage = createStorage();
+    const first = approvedReport(fingerprintA);
+    const second = approvedReport(fingerprintB);
+
+    expect(writeInsightCache(profileA, first, storage)).toBe(true);
+    expect(writeInsightCache(profileA, second, storage)).toBe(true);
+
+    expect(readInsightCache(profileA, fingerprintA, storage)).toEqual({ status: "stale", report: second });
+    expect(storage.getItem(cacheKey(profileA, fingerprintA))).toBeNull();
+    expect(storage.length).toBe(1);
   });
 });
 
