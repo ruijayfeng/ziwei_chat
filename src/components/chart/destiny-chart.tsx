@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { getRelatedIndices, SIHUA_TONE } from '@/lib/chart-data'
+import { getRelatedIndices, SIHUA_TONE } from '@/lib/reference-chart-contract'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useChart } from './chart-context'

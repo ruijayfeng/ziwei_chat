@@ -2,7 +2,7 @@
 > L2 | Parent: AGENTS.md
 
 Member List
-chart-data.ts: Reference palace presentation contract, explicitly labelled demo fallback, four-transform tones, and three-way/four-direction geometry.
+reference-chart-contract.ts: Data-free reference palace presentation types, four-transform tones, and three-way/four-direction geometry.
 ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including its routed intent and required skill.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-scoped caches, functional iztro chart recovery, real horoscope scopes, and tool event recording.

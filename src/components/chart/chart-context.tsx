@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useMemo, useState } from 'react'
-import type { Palace } from '@/lib/chart-data'
+import type { Palace } from '@/lib/reference-chart-contract'
 
 type ChartContextValue = {
   palaces: Palace[]

@@ -10,7 +10,7 @@ import type {
   ChartDisplayPalace,
   ChartDisplayStar,
 } from "../domain/chart-display";
-import type { MainStar, Palace, SihuaType } from "../chart-data";
+import type { MainStar, Palace, SihuaType } from "../reference-chart-contract";
 
 const brightnessScore: Record<string, number> = {
   陷: 1,
