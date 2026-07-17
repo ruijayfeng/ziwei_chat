@@ -117,8 +117,13 @@ function isPattern(value: unknown) {
 function hasDistinctSourceIds(value: unknown, minimum: number) {
   return Array.isArray(value)
     && value.length >= minimum
-    && value.every(isText)
+    && value.every(isCanonicalSourceId)
     && new Set(value).size === value.length;
+}
+function isCanonicalSourceId(value: unknown): value is string {
+  if (typeof value !== "string" || value !== value.trim()) return false;
+  const parts = value.split(":");
+  return parts.length === 2 && parts.every((part) => part.length > 0);
 }
 function isCanonicalTimestamp(value: unknown): value is string {
   if (typeof value !== "string") return false;

@@ -48,6 +48,19 @@ describe("insight report cache", () => {
     expect(writeInsightCache(profileA, report, storage)).toBe(false);
   });
 
+  test.each([
+    [["conversation-1:message-1", " conversation-1:message-1"]],
+    [["conversation-1:message-1", "conversation-1:message-1 "]],
+    [["conversation-1:message-1", "conversation-1:message:2"]],
+    [["conversation-1:message-1", "missing-separator"]],
+  ])("rejects non-canonical provenance ids: %j", (sourceIds) => {
+    const storage = createStorage();
+    const report = approvedReport(fingerprintA);
+    report.patterns[0] = { ...report.patterns[0]!, sourceIds };
+
+    expect(writeInsightCache(profileA, report, storage)).toBe(false);
+  });
+
   test("evicts a cache key whose report fingerprint does not match", () => {
     const storage = createStorage();
     storage.setItem(cacheKey(profileA, fingerprintA), JSON.stringify({ version: 1, report: approvedReport(fingerprintB) }));
