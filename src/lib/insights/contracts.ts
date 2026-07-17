@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Depends on unknown conversation-history payloads
- * [OUTPUT]: Provides strict sourced-insight wire contracts and parsers
+ * [OUTPUT]: Provides strict sourced-insight wire contracts, model candidate shape, and source parsers
  * [POS]: Privacy boundary for deterministic insight aggregation and generated reports
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
@@ -43,6 +43,21 @@ export type InsightAggregation = {
   topicCounts: Record<InsightTopic, number>;
   candidates: InsightCandidateExcerpt[];
   sourceFingerprint: string;
+};
+
+export type InsightReportCandidate = {
+  weeklyLetter: {
+    greeting: string;
+    paragraphs: Array<{ text: string; sourceIds: string[] }>;
+    signoff: string;
+  };
+  patterns: Array<{
+    id: string;
+    title: string;
+    detail: string;
+    topic: string;
+    sourceIds: string[];
+  }>;
 };
 
 export type InsightReport = {
