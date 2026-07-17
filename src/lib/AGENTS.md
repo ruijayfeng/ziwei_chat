@@ -42,6 +42,8 @@ ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer 
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.
 ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.
+ui/chart-route-state.ts: Pure chart-route state normalization for loading, empty, restore-error, and real-chart presentation.
+ui/chart-restore-payload.ts: Strict profile-owned parser for successful browser chart-restore envelopes; only HTTP 404 represents an empty chart.
 ui/sidebar-chart.ts: Pure WorkspaceProvider chart-state adapter for truthful sidebar loading, error, empty, and ready presentation.
 ui/current-calendar.ts: Shanghai-time current-date formatter and exact next-midnight refresh calculation for the home header.
 ui/data-deletion-dialog.ts: Pure controlled-dialog reducer that blocks pending closes and closes only after successful anonymous-data deletion.

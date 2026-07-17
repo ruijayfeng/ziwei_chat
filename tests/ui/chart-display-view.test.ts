@@ -59,7 +59,14 @@ describe("chart display geometry", () => {
 
     expect(route).toContain("useWorkspace()");
     expect(route).toContain("referencePalaces(chartDisplay)");
-    expect(route).toContain("chartDisplay?.chartId ?? 'demo-chart'");
+    expect(route).not.toContain("demo-chart");
+    expect(route).not.toContain("PALACES");
+    expect(route).toContain("chartRestoreSettled");
+    expect(route).toContain("retryChartRestore");
+    expect(route).toContain('aria-label="创建命盘"');
+    expect(route).toContain('aria-label="重试恢复"');
+    expect(route).toContain('role="status"');
+    expect(route).toContain('role="alert"');
     expect(context).toContain("palaces: Palace[]");
     expect(context).toContain("palace.name === '命宫'");
   });

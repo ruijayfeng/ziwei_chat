@@ -30,6 +30,7 @@ import {
   chartSessionStorageValue,
   isChartDisplayModel,
 } from "@/lib/ui/chart-session";
+import { parseChartRestorePayload } from "@/lib/ui/chart-restore-payload";
 import {
   defaultModelSettingsDraft,
   modelSettingsDraftFromStorage,
@@ -56,6 +57,7 @@ type WorkspaceContextValue = {
   chartRestoreSettled: boolean;
   chartSynced: boolean;
   chartError: string | null;
+  retryChartRestore: () => void;
   saveChart: (chart: CreateChartInput) => Promise<boolean>;
   resetLocalChart: () => void;
   modelSettings: ModelSettingsDraft;
@@ -92,6 +94,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const dataDeletingRef = useRef(false);
   const [chartSynced, setChartSynced] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
+  const [chartRestoreRevision, setChartRestoreRevision] = useState(0);
   const [modelSettings, setModelSettings] = useState<ModelSettingsDraft>(defaultModelSettingsDraft);
   const [modelSettingsLoaded, setModelSettingsLoaded] = useState(false);
   const [chatSession, dispatchChat] = useReducer(chatSessionReducer, initialChatSessionState);
@@ -169,7 +172,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         .then(async (response) => {
           if (response.status === 404) return null;
           if (!response.ok) throw new Error("命盘恢复暂时不可用，请稍后重试。");
-          return (await response.json()) as ChartApiPayload;
+          return await response.json() as unknown;
           })
           .then((payload) => {
             const currentOperation = {
@@ -177,15 +180,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
               profileRevision: revisionRef.current,
               chartOperationRevision: chartOperationRevisionRef.current,
             };
-            if (cancelled || !isCurrentProfileOperation(restoreToken, currentOperation) || !payload || !payload.chart) return;
-            if (!isChartDisplayModel(payload.display)) throw new Error("命盘展示数据不完整，请重试。");
-          const primaryChart = { ...payload.chart, profileId, isPrimary: true };
+            if (cancelled || !isCurrentProfileOperation(restoreToken, currentOperation) || !payload) return;
+          const restored = parseChartRestorePayload(payload, profileId);
+          const primaryChart = { ...restored.chart, profileId, isPrimary: true };
           setChartInput(primaryChart);
-          setChartDisplay(payload.display);
+          setChartDisplay(restored.display);
           setChartSynced(true);
           window.localStorage.setItem(
             storageKey,
-            chartSessionStorageValue(primaryChart, null, payload.display),
+            chartSessionStorageValue(primaryChart, null, restored.display),
           );
           })
           .catch((error: unknown) => {
@@ -215,9 +218,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
       window.clearTimeout(restoreTimer);
     };
-  }, [profileId]);
+  }, [profileId, chartRestoreRevision]);
 
   useEffect(() => () => chatAbortRef.current?.abort(), []);
+
+  const retryChartRestore = useCallback(() => {
+    if (!profileId || chartLoading || chartDisplay) return;
+    setChartError(null);
+    setSettledProfileId("");
+    setChartRestoreRevision((revision) => revision + 1);
+  }, [chartDisplay, chartLoading, profileId]);
 
   const saveChart = useCallback((nextChart: CreateChartInput) => {
     if (dataDeletingRef.current) return Promise.resolve(false);
@@ -426,6 +436,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     chartRestoreSettled,
     chartSynced,
     chartError,
+    retryChartRestore,
     saveChart,
     resetLocalChart,
     modelSettings,
@@ -453,6 +464,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     chartRestoreSettled,
     chartSynced,
     chartError,
+    retryChartRestore,
     saveChart,
     resetLocalChart,
     modelSettings,
