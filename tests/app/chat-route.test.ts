@@ -591,7 +591,15 @@ describe("POST /api/chat", () => {
       .at(-1)?.data as { generation?: { detail?: string } } | undefined;
     expect(finalEvidence?.generation?.detail).toMatch(/首字 .*，完成 .*/);
     const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
-    expect(JSON.parse(String(requestInit?.body))).toMatchObject({ stream: true });
+    const modelRequest = JSON.parse(String(requestInit?.body)) as {
+      stream: boolean;
+      messages: Array<{ content: string }>;
+    };
+    expect(modelRequest).toMatchObject({ stream: true });
+    expect(modelRequest.messages.at(-1)?.content).toContain("skill 回答规则：");
+    expect(modelRequest.messages.at(-1)?.content).toContain("skill 保守条件：");
+    expect(modelRequest.messages.at(-1)?.content).toContain("Do not tell the user to resign immediately.");
+    expect(modelRequest.messages.at(-1)?.content).toContain('Path: "Should I change jobs?"');
     expect(readEvidenceHeader(response).toolsUsed).toContain("generateModelResponse");
   });
 

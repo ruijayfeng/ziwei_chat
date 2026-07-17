@@ -199,4 +199,102 @@ describe("runResponseCritic", () => {
       ]),
     );
   });
+
+  test("enforces topic-specific skill prohibitions", () => {
+    const result = runResponseCritic({
+      intent: "relationship",
+      draft: "结论：先观察。\n\n命盘依据：\n- 工具事实。\n\n现实解释：这是倾向。\n\n建议：可以暗中查看对方手机。\n\n追问：你现在更担心什么？",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [{ ...chartFact, topic: "relationship", palace: "夫妻", rawText: "夫妻宫事实。" }],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+      prohibitionIds: ["relationship_manipulation"],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.issues).toContain("Response conflicts with the active skill's forbidden advice.");
+  });
+
+  test("does not reject a negated chart-explanation prediction boundary", () => {
+    const result = runResponseCritic({
+      intent: "chart_explanation",
+      draft: "结论：这里只解释命盘，不做预测。\n\n命盘依据：\n- 工具事实。\n\n现实解释：这是术语说明。\n\n建议：先理解宫位。\n\n追问：你想先看哪个宫位？",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [{ ...chartFact, topic: "general", palace: "命宫", rawText: "命宫事实。" }],
+      knowledgeSources: [],
+      safetyLevel: "normal",
+      prohibitionIds: ["chart_explanation_prediction"],
+    });
+
+    expect(result.passed).toBe(true);
+  });
+
+  test("checks later prohibition matches after an earlier negated match", () => {
+    const result = runResponseCritic({
+      intent: "general_chat",
+      draft: "不要说我预测，但我预测明天会发生。",
+      toolsUsed: [],
+      chartFacts: [],
+      knowledgeSources: [],
+      safetyLevel: "normal",
+      prohibitionIds: ["chart_explanation_prediction"],
+    });
+
+    expect(result.issues).toContain("Response conflicts with the active skill's forbidden advice.");
+  });
+
+  test.each(["不建议辞职。", "不要买入。", "不能用命盘诊断。"])(
+    "allows a negated global high-stakes boundary: %s",
+    (draft) => {
+      const result = runResponseCritic({
+        intent: "general_chat",
+        draft,
+        toolsUsed: [],
+        chartFacts: [],
+        knowledgeSources: [],
+        safetyLevel: "normal",
+      });
+
+      expect(result.passed).toBe(true);
+    },
+  );
+
+  test.each([
+    ["immediate_career_exit", "建议：你应该立即辞职。"],
+    ["career_outcome_certainty", "结论：保证你会升职。"],
+    ["legal_or_retaliation_instruction", "建议：你应该报复上司。"],
+    ["timing_certainty", "结论：你一定会在明年成功。"],
+    ["relationship_manipulation", "建议：暗中查看对方手机。"],
+    ["relationship_fatalism", "结论：你们是命中注定。"],
+    ["unsafe_relationship_advice", "建议：继续忍受暴力。"],
+    ["relationship_outcome_certainty", "结论：你们一定会复合。"],
+    ["financial_action_instruction", "建议：现在全仓买入。"],
+    ["financial_outcome_certainty", "结论：保证你会赚钱。"],
+    ["professional_financial_boundary", "建议：无需咨询理财师。"],
+    ["exact_income_prediction", "结论：你的年薪会达到1000000。"],
+    ["clinical_diagnosis", "结论：诊断你有人格障碍。"],
+    ["fixed_personality_label", "结论：你就是控制狂。"],
+    ["fixed_personality_certainty", "结论：你的性格永远无法改变。"],
+    ["harmful_behavior_excuse", "结论：因为命盘，伤害别人也合理。"],
+    ["fear_prediction", "结论：你近期大祸临头。"],
+    ["disaster_or_windfall_prediction", "结论：你将有横财。"],
+    ["regulated_instruction", "建议：你应该停药。"],
+    ["unsupported_lucky_date", "结论：2027年3月18日是最幸运的吉日。"],
+    ["single_factor_determinism", "结论：一颗星决定整个命盘。"],
+    ["undisclosed_school_mixing", "结论：各流派结论都一样。"],
+    ["invented_chart_fact", "命盘依据：假设你命宫有紫微。"],
+    ["chart_explanation_prediction", "结论：我预测你明年升职。"],
+  ] as const)("executes the %s prohibition contract", (prohibitionId, unsafeSentence) => {
+    const result = runResponseCritic({
+      intent: "general_chat",
+      draft: unsafeSentence,
+      toolsUsed: [],
+      chartFacts: [],
+      knowledgeSources: [],
+      safetyLevel: "normal",
+      prohibitionIds: [prohibitionId],
+    });
+
+    expect(result.issues, prohibitionId).toContain("Response conflicts with the active skill's forbidden advice.");
+  });
 });

@@ -18,14 +18,47 @@ export type SkillId =
   | "recent_fortune"
   | "chart_explanation";
 
+export const skillProhibitionIds = [
+  "immediate_career_exit",
+  "career_outcome_certainty",
+  "legal_or_retaliation_instruction",
+  "timing_certainty",
+  "relationship_manipulation",
+  "relationship_fatalism",
+  "unsafe_relationship_advice",
+  "relationship_outcome_certainty",
+  "financial_action_instruction",
+  "financial_outcome_certainty",
+  "professional_financial_boundary",
+  "exact_income_prediction",
+  "clinical_diagnosis",
+  "fixed_personality_label",
+  "fixed_personality_certainty",
+  "harmful_behavior_excuse",
+  "fear_prediction",
+  "disaster_or_windfall_prediction",
+  "regulated_instruction",
+  "unsupported_lucky_date",
+  "single_factor_determinism",
+  "undisclosed_school_mixing",
+  "invented_chart_fact",
+  "chart_explanation_prediction",
+] as const;
+
+export type SkillProhibitionId = (typeof skillProhibitionIds)[number];
+
 export type ParsedSkill = {
   skillId: SkillId;
   version: string;
   topic: string;
   tools: string[];
   requiredFacts: string[];
+  prohibitionIds: SkillProhibitionId[];
   analysisSteps: string[];
   responseRules: string[];
+  conservativeConditions: string[];
+  forbiddenAdvice: string[];
+  commonQuestionPaths: string[];
   safetyNotes: string[];
   body: string;
 };
@@ -63,6 +96,7 @@ export function parseSkillMarkdown({
   const version = requireString(data, "version", filePath);
   const topic = requireString(data, "topic", filePath);
   const requiredFacts = requireStringArray(data, "requiredFacts", filePath);
+  const prohibitionIds = requireProhibitionIds(data, filePath);
   const tools = requireStringArray(data, "tools", filePath);
 
   return {
@@ -71,11 +105,24 @@ export function parseSkillMarkdown({
     topic,
     tools,
     requiredFacts,
+    prohibitionIds,
     analysisSteps: readSectionItems(parsed.content, "Analysis Steps"),
     responseRules: readSectionItems(parsed.content, "Response Rules"),
+    conservativeConditions: readSectionItems(parsed.content, "Conservative Conditions"),
+    forbiddenAdvice: readSectionItems(parsed.content, "Forbidden Advice"),
+    commonQuestionPaths: readSectionItems(parsed.content, "Common Question Paths"),
     safetyNotes: readSectionItems(parsed.content, "Safety Notes"),
     body: parsed.content.trim(),
   };
+}
+
+function requireProhibitionIds(data: Record<string, unknown>, filePath: string) {
+  const values = requireStringArray(data, "prohibitionIds", filePath);
+  const allowed = new Set<string>(skillProhibitionIds);
+  if (values.some((value) => !allowed.has(value))) {
+    throw new Error(`Skill ${filePath} has an invalid prohibition id.`);
+  }
+  return values as SkillProhibitionId[];
 }
 
 function requireString(

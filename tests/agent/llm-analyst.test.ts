@@ -33,6 +33,10 @@ describe("LLM analyst revision", () => {
       deterministicDraft: "grounded draft",
       chartFacts: ["career fact"],
       skillSteps: ["inspect career facts"],
+      skillResponseRules: ["use plain language"],
+      skillConservativeConditions: ["missing career facts"],
+      skillForbiddenAdvice: ["Do not tell the user to resign immediately."],
+      skillCommonQuestionPaths: ["Path: job change"],
       knowledgeSources: ["career source"],
       criticStatus: "passed",
       criticIssues: [],
@@ -46,6 +50,10 @@ describe("LLM analyst revision", () => {
     };
     expect(body.max_tokens).toBe(1_200);
     expect(body.messages?.at(-1)?.content).toContain("500 至 700 个中文字符");
+    expect(body.messages?.at(-1)?.content).toContain("skill 回答规则：\n- use plain language");
+    expect(body.messages?.at(-1)?.content).toContain("skill 保守条件：\n- missing career facts");
+    expect(body.messages?.at(-1)?.content).toContain("skill 禁止建议：\n- Do not tell the user to resign immediately.");
+    expect(body.messages?.at(-1)?.content).toContain("skill 常见问题路径：\n- Path: job change");
     vi.unstubAllGlobals();
   });
 
@@ -61,6 +69,10 @@ describe("LLM analyst revision", () => {
         deterministicDraft: "grounded draft",
         chartFacts: ["career fact"],
         skillSteps: ["inspect career facts"],
+        skillResponseRules: [],
+        skillConservativeConditions: [],
+        skillForbiddenAdvice: [],
+        skillCommonQuestionPaths: [],
         knowledgeSources: ["career source"],
         criticStatus: "passed",
         criticIssues: [],

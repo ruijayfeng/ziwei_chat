@@ -5,13 +5,18 @@ topic: relationship
 requiredFacts:
   - relationship palace
   - life palace
-  - emotional pattern facts
-  - current context
+prohibitionIds:
+  - relationship_manipulation
+  - relationship_fatalism
+  - unsafe_relationship_advice
+  - relationship_outcome_certainty
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getPalaceAnalysis
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Relationship Analysis

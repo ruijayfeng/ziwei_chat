@@ -6,11 +6,19 @@ requiredFacts:
   - life palace
   - major stars
   - key palaces
-  - chart terms
+prohibitionIds:
+  - single_factor_determinism
+  - undisclosed_school_mixing
+  - invented_chart_fact
+  - chart_explanation_prediction
 tools:
   - getCurrentChart
   - summarizeChartFacts
+  - getPalaceAnalysis
+  - getStarAnalysis
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Chart Explanation
@@ -58,7 +66,7 @@ tools:
 - Do not imply that a single star decides the whole chart.
 - Do not mix interpretation schools without disclosure.
 - Do not invent star positions, palaces, transforms, or patterns.
-- Do not turn an explanation into a prediction unless the user asks and tools support it.
+- Do not provide predictions in this workflow; route timing questions to the recent-fortune workflow so matching luck-cycle facts are loaded first.
 
 ## Common Question Paths
 

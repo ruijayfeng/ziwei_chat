@@ -5,6 +5,7 @@ import {
   createInMemoryToolStores,
 } from "../../src/lib/agent/tools";
 import type { CreateChartOutput } from "../../src/lib/domain/chart";
+import { loadSkill } from "../../src/lib/knowledge/skill-loader";
 
 describe("agent tools", () => {
   test("chart tools create, load, and summarize charts with structured results", async () => {
@@ -110,10 +111,16 @@ describe("agent tools", () => {
       skills: [
         {
           skillId: "career",
+          topic: "career",
           version: "1.0.0",
+          tools: ["getCurrentChart"],
           requiredFacts: ["career palace"],
+          prohibitionIds: ["immediate_career_exit"],
           analysisSteps: ["read career palace"],
           responseRules: ["cite chart basis"],
+          conservativeConditions: ["missing chart facts"],
+          forbiddenAdvice: ["do not resign immediately"],
+          commonQuestionPaths: ["career direction"],
           safetyNotes: ["avoid irreversible career commands"],
         },
       ],
@@ -184,6 +191,28 @@ describe("agent tools", () => {
       ok: true,
       data: {
         memoryId: expect.any(String),
+      },
+    });
+  });
+
+  test("returns every executable field from a real loaded skill", async () => {
+    const skill = await loadSkill("relationship");
+    const tools = createAgentTools({
+      stores: createInMemoryToolStores({ skills: [skill] }),
+    });
+
+    await expect(tools.loadSkill({ skillId: "relationship" })).resolves.toMatchObject({
+      ok: true,
+      data: {
+        analysisSteps: skill.analysisSteps,
+        topic: skill.topic,
+        tools: skill.tools,
+        prohibitionIds: skill.prohibitionIds,
+        responseRules: skill.responseRules,
+        conservativeConditions: skill.conservativeConditions,
+        forbiddenAdvice: skill.forbiddenAdvice,
+        commonQuestionPaths: skill.commonQuestionPaths,
+        safetyNotes: skill.safetyNotes,
       },
     });
   });

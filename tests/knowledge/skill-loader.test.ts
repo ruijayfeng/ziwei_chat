@@ -45,37 +45,100 @@ describe("skill loader", () => {
     ).toThrow("Skill bad.md is missing required field: version");
   });
 
-  test("all beta skills define analysis order, conservative boundaries, and common question paths", async () => {
-    const skillIds = [
-      "career",
-      "relationship",
-      "wealth",
-      "personality",
-      "recent_fortune",
-      "chart_explanation",
-    ] as const;
+  test("rejects unknown machine-enforced prohibition ids", () => {
+    expect(() =>
+      parseSkillMarkdown({
+        filePath: "bad-prohibition.md",
+        markdown: "---\nid: career\nversion: 1.0.0\ntopic: career\nrequiredFacts: []\nprohibitionIds: [unknown_rule]\ntools: []\n---\n",
+      }),
+    ).toThrow("Skill bad-prohibition.md has an invalid prohibition id.");
+  });
 
-    for (const skillId of skillIds) {
+  test("all beta skills define analysis order, conservative boundaries, and common question paths", async () => {
+    const contracts = {
+      career: {
+        facts: ["career palace", "life palace", "wealth palace", "current luck cycle"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getLuckCycle", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认官禄宫事实",
+        condition: "resign",
+        prohibition: "resign immediately",
+        prohibitionIds: ["immediate_career_exit", "career_outcome_certainty", "legal_or_retaliation_instruction", "timing_certainty"],
+      },
+      relationship: {
+        facts: ["relationship palace", "life palace"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认夫妻宫事实",
+        condition: "coercion",
+        prohibition: "surveillance",
+        prohibitionIds: ["relationship_manipulation", "relationship_fatalism", "unsafe_relationship_advice", "relationship_outcome_certainty"],
+      },
+      wealth: {
+        facts: ["wealth palace", "career palace", "current luck cycle"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getLuckCycle", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认财帛宫事实",
+        condition: "investing",
+        prohibition: "buy, sell, borrow",
+        prohibitionIds: ["financial_action_instruction", "financial_outcome_certainty", "professional_financial_boundary", "exact_income_prediction"],
+      },
+      personality: {
+        facts: ["life palace", "body palace", "major stars"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getStarAnalysis", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认命宫和身宫事实",
+        condition: "diagnosis",
+        prohibition: "diagnose personality disorders",
+        prohibitionIds: ["clinical_diagnosis", "fixed_personality_label", "fixed_personality_certainty", "harmful_behavior_excuse"],
+      },
+      recent_fortune: {
+        facts: ["life palace", "current luck cycle"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getLuckCycle", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认用户问的是哪一个近期主题",
+        condition: "irreversible decisions",
+        prohibition: "predict accidents",
+        prohibitionIds: ["fear_prediction", "disaster_or_windfall_prediction", "regulated_instruction", "unsupported_lucky_date"],
+      },
+      chart_explanation: {
+        facts: ["life palace", "major stars", "key palaces"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getStarAnalysis", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认用户问的是哪个命盘事实或术语",
+        condition: "chart facts are missing",
+        prohibition: "Do not provide predictions in this workflow",
+        prohibitionIds: ["single_factor_determinism", "undisclosed_school_mixing", "invented_chart_fact", "chart_explanation_prediction"],
+      },
+    } as const;
+
+    for (const [skillId, contract] of Object.entries(contracts) as Array<
+      [keyof typeof contracts, (typeof contracts)[keyof typeof contracts]]
+    >) {
       const skill = await loadSkill(skillId);
 
+      expect(skill.skillId, `${skillId} id`).toBe(skillId);
+      expect(skill.topic, `${skillId} topic`).toBe(skillId);
+      expect(skill.requiredFacts, `${skillId} required facts`).toEqual(contract.facts);
+      expect(skill.tools, `${skillId} tools`).toEqual(contract.tools);
+      expect(skill.prohibitionIds, `${skillId} prohibition ids`).toEqual(contract.prohibitionIds);
+      expect(new Set(skill.prohibitionIds).size, `${skillId} unique prohibition ids`).toBe(skill.prohibitionIds.length);
       expect(skill.analysisSteps.length, `${skillId} analysis steps`).toBeGreaterThanOrEqual(5);
       expect(skill.responseRules.length, `${skillId} response rules`).toBeGreaterThanOrEqual(4);
       expect(skill.safetyNotes.length, `${skillId} safety notes`).toBeGreaterThanOrEqual(3);
-      expect(skill.body, `${skillId} primary facts`).toContain("## Primary Facts");
-      expect(skill.body, `${skillId} auxiliary signals`).toContain("## Auxiliary Signals");
-      expect(skill.body, `${skillId} conservative conditions`).toContain(
-        "## Conservative Conditions",
-      );
-      expect(skill.body, `${skillId} forbidden advice`).toContain("## Forbidden Advice");
-      expect(skill.body, `${skillId} common question paths`).toContain(
-        "## Common Question Paths",
-      );
+      expect(skill.conservativeConditions.length, `${skillId} conservative conditions`).toBeGreaterThanOrEqual(3);
+      expect(skill.forbiddenAdvice.length, `${skillId} forbidden advice`).toBeGreaterThanOrEqual(3);
+      expect(skill.commonQuestionPaths.length, `${skillId} common question paths`).toBeGreaterThanOrEqual(3);
+      expect(skill.analysisSteps[0], `${skillId} first analysis step`).toContain(contract.firstStep);
+      expect(skill.conservativeConditions.join(" "), `${skillId} topic condition`).toContain(contract.condition);
+      expect(skill.forbiddenAdvice.join(" "), `${skillId} topic prohibition`).toContain(contract.prohibition);
+      expect(skill.forbiddenAdvice.some((rule) => /^Do not /i.test(rule)), `${skillId} explicit prohibition`).toBe(true);
       expect(
-        skill.body
-          .split("\n")
-          .filter((line) => line.startsWith("- Path: ")).length,
-        `${skillId} common question path count`,
-      ).toBeGreaterThanOrEqual(3);
+        skill.responseRules.some((rule) => /plain language|terminology|Ziwei terms/i.test(rule)),
+        `${skillId} plain-language rule`,
+      ).toBe(true);
+      expect(
+        skill.responseRules.filter((rule) => /follow-up/i.test(rule)),
+        `${skillId} exactly-one-follow-up rule`,
+      ).toHaveLength(1);
+      expect(
+        skill.responseRules.find((rule) => /follow-up/i.test(rule)),
+        `${skillId} exactly-one-follow-up wording`,
+      ).toMatch(/\b(one|exactly one)\b/i);
     }
   });
 });

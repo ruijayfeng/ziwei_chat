@@ -15,6 +15,10 @@ export type LlmAnalystInput = {
   deterministicDraft: string;
   chartFacts: string[];
   skillSteps: string[];
+  skillResponseRules: string[];
+  skillConservativeConditions: string[];
+  skillForbiddenAdvice: string[];
+  skillCommonQuestionPaths: string[];
   knowledgeSources: string[];
   criticStatus: "not_run" | "passed" | "needs_review";
   criticIssues: string[];
@@ -35,6 +39,10 @@ export async function generateLlmAnalysis({
   deterministicDraft,
   chartFacts,
   skillSteps,
+  skillResponseRules,
+  skillConservativeConditions,
+  skillForbiddenAdvice,
+  skillCommonQuestionPaths,
   knowledgeSources,
   criticStatus,
   criticIssues,
@@ -68,6 +76,18 @@ export async function generateLlmAnalysis({
       "主题 skill 分析步骤：",
       skillSteps.length > 0 ? skillSteps.map((step) => `- ${step}`).join("\n") : "- 暂无",
       "",
+      "skill 回答规则：",
+      formatSkillRules(skillResponseRules),
+      "",
+      "skill 保守条件：",
+      formatSkillRules(skillConservativeConditions),
+      "",
+      "skill 禁止建议：",
+      formatSkillRules(skillForbiddenAdvice),
+      "",
+      "skill 常见问题路径：",
+      formatSkillRules(skillCommonQuestionPaths),
+      "",
       conversationContext ? `最近对话：\n${conversationContext}` : "",
       "",
       "请把上面的命盘事实、skill、RAG 来源作为分析材料，给出综合判断；不要只改写本地草稿。",
@@ -84,6 +104,10 @@ export async function reviseLlmAnalysis({
   deterministicDraft,
   chartFacts,
   skillSteps,
+  skillResponseRules,
+  skillConservativeConditions,
+  skillForbiddenAdvice,
+  skillCommonQuestionPaths,
   knowledgeSources,
   criticStatus,
   criticIssues,
@@ -127,6 +151,18 @@ export async function reviseLlmAnalysis({
       "主题 skill 分析步骤：",
       skillSteps.length > 0 ? skillSteps.map((step) => `- ${step}`).join("\n") : "- 暂无",
       "",
+      "skill 回答规则：",
+      formatSkillRules(skillResponseRules),
+      "",
+      "skill 保守条件：",
+      formatSkillRules(skillConservativeConditions),
+      "",
+      "skill 禁止建议：",
+      formatSkillRules(skillForbiddenAdvice),
+      "",
+      "skill 常见问题路径：",
+      formatSkillRules(skillCommonQuestionPaths),
+      "",
       conversationContext ? `最近对话：\n${conversationContext}` : "",
       "",
       "你上一版回答没有通过最终 critic。请只根据下面问题修订，不要新增命盘事实：",
@@ -142,6 +178,10 @@ export async function reviseLlmAnalysis({
     idleTimeoutMs: 10_000,
     maxTokens: 800,
   });
+}
+
+function formatSkillRules(rules: string[]) {
+  return rules.length > 0 ? rules.map((rule) => `- ${rule}`).join("\n") : "- 暂无";
 }
 
 function buildConversationPrompt({

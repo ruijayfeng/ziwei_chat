@@ -6,14 +6,20 @@ requiredFacts:
   - career palace
   - life palace
   - wealth palace
-  - migration palace
   - current luck cycle
+prohibitionIds:
+  - immediate_career_exit
+  - career_outcome_certainty
+  - legal_or_retaliation_instruction
+  - timing_certainty
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getPalaceAnalysis
   - getLuckCycle
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Career Analysis

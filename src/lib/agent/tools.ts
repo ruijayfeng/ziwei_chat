@@ -14,6 +14,7 @@ import type {
   CreateChartInput,
   CreateChartOutput,
 } from "../domain/chart";
+import type { SkillProhibitionId } from "../knowledge/skill-loader";
 import type { ChartPersistence } from "../db/chart-persistence";
 import { createChart as createChartWithIztro } from "../chart/create-chart";
 import { summarizeChart } from "../chart/summarize-chart";
@@ -56,10 +57,16 @@ type LuckCycleInput = {
 
 export type SkillOutput = {
   skillId: string;
+  topic: string;
   version: string;
+  tools: string[];
   requiredFacts: string[];
+  prohibitionIds: SkillProhibitionId[];
   analysisSteps: string[];
   responseRules: string[];
+  conservativeConditions: string[];
+  forbiddenAdvice: string[];
+  commonQuestionPaths: string[];
   safetyNotes: string[];
 };
 

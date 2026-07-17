@@ -8,6 +8,7 @@
 import type { CritiqueResult, Intent, SafetyLevel } from "../domain/analysis";
 import type { ChartFact } from "../domain/chart";
 import type { KnowledgeSource } from "../knowledge/search";
+import type { SkillProhibitionId } from "../knowledge/skill-loader";
 
 type RunResponseCriticInput = {
   intent: Intent | string;
@@ -16,6 +17,7 @@ type RunResponseCriticInput = {
   chartFacts: ChartFact[];
   knowledgeSources: KnowledgeSource[];
   safetyLevel: SafetyLevel;
+  prohibitionIds?: SkillProhibitionId[];
 };
 
 const seriousIntents = new Set([
@@ -87,6 +89,7 @@ export function runResponseCritic({
   toolsUsed,
   chartFacts,
   safetyLevel,
+  prohibitionIds = [],
 }: RunResponseCriticInput): CritiqueResult {
   const issues: string[] = [];
 
@@ -109,8 +112,12 @@ export function runResponseCritic({
     issues.push("Response mentions chart facts that tools did not return.");
   }
 
-  if (prohibitedAdviceTerms.some((term) => draft.includes(term))) {
+  if (prohibitedAdviceTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
     issues.push("Response contains prohibited high-stakes advice.");
+  }
+
+  if (conflictsWithSkillProhibitions(draft, prohibitionIds)) {
+    issues.push("Response conflicts with the active skill's forbidden advice.");
   }
 
   const followUpCount = countVisibleQuestions(draft);
@@ -118,7 +125,7 @@ export function runResponseCritic({
     issues.push("Response must include exactly one useful follow-up question.");
   }
 
-  if (safetyLevel === "refusal" && prohibitedAdviceTerms.some((term) => draft.includes(term))) {
+  if (safetyLevel === "refusal" && prohibitedAdviceTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
     issues.push("Refusal-level response contains prohibited instruction language.");
   }
 
@@ -129,6 +136,50 @@ export function runResponseCritic({
   };
 }
 
+const skillProhibitionPatterns: Record<SkillProhibitionId, RegExp[]> = {
+  immediate_career_exit: [/立即辞职|马上辞职/],
+  career_outcome_certainty: [/保证.{0,8}(升职|录用|裁员|收入)|一定.{0,8}(升职|录用|裁员|涨薪)/],
+  legal_or_retaliation_instruction: [/起诉|报复上司|职场报复|伪造证据/],
+  timing_certainty: [/一定会在|必然会在|确定会在/],
+  relationship_manipulation: [/查看.{0,4}(手机|聊天记录)|监视|操控|试探对方|向对方施压/],
+  relationship_fatalism: [/命中注定|天生一对|唯一正缘/],
+  unsafe_relationship_advice: [/忍受.{0,6}(暴力|虐待)|留在.{0,6}(暴力|虐待)/],
+  relationship_outcome_certainty: [/一定.{0,6}(复合|结婚|离婚|出轨|怀孕)/],
+  financial_action_instruction: [/买入|卖出|借钱|加杠杆|赌博|全仓/],
+  financial_outcome_certainty: [/保证.{0,8}(赚钱|盈利|回本|成功)|一定.{0,8}(暴富|亏损|发财)/],
+  professional_financial_boundary: [/替代.{0,8}(财务|税务|法律).{0,4}(建议|意见)|无需咨询.{0,6}(会计师|律师|理财师)/],
+  exact_income_prediction: [/(?:收入|年薪|月薪).{0,8}(?:达到|会有|是)\s*\d+/],
+  clinical_diagnosis: [/诊断.{0,8}(人格障碍|抑郁|ADHD|创伤)|你有.{0,5}(人格障碍|抑郁症|ADHD)/i],
+  fixed_personality_label: [/你就是.{0,8}(自私|冷漠|懒惰|控制狂)|天生.{0,8}(自私|冷漠|懒惰)/],
+  fixed_personality_certainty: [/性格.{0,8}(永远|绝不|无法).{0,5}(改变|变化)|你永远不会改变/],
+  harmful_behavior_excuse: [/因为命盘.{0,12}(伤害|控制|欺骗).{0,5}(没错|合理|正常)/],
+  fear_prediction: [/大祸临头|血光之灾|厄运将至/],
+  disaster_or_windfall_prediction: [/(?:会|必有|将有).{0,5}(事故|死亡|重病|诉讼|横财)/],
+  regulated_instruction: [/应该.{0,6}(服药|停药|起诉|买入|卖出)|治疗方案|法律策略/],
+  unsupported_lucky_date: [/(?:\d{1,2}月\d{1,2}日|\d{4}年\d{1,2}月\d{1,2}日).{0,6}(吉日|凶日|最幸运|最倒霉)/],
+  single_factor_determinism: [/单凭.{0,8}(一颗星|一个宫位).{0,8}(决定|断定)|一颗星决定/],
+  undisclosed_school_mixing: [/混合.{0,8}(流派|派别).{0,6}(不说明|无需说明)|各流派结论都一样/],
+  invented_chart_fact: [/假设你.{0,8}(命宫|夫妻宫|财帛宫|官禄宫).{0,8}(有|落)|就当作.{0,8}(化禄|化权|化科|化忌)/],
+  chart_explanation_prediction: [/我预测|将会发生|注定会|一定会发生/],
+};
+
+function conflictsWithSkillProhibitions(draft: string, prohibitionIds: SkillProhibitionId[]) {
+  return prohibitionIds.some((id) =>
+    skillProhibitionPatterns[id].some((pattern) => hasUnqualifiedMatch(draft, pattern)),
+  );
+}
+
+function hasUnqualifiedMatch(draft: string, pattern: RegExp) {
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+  const matcher = new RegExp(pattern.source, flags);
+  for (const match of draft.matchAll(matcher)) {
+    if (match.index === undefined) continue;
+    const prefix = qualifierPrefix(draft, match.index);
+    if (!hasNearbyQualifier(prefix)) return true;
+  }
+  return false;
+}
+
 function countVisibleQuestions(draft: string) {
   return (draft.match(/[?？]/g) ?? []).length;
 }
@@ -137,7 +188,7 @@ function containsUnqualifiedTerm(draft: string, term: string) {
   let index = draft.indexOf(term);
 
   while (index !== -1) {
-    const prefix = draft.slice(Math.max(0, index - 12), index);
+    const prefix = qualifierPrefix(draft, index);
     if (!hasNearbyQualifier(prefix)) {
       return true;
     }
@@ -152,6 +203,13 @@ function hasNearbyQualifier(prefix: string) {
   return ["不", "不能", "不是", "并非", "不要", "避免", "不宜", "未必", "难以", "无法"].some((term) =>
     prefix.includes(term),
   );
+}
+
+function qualifierPrefix(draft: string, index: number) {
+  const prefix = draft.slice(Math.max(0, index - 12), index);
+  const boundaries = [...prefix.matchAll(/[，。！？；,!?;\n]/g)];
+  const boundary = boundaries.at(-1)?.index ?? -1;
+  return prefix.slice(boundary + 1);
 }
 
 function mentionsUnknownChartFact(draft: string, chartFacts: ChartFact[]) {

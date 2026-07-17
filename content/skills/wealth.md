@@ -5,14 +5,20 @@ topic: wealth
 requiredFacts:
   - wealth palace
   - career palace
-  - life palace
   - current luck cycle
+prohibitionIds:
+  - financial_action_instruction
+  - financial_outcome_certainty
+  - professional_financial_boundary
+  - exact_income_prediction
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getPalaceAnalysis
   - getLuckCycle
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Wealth Analysis
@@ -43,6 +49,7 @@ tools:
 ## Response Rules
 
 - Start with the practical money-pattern conclusion.
+- Explain chart terms in plain language.
 - Avoid investment commands.
 - Ground advice in chart facts and uncertainty.
 - Clearly separate wealth tendency from financial advice.

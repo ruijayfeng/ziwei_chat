@@ -6,13 +6,19 @@ requiredFacts:
   - life palace
   - body palace
   - major stars
-  - key transforms
+prohibitionIds:
+  - clinical_diagnosis
+  - fixed_personality_label
+  - fixed_personality_certainty
+  - harmful_behavior_excuse
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getPalaceAnalysis
   - getStarAnalysis
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Personality Analysis

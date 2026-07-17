@@ -56,6 +56,10 @@ type StreamingChartAnswer = {
     deterministicDraft: string;
     chartFacts: string[];
     skillSteps: string[];
+    skillResponseRules: string[];
+    skillConservativeConditions: string[];
+    skillForbiddenAdvice: string[];
+    skillCommonQuestionPaths: string[];
     knowledgeSources: string[];
     criticStatus: "not_run" | "passed" | "needs_review";
     criticIssues: string[];
@@ -69,6 +73,7 @@ type StreamingChartAnswer = {
     chartFacts: ChartFact[];
     knowledgeSources: KnowledgeSource[];
     safetyLevel: ReturnType<typeof buildAnalysisPlan>["safetyLevel"];
+    prohibitionIds: import("../../../lib/knowledge/skill-loader").SkillProhibitionId[];
   };
 };
 
@@ -244,6 +249,10 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
         deterministicDraft: generalChatFallback,
         chartFacts: [],
         skillSteps: [],
+        skillResponseRules: [],
+        skillConservativeConditions: [],
+        skillForbiddenAdvice: [],
+        skillCommonQuestionPaths: [],
         knowledgeSources: [],
         criticStatus: "not_run",
         criticIssues: [],
@@ -256,6 +265,7 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
         chartFacts: [],
         knowledgeSources: [],
         safetyLevel: route.safetyLevel,
+        prohibitionIds: [],
       },
     });
   }
@@ -421,6 +431,7 @@ async function answerWithChartContext({
     chartFacts,
     knowledgeSources,
     safetyLevel: agentPlan.safetyLevel,
+    prohibitionIds: skill?.prohibitionIds ?? [],
   });
   await recordRouteToolEventToStores(
     stores,
@@ -467,6 +478,10 @@ async function answerWithChartContext({
         deterministicDraft: deterministicContent,
         chartFacts: chartFacts.map(formatChartFact),
         skillSteps: skill?.analysisSteps ?? [],
+        skillResponseRules: skill?.responseRules ?? [],
+        skillConservativeConditions: skill?.conservativeConditions ?? [],
+        skillForbiddenAdvice: skill?.forbiddenAdvice ?? [],
+        skillCommonQuestionPaths: skill?.commonQuestionPaths ?? [],
         knowledgeSources: knowledgeSources.map(formatKnowledgeSource),
         criticStatus: critique.passed ? "passed" : "needs_review",
         criticIssues: critique.issues,
@@ -488,6 +503,7 @@ async function answerWithChartContext({
         chartFacts,
         knowledgeSources,
         safetyLevel: agentPlan.safetyLevel,
+        prohibitionIds: skill?.prohibitionIds ?? [],
       },
     };
   }
@@ -700,6 +716,7 @@ function streamModelAndPersist({
         chartFacts: postCriticContext.chartFacts,
         knowledgeSources: postCriticContext.knowledgeSources,
         safetyLevel: postCriticContext.safetyLevel,
+        prohibitionIds: postCriticContext.prohibitionIds,
       });
       let modelCriticLatencyMs = Date.now() - modelCriticStartedAt;
       let revisionAttempted = false;
@@ -743,6 +760,7 @@ function streamModelAndPersist({
             chartFacts: postCriticContext.chartFacts,
             knowledgeSources: postCriticContext.knowledgeSources,
             safetyLevel: postCriticContext.safetyLevel,
+            prohibitionIds: postCriticContext.prohibitionIds,
           });
           modelCriticLatencyMs += Date.now() - modelCriticStartedAt;
         } else {
@@ -1259,10 +1277,6 @@ function toUuid(value: string | undefined) {
   return match?.[0];
 }
 
-function toChartTopic(intent: Intent): ChartTopic {
-  return intent === "chart_explanation" ? "general" : (intent as ChartTopic);
-}
-
 function formatChartFact(fact: ChartFact) {
   const starText = fact.stars.length > 0 ? `主星 ${fact.stars.join("、")}` : "暂无主星";
   const transformText =
@@ -1273,6 +1287,10 @@ function formatChartFact(fact: ChartFact) {
 
 function formatKnowledgeSource(source: KnowledgeSource) {
   return `${source.title}（${source.source} / ${source.school}）：${source.excerpt}`;
+}
+
+function toChartTopic(intent: Intent): ChartTopic {
+  return intent === "chart_explanation" ? "general" : (intent as ChartTopic);
 }
 
 function buildConclusion(topic: ChartTopic) {

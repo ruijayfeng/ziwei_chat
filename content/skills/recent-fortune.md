@@ -4,14 +4,19 @@ version: 1.0.0
 topic: recent_fortune
 requiredFacts:
   - life palace
-  - relevant topic palace
   - current luck cycle
-  - current date range
+prohibitionIds:
+  - fear_prediction
+  - disaster_or_windfall_prediction
+  - regulated_instruction
+  - unsupported_lucky_date
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getLuckCycle
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Recent Fortune Analysis
@@ -42,6 +47,7 @@ tools:
 ## Response Rules
 
 - Start with the near-term practical conclusion.
+- Explain timing and chart terms in plain language.
 - Use timing as tendency, not prediction certainty.
 - Mention only chart bases that tools returned.
 - Avoid exact dates unless a deterministic tool provided them.
