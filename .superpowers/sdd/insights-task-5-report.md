@@ -71,3 +71,12 @@ Result: 64 files passed, 1 skipped; 439 tests passed, 2 skipped.
 ## Residual Concern
 
 The project intentionally has no React DOM test harness. The coordinator executes the same source/cache/API pipeline used by the effect and is covered through dependency injection; route source contracts cover its JSX wiring.
+
+## Final Review Closure
+
+- Added `reportMatchesAggregation`: exact/stale cache reports and API reports must reference only current aggregation candidates; paragraphs require one known source and patterns require two distinct known sources.
+- Invalid provenance cache entries are cleared before returning a retryable integrity error, so retry can generate a fresh report.
+- Added `insightPresentationOwned`: deletion, profile replacement, workspace/model-settings bootstrap, and active chat streaming hide prior report state immediately.
+- RED: focused controller tests failed for unknown provenance acceptance and missing workspace ownership gate.
+- GREEN: focused controller/cache/source/page gate passed 51/51; typecheck, scoped ESLint, and diff check passed.
+- Full suite passed 64 files / 1 skipped and 442 tests / 2 skipped.
