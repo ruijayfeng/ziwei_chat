@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 
-import type { InsightAggregation, InsightReport } from "../../lib/insights/contracts";
+import type { InsightAggregation, InsightReport, InsightSourceBundle } from "../../lib/insights/contracts";
 import { aggregateInsightSources, insightEligibility } from "../../lib/insights/source";
 import { parseInsightReport, readInsightCache, writeInsightCache, type InsightCacheRead } from "../../lib/ui/insight-cache";
-import { loadInsightSourceBundle } from "../../lib/ui/insight-sources";
-import { modelSettingsRequestFromDraft, modelSettingsStatus } from "../../lib/ui/model-settings";
+import { loadInsightSourceBundle, type CurrentInsightSession } from "../../lib/ui/insight-sources";
+import { modelSettingsRequestFromDraft, modelSettingsStatus, type ModelSettingsDraft } from "../../lib/ui/model-settings";
+import type { ChatSessionMessage } from "../../lib/ui/chat-session";
 import { useWorkspace } from "../workspace/workspace-provider";
 import { InsightsEmptyState } from "./insights-empty-state";
 import { PatternList } from "./pattern-list";
@@ -21,7 +22,7 @@ export type InsightControllerState =
   | { status: "stale"; profileId: string; aggregation: InsightAggregation; report: InsightReport }
   | { status: "error"; profileId: string; error: InsightControllerError };
 
-type InsightControllerAction =
+export type InsightControllerAction =
   | { type: "load_started"; profileId: string }
   | { type: "insufficient"; profileId: string; aggregation: InsightAggregation }
   | { type: "cache_hit"; profileId: string; aggregation: InsightAggregation; report: InsightReport }
@@ -51,65 +52,146 @@ export function resolveInsightCacheState(aggregation: InsightAggregation, cache:
   return { status: "generate" };
 }
 
+type FetchImplementation = typeof fetch;
+
+export type InsightLifecycleDependencies = {
+  loadSourceBundle: (profileId: string, currentSession: CurrentInsightSession | null, fetchImpl: FetchImplementation, signal: AbortSignal) => Promise<InsightSourceBundle>;
+  aggregateSources: (sourceBundle: InsightSourceBundle) => Promise<InsightAggregation>;
+  readCache: (profileId: string, sourceFingerprint: string) => InsightCacheRead;
+  writeCache: (profileId: string, report: InsightReport) => boolean;
+  fetchImpl: FetchImplementation;
+  modelSettingsReady: (settings: ModelSettingsDraft) => boolean;
+  modelSettingsRequest: (settings: ModelSettingsDraft) => unknown;
+  emit: (action: InsightControllerAction) => void;
+};
+
+export type InsightLifecycleInput = {
+  profileId: string;
+  currentSession: CurrentInsightSession | null;
+  modelSettings: ModelSettingsDraft;
+  refreshAuthorizationFingerprint: string | null;
+  signal: AbortSignal;
+  isCurrent: () => boolean;
+};
+
+const insightLifecycleDependencies: Omit<InsightLifecycleDependencies, "emit"> = {
+  loadSourceBundle: loadInsightSourceBundle,
+  aggregateSources: aggregateInsightSources,
+  readCache: readInsightCache,
+  writeCache: writeInsightCache,
+  fetchImpl: fetch,
+  modelSettingsReady: (settings) => modelSettingsStatus(settings).ready,
+  modelSettingsRequest: modelSettingsRequestFromDraft,
+};
+
+export async function runInsightLifecycle(input: InsightLifecycleInput, dependencies: InsightLifecycleDependencies): Promise<void> {
+  const { profileId, currentSession, modelSettings, refreshAuthorizationFingerprint, signal, isCurrent } = input;
+  const emit = (action: InsightControllerAction) => { if (isCurrent()) dependencies.emit(action); };
+  try {
+    const sourceBundle = await dependencies.loadSourceBundle(profileId, currentSession, dependencies.fetchImpl, signal);
+    if (!isCurrent()) return;
+    const aggregation = await dependencies.aggregateSources(sourceBundle);
+    if (!isCurrent()) return;
+    const resolution = resolveInsightCacheState(aggregation, dependencies.readCache(profileId, aggregation.sourceFingerprint));
+    if (resolution.status === "insufficient") return emit({ type: "insufficient", profileId, aggregation });
+    if (resolution.status === "ready") return emit({ type: "cache_hit", profileId, aggregation, report: resolution.report });
+    if (resolution.status === "stale" && refreshAuthorizationFingerprint !== aggregation.sourceFingerprint) {
+      return emit({ type: "stale", profileId, aggregation, report: resolution.report });
+    }
+    if (!dependencies.modelSettingsReady(modelSettings)) {
+      return emit({ type: "failed", profileId, error: { message: "请先完成模型设置，再生成新的洞见。", canRetry: false, settingsRequired: true } });
+    }
+    const response = await dependencies.fetchImpl("/api/insights", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({ sourceBundle: aggregation.sources, modelSettings: dependencies.modelSettingsRequest(modelSettings) }),
+    });
+    const payload = await readJson(response);
+    if (!isCurrent()) return;
+    if (response.ok) {
+      const report = parseInsightReport(payload);
+      if (!report || report.sourceFingerprint !== aggregation.sourceFingerprint) {
+        return emit({ type: "failed", profileId, error: { message: "洞见响应未通过完整性检查，请重试。", canRetry: true } });
+      }
+      try {
+        dependencies.writeCache(profileId, report);
+      } catch {
+        // Cache is best-effort; an approved report remains safe to render.
+      }
+      return emit({ type: "generated", profileId, aggregation, report });
+    }
+    const error = parseInsightApiError(payload);
+    if (error.code === "INSUFFICIENT_HISTORY") return emit({ type: "insufficient", profileId, aggregation });
+    return emit({ type: "failed", profileId, error: error.code === "MODEL_SETTINGS_REQUIRED"
+      ? { message: error.message, canRetry: false, settingsRequired: true }
+      : { message: error.message, canRetry: error.canRetry } });
+  } catch (error) {
+    if (!isCurrent()) return;
+    dependencies.emit({ type: "failed", profileId, error: { message: error instanceof Error ? error.message : "洞见读取失败，请重试。", canRetry: true } });
+  }
+}
+
+export function currentInsightSessionSnapshot(
+  conversationId: string,
+  messages: ChatSessionMessage[],
+): CurrentInsightSession | null {
+  if (!conversationId) return null;
+  const completed = messages.filter((message) =>
+    (message.role === "user" || message.role === "assistant")
+    && message.status === "complete"
+    && Boolean(message.content.trim()),
+  ).map(({ id, role, content }) => ({ id, role, content: content.trim() }));
+  return completed.length ? { conversationId, messages: completed } : null;
+}
+
+function currentInsightSessionSnapshotFromKey(
+  conversationId: string,
+  snapshotKey: string,
+) {
+  if (!conversationId) return null;
+  const messages = JSON.parse(snapshotKey) as Array<Pick<ChatSessionMessage, "id" | "role" | "content">>;
+  return messages.length ? { conversationId, messages } : null;
+}
+
 export function InsightsController() {
   const { ready, profileId, conversationId, chatSession, modelSettings, modelSettingsLoaded, dataDeleting } = useWorkspace();
   const [state, dispatch] = useReducer(insightControllerReducer, initialInsightControllerState);
-  const [refreshRevision, setRefreshRevision] = useState(0);
+  const [refreshAuthorizationFingerprint, setRefreshAuthorizationFingerprint] = useState<string | null>(null);
+  const [retryRevision, setRetryRevision] = useState(0);
   const requestRevision = useRef(0);
-  const currentSession = useMemo(() => conversationId ? { conversationId, messages: chatSession.messages } : null, [chatSession.messages, conversationId]);
+  const completedSessionKey = useMemo(() => JSON.stringify(chatSession.messages
+    .filter((message) => (message.role === "user" || message.role === "assistant") && message.status === "complete" && Boolean(message.content.trim()))
+    .map(({ id, role, content }) => ({ id, role, content: content.trim() }))), [chatSession.messages]);
+  const currentSession = useMemo(
+    () => currentInsightSessionSnapshotFromKey(conversationId, completedSessionKey),
+    [completedSessionKey, conversationId],
+  );
+  const staleFingerprint = state.status === "stale" ? state.aggregation.sourceFingerprint : null;
 
-  const refresh = useCallback(() => setRefreshRevision((revision) => revision + 1), []);
+  const refresh = useCallback(() => {
+    if (staleFingerprint) setRefreshAuthorizationFingerprint(staleFingerprint);
+    setRetryRevision((revision) => revision + 1);
+  }, [staleFingerprint]);
 
   useEffect(() => {
-    if (!ready || !profileId || !modelSettingsLoaded || dataDeleting) return;
+    if (!ready || !profileId || !modelSettingsLoaded || dataDeleting || chatSession.activeRequestId) return;
     const revision = ++requestRevision.current;
     const controller = new AbortController();
     const isCurrent = () => !controller.signal.aborted && requestRevision.current === revision;
     dispatch({ type: "load_started", profileId });
 
-    void (async () => {
-      try {
-        const sourceBundle = await loadInsightSourceBundle(profileId, currentSession, fetch, controller.signal);
-        if (!isCurrent()) return;
-        const aggregation = await aggregateInsightSources(sourceBundle);
-        if (!isCurrent()) return;
-        const resolution = resolveInsightCacheState(aggregation, readInsightCache(profileId, aggregation.sourceFingerprint));
-        if (resolution.status === "insufficient") return dispatch({ type: "insufficient", profileId, aggregation });
-        if (resolution.status === "ready") return dispatch({ type: "cache_hit", profileId, aggregation, report: resolution.report });
-        if (resolution.status === "stale" && refreshRevision === 0) return dispatch({ type: "stale", profileId, aggregation, report: resolution.report });
-
-        if (!modelSettingsStatus(modelSettings).ready) {
-          return dispatch({ type: "failed", profileId, error: { message: "请先完成模型设置，再生成新的洞见。", canRetry: false, settingsRequired: true } });
-        }
-        const response = await fetch("/api/insights", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({ sourceBundle: aggregation.sources, modelSettings: modelSettingsRequestFromDraft(modelSettings) }),
-        });
-        const payload = await readJson(response);
-        if (!isCurrent()) return;
-        if (response.ok) {
-          const report = parseInsightReport(payload);
-          if (!report || report.sourceFingerprint !== aggregation.sourceFingerprint) {
-            return dispatch({ type: "failed", profileId, error: { message: "洞见响应未通过完整性检查，请重试。", canRetry: true } });
-          }
-          writeInsightCache(profileId, report);
-          return dispatch({ type: "generated", profileId, aggregation, report });
-        }
-        const error = parseInsightApiError(payload);
-        if (error.code === "INSUFFICIENT_HISTORY") return dispatch({ type: "insufficient", profileId, aggregation });
-        return dispatch({ type: "failed", profileId, error: error.code === "MODEL_SETTINGS_REQUIRED"
-          ? { message: error.message, canRetry: false, settingsRequired: true }
-          : { message: error.message, canRetry: error.canRetry } });
-      } catch (error) {
-        if (!isCurrent()) return;
-        dispatch({ type: "failed", profileId, error: { message: error instanceof Error ? error.message : "洞见读取失败，请重试。", canRetry: true } });
-      }
-    })();
+    void runInsightLifecycle({
+      profileId,
+      currentSession,
+      modelSettings,
+      refreshAuthorizationFingerprint,
+      signal: controller.signal,
+      isCurrent,
+    }, { ...insightLifecycleDependencies, emit: dispatch });
 
     return () => controller.abort();
-  }, [currentSession, dataDeleting, modelSettings, modelSettingsLoaded, profileId, ready, refreshRevision]);
+  }, [chatSession.activeRequestId, currentSession, dataDeleting, modelSettings, modelSettingsLoaded, profileId, ready, refreshAuthorizationFingerprint, retryRevision]);
 
   if (state.status === "loading") return <p role="status" aria-live="polite" className="text-sm text-muted-foreground">正在核对可用对话记录。</p>;
   if (state.status === "insufficient") return <InsightsEmptyState eligibility={insightEligibility(state.aggregation)} />;

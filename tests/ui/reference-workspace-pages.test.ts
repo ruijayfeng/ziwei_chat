@@ -39,8 +39,13 @@ describe("reference workspace pages", () => {
     expect(weeklyLetter).toContain("<InsightSources");
     expect(patterns).toContain("<article");
     expect(patterns).toContain("<InsightSources");
+    expect(patterns).toContain("size-10");
+    expect(patterns).toContain("topicPresentation");
     expect(patterns).not.toContain("<button");
     expect(patterns).not.toContain("<a ");
+    const sources = source("src/components/insights/insight-sources.tsx");
+    expect(sources).toContain("source.createdAt ? <time");
+    expect(sources).toContain("当前浏览器会话，时间未持久化");
     expect(workspaceData).not.toContain("WEEKLY_LETTER");
     expect(workspaceData).not.toContain("PATTERNS");
     expect(workspaceData).not.toContain("MONTHLY_REFLECTION");

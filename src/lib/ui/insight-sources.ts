@@ -12,7 +12,7 @@ type FetchImplementation = (input: RequestInfo | URL, init?: RequestInit) => Pro
 
 export type CurrentInsightSession = {
   conversationId: string;
-  messages: ChatSessionMessage[];
+  messages: Array<Pick<ChatSessionMessage, "id" | "role" | "content"> & Record<string, unknown>>;
 };
 
 const MAX_CONVERSATIONS = 20;
@@ -116,16 +116,16 @@ function mergeCurrentSession(
 function currentSessionConversation(currentSession: CurrentInsightSession | null): InsightSourceConversation | null {
   if (!currentSession?.conversationId.trim()) return null;
   const conversationId = normalizeSourceId(currentSession.conversationId);
-  const messages = currentSession.messages
-    .filter((message): message is ChatSessionMessage & { role: "user" | "assistant" } =>
-      (message.role === "user" || message.role === "assistant") && Boolean(message.content.trim()),
-    )
-    .map((message): InsightSourceMessage => ({
+  const messages: InsightSourceMessage[] = [];
+  for (const message of currentSession.messages) {
+    if ((message.role !== "user" && message.role !== "assistant") || !message.content.trim()) continue;
+    messages.push({
       id: normalizeSourceId(message.id),
       role: message.role,
       content: message.content.trim(),
       createdAt: "",
-    }));
+    });
+  }
   if (!messages.length) return null;
   return {
     id: conversationId,
