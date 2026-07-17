@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import type { InsightAggregation, InsightReport, InsightSourceBundle } from "../../lib/insights/contracts";
 import { aggregateInsightSources, insightEligibility } from "../../lib/insights/source";
-import { parseInsightReport, readInsightCache, writeInsightCache, type InsightCacheRead } from "../../lib/ui/insight-cache";
+import { clearInsightCache, parseInsightReport, readInsightCache, writeInsightCache, type InsightCacheRead } from "../../lib/ui/insight-cache";
 import { loadInsightSourceBundle, type CurrentInsightSession } from "../../lib/ui/insight-sources";
 import { modelSettingsRequestFromDraft, modelSettingsStatus, type ModelSettingsDraft } from "../../lib/ui/model-settings";
 import type { ChatSessionMessage } from "../../lib/ui/chat-session";
@@ -52,6 +52,32 @@ export function resolveInsightCacheState(aggregation: InsightAggregation, cache:
   return { status: "generate" };
 }
 
+export function reportMatchesAggregation(report: InsightReport, aggregation: InsightAggregation) {
+  const known = new Set(aggregation.candidates.map((candidate) => candidate.sourceId));
+  const hasKnown = (sourceIds: string[], minimum: number) =>
+    new Set(sourceIds.filter((sourceId) => known.has(sourceId))).size >= minimum
+    && sourceIds.every((sourceId) => known.has(sourceId));
+  return report.weeklyLetter.paragraphs.every((paragraph) => hasKnown(paragraph.sourceIds, 1))
+    && report.patterns.every((pattern) => hasKnown(pattern.sourceIds, 2));
+}
+
+type InsightWorkspaceOwnership = {
+  ready: boolean;
+  profileId: string;
+  modelSettingsLoaded: boolean;
+  dataDeleting: boolean;
+  activeRequestId: string | null;
+};
+
+export function insightPresentationOwned(state: InsightControllerState, workspace: InsightWorkspaceOwnership) {
+  return workspace.ready
+    && workspace.modelSettingsLoaded
+    && !workspace.dataDeleting
+    && !workspace.activeRequestId
+    && Boolean(workspace.profileId)
+    && state.profileId === workspace.profileId;
+}
+
 type FetchImplementation = typeof fetch;
 
 export type InsightLifecycleDependencies = {
@@ -59,6 +85,7 @@ export type InsightLifecycleDependencies = {
   aggregateSources: (sourceBundle: InsightSourceBundle) => Promise<InsightAggregation>;
   readCache: (profileId: string, sourceFingerprint: string) => InsightCacheRead;
   writeCache: (profileId: string, report: InsightReport) => boolean;
+  clearCache: (profileId: string) => boolean;
   fetchImpl: FetchImplementation;
   modelSettingsReady: (settings: ModelSettingsDraft) => boolean;
   modelSettingsRequest: (settings: ModelSettingsDraft) => unknown;
@@ -79,6 +106,7 @@ const insightLifecycleDependencies: Omit<InsightLifecycleDependencies, "emit"> =
   aggregateSources: aggregateInsightSources,
   readCache: readInsightCache,
   writeCache: writeInsightCache,
+  clearCache: clearInsightCache,
   fetchImpl: fetch,
   modelSettingsReady: (settings) => modelSettingsStatus(settings).ready,
   modelSettingsRequest: modelSettingsRequestFromDraft,
@@ -94,7 +122,17 @@ export async function runInsightLifecycle(input: InsightLifecycleInput, dependen
     if (!isCurrent()) return;
     const resolution = resolveInsightCacheState(aggregation, dependencies.readCache(profileId, aggregation.sourceFingerprint));
     if (resolution.status === "insufficient") return emit({ type: "insufficient", profileId, aggregation });
-    if (resolution.status === "ready") return emit({ type: "cache_hit", profileId, aggregation, report: resolution.report });
+    if (resolution.status === "ready") {
+      if (reportMatchesAggregation(resolution.report, aggregation)) {
+        return emit({ type: "cache_hit", profileId, aggregation, report: resolution.report });
+      }
+      dependencies.clearCache(profileId);
+      return emit({ type: "failed", profileId, error: { message: "缓存洞见的来源已失效，请重试。", canRetry: true } });
+    }
+    if (resolution.status === "stale" && !reportMatchesAggregation(resolution.report, aggregation)) {
+      dependencies.clearCache(profileId);
+      return emit({ type: "failed", profileId, error: { message: "缓存洞见的来源已失效，请重试。", canRetry: true } });
+    }
     if (resolution.status === "stale" && refreshAuthorizationFingerprint !== aggregation.sourceFingerprint) {
       return emit({ type: "stale", profileId, aggregation, report: resolution.report });
     }
@@ -111,7 +149,7 @@ export async function runInsightLifecycle(input: InsightLifecycleInput, dependen
     if (!isCurrent()) return;
     if (response.ok) {
       const report = parseInsightReport(payload);
-      if (!report || report.sourceFingerprint !== aggregation.sourceFingerprint) {
+      if (!report || report.sourceFingerprint !== aggregation.sourceFingerprint || !reportMatchesAggregation(report, aggregation)) {
         return emit({ type: "failed", profileId, error: { message: "洞见响应未通过完整性检查，请重试。", canRetry: true } });
       }
       try {
@@ -193,6 +231,15 @@ export function InsightsController() {
     return () => controller.abort();
   }, [chatSession.activeRequestId, currentSession, dataDeleting, modelSettings, modelSettingsLoaded, profileId, ready, refreshAuthorizationFingerprint, retryRevision]);
 
+  if (!insightPresentationOwned(state, {
+    ready,
+    profileId,
+    modelSettingsLoaded,
+    dataDeleting,
+    activeRequestId: chatSession.activeRequestId,
+  })) {
+    return <p role="status" aria-live="polite" className="text-sm text-muted-foreground">正在核对可用对话记录。</p>;
+  }
   if (state.status === "loading") return <p role="status" aria-live="polite" className="text-sm text-muted-foreground">正在核对可用对话记录。</p>;
   if (state.status === "insufficient") return <InsightsEmptyState eligibility={insightEligibility(state.aggregation)} />;
   if (state.status === "error") return <InsightError error={state.error} onRetry={refresh} />;

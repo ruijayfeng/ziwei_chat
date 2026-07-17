@@ -9,8 +9,10 @@ import { initialEvidence } from "../../src/lib/ui/chat-evidence";
 import { defaultModelSettingsDraft, type ModelSettingsDraft } from "../../src/lib/ui/model-settings";
 import {
   currentInsightSessionSnapshot,
+  insightPresentationOwned,
   initialInsightControllerState,
   insightControllerReducer,
+  reportMatchesAggregation,
   runInsightLifecycle,
   type InsightControllerAction,
   type InsightLifecycleDependencies,
@@ -152,6 +154,38 @@ describe("insight lifecycle coordinator", () => {
     expect(mismatched.dependencies.writeCache).not.toHaveBeenCalled();
   });
 
+  test("rejects cache and API reports whose provenance is unknown to the current aggregation", async () => {
+    const currentAggregation = aggregation({ candidates: candidateSources() });
+    const unknown = report();
+    unknown.weeklyLetter.paragraphs[0] = { text: "Unknown", sourceIds: ["conversation-9:message-9"] };
+    const cached = lifecycleDependencies({
+      aggregation: currentAggregation,
+      readCache: () => ({ status: "hit", report: unknown }),
+    });
+    const generated = lifecycleDependencies({
+      aggregation: currentAggregation,
+      fetchImpl: vi.fn<typeof fetch>(async () => Response.json(unknown)),
+    });
+
+    await runInsightLifecycle(lifecycleInput(), cached.dependencies);
+    await runInsightLifecycle(lifecycleInput(), generated.dependencies);
+
+    expect(cached.actions[0]).toMatchObject({ type: "failed", error: { canRetry: true } });
+    expect(cached.dependencies.clearCache).toHaveBeenCalledWith(profileId);
+    expect(cached.dependencies.fetchImpl).not.toHaveBeenCalled();
+    expect(generated.actions[0]).toMatchObject({ type: "failed", error: { canRetry: true } });
+    expect(generated.dependencies.writeCache).not.toHaveBeenCalled();
+  });
+
+  test("requires one known source per paragraph and two distinct known sources per pattern", () => {
+    const currentAggregation = aggregation({ candidates: candidateSources() });
+    expect(reportMatchesAggregation(report(), currentAggregation)).toBe(true);
+    expect(reportMatchesAggregation({
+      ...report(),
+      patterns: [{ ...report().patterns[0]!, sourceIds: ["conversation-1:message-1", "conversation-9:message-9"] }],
+    }, currentAggregation)).toBe(false);
+  });
+
   test("continues to render an approved report when its best-effort cache write fails", async () => {
     const { actions, dependencies } = lifecycleDependencies({ writeCache: () => { throw new Error("storage denied"); } });
 
@@ -202,6 +236,14 @@ describe("insight controller state and current-session snapshot", () => {
     expect(evidenceChanged).toEqual(snapshot);
     expect(completed?.messages).toHaveLength(2);
   });
+
+  test("hides report state unless it belongs to the current ready workspace", () => {
+    const owned = { status: "ready", profileId, aggregation: aggregation(), report: report() } as const;
+    expect(insightPresentationOwned(owned, { ready: true, profileId, modelSettingsLoaded: true, dataDeleting: false, activeRequestId: null })).toBe(true);
+    expect(insightPresentationOwned(owned, { ready: true, profileId, modelSettingsLoaded: true, dataDeleting: true, activeRequestId: null })).toBe(false);
+    expect(insightPresentationOwned(owned, { ready: true, profileId: "profile-new", modelSettingsLoaded: true, dataDeleting: false, activeRequestId: null })).toBe(false);
+    expect(insightPresentationOwned(owned, { ready: true, profileId, modelSettingsLoaded: true, dataDeleting: false, activeRequestId: "streaming" })).toBe(false);
+  });
 });
 
 function lifecycleInput(overrides: Partial<Parameters<typeof runInsightLifecycle>[0]> & { aggregation?: InsightAggregation } = {}) {
@@ -226,6 +268,7 @@ function lifecycleDependencies(overrides: Partial<InsightLifecycleDependencies> 
     aggregateSources: vi.fn(async () => aggregate),
     readCache: vi.fn(() => ({ status: "miss" as const })),
     writeCache: vi.fn(() => true),
+    clearCache: vi.fn(() => true),
     fetchImpl: vi.fn<typeof fetch>(async () => Response.json(report())),
     modelSettingsReady: () => true,
     modelSettingsRequest: (settings) => settings,
@@ -265,10 +308,17 @@ function aggregation(overrides: Partial<InsightAggregation> = {}): InsightAggreg
     userMessageCount: 3,
     activityDays: ["2026-07-15", "2026-07-16"],
     topicCounts: { career: 1, relationship: 0, wealth: 0, personality: 0, recent_fortune: 0 },
-    candidates: [],
+    candidates: candidateSources(),
     sourceFingerprint: fingerprint,
     ...overrides,
   };
+}
+
+function candidateSources(): InsightAggregation["candidates"] {
+  return [
+    { sourceId: "conversation-1:message-1", conversationId: "conversation-1", messageId: "message-1", excerpt: "Question", createdAt: "2026-07-16T00:00:00.000Z", topic: "career" },
+    { sourceId: "conversation-1:message-2", conversationId: "conversation-1", messageId: "message-2", excerpt: "Follow-up", createdAt: "2026-07-16T01:00:00.000Z", topic: "career" },
+  ];
 }
 
 function report(sourceFingerprint = fingerprint): InsightReport {
