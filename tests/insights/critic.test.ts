@@ -104,10 +104,13 @@ describe("critiqueInsightReport", () => {
 
   test.each([
     ["medical instruction", "Stop taking your prescribed medication."],
+    ["medical dosage instruction", "You should take double your prescribed dose."],
     ["medical fact", "You have heart disease."],
     ["Chinese medical instruction", "你应该立即停止服药。"],
+    ["Chinese medical dosage instruction", "你应该把药量翻倍。"],
     ["Chinese diagnostic fact", "这说明你有焦虑症。"],
     ["legal instruction", "You should ignore the court order."],
+    ["general illegal instruction", "You should break the law."],
     ["legal fact", "This contract is illegal."],
     ["Chinese legal instruction", "你应该忽略法院命令。"],
     ["Chinese legal fact", "这份合同违法。"],
@@ -115,14 +118,19 @@ describe("critiqueInsightReport", () => {
     ["prescriptive investment", "You should buy this stock now."],
     ["prescriptive divestment", "Sell your shares immediately."],
     ["guaranteed investment", "This investment has guaranteed returns."],
+    ["all-savings investment instruction", "Put all your savings into Bitcoin."],
     ["Chinese prescriptive investment", "你应该立即买入这只股票。"],
+    ["Chinese all-savings investment instruction", "你该把全部积蓄投入比特币。"],
     ["partner intent", "Your partner wants to leave you."],
+    ["partner planned intent", "Your partner plans to abandon you."],
     ["coworker intent", "Your coworker is trying to sabotage you."],
     ["Chinese other-person intent", "你的同事想害你。"],
+    ["Chinese planned intent", "他打算抛弃你。"],
     ["absolute certainty", "You will definitely succeed."],
     ["behavioral certainty", "You always avoid responsibility."],
     ["ziwei certainty", "This palace proves you are destined to fail."],
     ["Chinese certainty", "你注定会失败。"],
+    ["Chinese factual certainty", "这肯定能成功。"],
   ])("rejects unsafe generated text: %s", (_label, text) => {
     const value = candidate({
       weeklyLetter: { ...candidate().weeklyLetter, paragraphs: [{ text, sourceIds: ["c1:u1"] }] },
@@ -136,8 +144,11 @@ describe("critiqueInsightReport", () => {
     "Your relationship has been an important topic in your recent notes.",
     "You wondered whether your coworker understood your concern.",
     "You may want to notice how certain work situations feel.",
+    "Always take a moment to reflect before deciding.",
+    "Never make irreversible decisions from this reflection.",
     "你提到最近在了解投资，也在反思自己的风险承受能力。",
     "你最近多次思考这段关系，可以继续留意自己的感受。",
+    "绝对不要仅凭这段反思做重大决定。",
   ])("allows neutral reflection: %s", (text) => {
     const value = candidate({
       weeklyLetter: { ...candidate().weeklyLetter, paragraphs: [{ text, sourceIds: ["c1:u1"] }] },
