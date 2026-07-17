@@ -24,6 +24,8 @@ export type ConversationMessageItem = {
 };
 
 export const conversationDetailLoadErrorMessage = "\u5bf9\u8bdd\u5185\u5bb9\u8bfb\u53d6\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+export const conversationListInvalidResponseMessage = "\u5bf9\u8bdd\u8bb0\u5f55\u54cd\u5e94\u683c\u5f0f\u65e0\u6548\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+export const conversationDetailInvalidResponseMessage = "\u5bf9\u8bdd\u5185\u5bb9\u54cd\u5e94\u683c\u5f0f\u65e0\u6548\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
 
 export type ConversationDetailState =
   | { phase: "idle"; messages?: ConversationMessageItem[] }
@@ -46,6 +48,26 @@ export type ConversationRecordsAction =
   | { type: "detail_resolved"; profileId: string; conversationId: string; messages: ConversationMessageItem[] }
   | { type: "detail_failed"; profileId: string; conversationId: string }
   | { type: "detail_retry"; profileId: string; conversationId: string };
+
+export type ConversationDetailView =
+  | { phase: "loading" }
+  | { phase: "empty" }
+  | { phase: "ready"; messages: ConversationMessageItem[] }
+  | { phase: "error"; message: string; messages: ConversationMessageItem[] };
+
+export function conversationDetailView(detail: ConversationDetailState | undefined): ConversationDetailView {
+  if (!detail || detail.phase === "idle" || detail.phase === "loading") return { phase: "loading" };
+  if (detail.phase === "error") {
+    return { phase: "error", message: detail.message, messages: detail.messages ?? [] };
+  }
+  if (detail.messages.length === 0) return { phase: "empty" };
+  return { phase: "ready", messages: detail.messages };
+}
+
+export function nextConversationRequest(previous: AbortController | null) {
+  previous?.abort();
+  return new AbortController();
+}
 
 export function createConversationRecordsState(profileId: string): ConversationRecordsState {
   return { profileId, conversations: [], details: {}, selectedId: null };
@@ -93,8 +115,9 @@ export type ConversationTimelineItem = {
 export async function loadConversationList(
   profileId: string,
   fetchImpl: FetchImplementation = fetch,
+  signal?: AbortSignal,
 ): Promise<{ conversations: ConversationListItem[]; unavailable: boolean }> {
-  const response = await fetchImpl(`/api/conversations?profileId=${encodeURIComponent(profileId)}`);
+  const response = await fetchImpl(`/api/conversations?profileId=${encodeURIComponent(profileId)}`, { signal });
   if (response.status === 503) return { conversations: [], unavailable: true };
   if (!response.ok) throw new Error("历史记录读取失败，请稍后重试。");
   const payload = await response.json() as unknown;
@@ -108,8 +131,9 @@ export async function loadConversationMessages(
   profileId: string,
   conversationId: string,
   fetchImpl: FetchImplementation = fetch,
+  signal?: AbortSignal,
 ) {
-  const response = await fetchImpl(`/api/conversations?profileId=${encodeURIComponent(profileId)}&conversationId=${encodeURIComponent(conversationId)}`);
+  const response = await fetchImpl(`/api/conversations?profileId=${encodeURIComponent(profileId)}&conversationId=${encodeURIComponent(conversationId)}`, { signal });
   if (!response.ok) throw new Error("对话内容读取失败，请稍后重试。");
   return readMessages(await response.json() as unknown);
 }
@@ -181,19 +205,23 @@ const TIMELINE_KIND_KEYWORDS: Record<Exclude<ConversationTimelineKind, "conversa
 };
 
 function readConversations(value: unknown): ConversationListItem[] {
-  if (!isRecord(value) || !Array.isArray(value.conversations)) return [];
-  return value.conversations.map((item) => {
+  if (!isRecord(value) || !Array.isArray(value.conversations)) throw new Error(conversationListInvalidResponseMessage);
+  const conversations = value.conversations.map((item) => {
     if (!isRecord(item) || typeof item.id !== "string" || typeof item.title !== "string") return null;
     return { id: item.id, title: item.title, lastMessageAt: typeof item.lastMessageAt === "string" ? item.lastMessageAt : "" };
-  }).filter(isConversation);
+  });
+  if (conversations.some((item) => item === null)) throw new Error(conversationListInvalidResponseMessage);
+  return conversations.filter(isConversation);
 }
 
 function readMessages(value: unknown): ConversationMessageItem[] {
-  if (!isRecord(value) || !Array.isArray(value.messages)) return [];
-  return value.messages.map((item) => {
+  if (!isRecord(value) || !Array.isArray(value.messages)) throw new Error(conversationDetailInvalidResponseMessage);
+  const parsed = value.messages.map((item) => {
     if (!isRecord(item) || typeof item.id !== "string" || typeof item.conversationId !== "string" || !isRole(item.role) || typeof item.content !== "string") return null;
     return { id: item.id, conversationId: item.conversationId, role: item.role, content: item.content, createdAt: typeof item.createdAt === "string" ? item.createdAt : "" };
-  }).filter(isMessage);
+  });
+  if (parsed.some((item) => item === null)) throw new Error(conversationDetailInvalidResponseMessage);
+  return parsed.filter(isMessage);
 }
 
 function isRole(value: unknown): value is ConversationMessageItem["role"] { return value === "user" || value === "assistant" || value === "system" || value === "tool"; }

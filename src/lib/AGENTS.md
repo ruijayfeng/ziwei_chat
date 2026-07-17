@@ -3,12 +3,12 @@
 
 Member List
 chart-data.ts: Reference palace presentation contract, explicitly labelled demo fallback, four-transform tones, and three-way/four-direction geometry.
-workspace-data.ts: Temporary reference UI themes plus presentation-only insights reflections, weekly letter, and patterns; records use the real conversation adapter.
+workspace-data.ts: Reference quick-topic entry metadata only; personalized records and insights fixtures are removed.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-scoped caches, primary-chart persistence recovery, and tool event recording.
 agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, safety, and follow-up count.
-agent/chat-runtime.ts: Runtime tool stores, persistence selection, 3-second best-effort chat-message saves, non-blocking tool-event telemetry, and current anonymous profile data deletion for the MVP API route.
-agent/chat-persistence.ts: Storage-agnostic chat message, tool event, and profile data deletion persistence contract with in-memory implementation.
+agent/chat-runtime.ts: Runtime tool stores, persistence selection, 3-second best-effort chat-message saves, non-blocking tool-event telemetry, and deletion guards that reject late writes for invalidated anonymous profiles.
+agent/chat-persistence.ts: Storage-agnostic chat persistence contract with a stateless production fallback and tombstone-aware in-memory test implementation.
 agent/intent-router.ts: Rule-based MVP intent router for Ziwei topics, management intents, and safety-sensitive prompts.
 agent/llm-analyst.ts: Optional model-backed analyst that consumes chart facts, skill steps, RAG sources, critic constraints, and streams final analysis.
 agent/llm-planner.ts: Optional 3-second model planner that proposes allowlisted tool, skill, and knowledge plans, then explicitly reports model, deterministic, or diagnostic fallback provenance.
@@ -20,9 +20,10 @@ chart/create-chart.ts: iztro chart creation adapter, birth validation, and struc
 chart/chart-display.ts: Server-only iztro-to-display adapter that exposes all twelve palaces without leaking raw chart JSON.
 chart/summarize-chart.ts: Deterministic chart fact extraction from raw iztro chart JSON.
 db/client.ts: Drizzle/Postgres client factory and default database instance.
-db/chat-persistence.ts: Postgres-backed ChatPersistence adapter for messages, null-safe JSON tool events, and profile-owned data deletion.
-db/chart-persistence.ts: Postgres-backed primary-chart save and recovery adapter for cold-start-safe chart tools.
-db/schema.ts: Drizzle schema for profiles, charts, conversations, messages, memory, knowledge, skills, tool events, and evals.
+db/chat-persistence.ts: Postgres-backed ChatPersistence adapter for transaction-guarded messages/tool events and tombstone-first cascade deletion.
+db/chart-persistence.ts: Postgres-backed primary-chart save and recovery adapter whose writes share the anonymous-profile lifecycle lock.
+db/profile-lifecycle.ts: Shared Postgres transaction lock and permanent deletion-tombstone boundary that prevents late requests from recreating anonymous data.
+db/schema.ts: Drizzle schema for profiles, profile deletion tombstones, charts, conversations, messages, memory, knowledge, skills, tool events, and evals.
 db/knowledge-retrieval.ts: Optional time-bounded Postgres/pgvector knowledge retriever for database-backed semantic RAG.
 domain/analysis.ts: Shared intent, plan, analysis state, safety level, and critique contracts.
 domain/chart.ts: Shared chart input, output, summary, fact, and error contracts.
@@ -44,6 +45,7 @@ ui/chart-profile.ts: Chart profile label formatting and sync-state copy for curr
 ui/sidebar-chart.ts: Pure WorkspaceProvider chart-state adapter for truthful sidebar loading, error, empty, and ready presentation.
 ui/current-calendar.ts: Shanghai-time current-date formatter and exact next-midnight refresh calculation for the home header.
 ui/data-deletion-dialog.ts: Pure controlled-dialog reducer that blocks pending closes and closes only after successful anonymous-data deletion.
+ui/anonymous-data-deletion.ts: Pure remote-first coordinator that runs browser cleanup only after server deletion commits.
 ui/profile-operation.ts: Profile/revision operation tokens that prevent stale chart restore and save mutations from winning.
 ui/chart-display.ts: Pure stable-id lookup and real-index three-way/four-direction geometry for the redesigned chart.
 ui/chart-visual.ts: Pure deterministic fact-to-disc model mapping and evidence-backed active palace selection.

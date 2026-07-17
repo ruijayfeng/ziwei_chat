@@ -50,15 +50,28 @@ export type ChatPersistence = {
   };
 };
 
+export function createNoopChatPersistence(): ChatPersistence {
+  return {
+    async saveMessage() {},
+    async saveToolEvent() {},
+    async listConversations() { return []; },
+    async listMessages() { return []; },
+    async deleteProfileData() {},
+    snapshot: () => ({ messages: [], toolEvents: [] }),
+  };
+}
+
 export function createInMemoryChatPersistence(): ChatPersistence {
   const messages: PersistedChatMessage[] = [];
   const toolEvents: PersistedToolEvent[] = [];
+  const deletedProfileIds = new Set<string>();
   const messageRecords: Array<ConversationMessageRecord & { profileId: string; order: number }> = [];
   const conversationRecords = new Map<string, ConversationRecord & { profileId: string; order: number }>();
   let writeOrder = 0;
 
   return {
     async saveMessage(message) {
+      if (deletedProfileIds.has(message.profileId)) return;
       messages.push(message);
       writeOrder += 1;
       const now = new Date().toISOString();
@@ -81,6 +94,7 @@ export function createInMemoryChatPersistence(): ChatPersistence {
       });
     },
     async saveToolEvent(event) {
+      if (event.profileId && deletedProfileIds.has(event.profileId)) return;
       toolEvents.push(event);
     },
     async listConversations(profileId) {
@@ -96,6 +110,7 @@ export function createInMemoryChatPersistence(): ChatPersistence {
         .map(({ id, role, content, createdAt }) => ({ id, conversationId, role, content, createdAt }));
     },
     async deleteProfileData(profileId) {
+      deletedProfileIds.add(profileId);
       for (let index = messages.length - 1; index >= 0; index -= 1) {
         if (messages[index]?.profileId === profileId) {
           messages.splice(index, 1);

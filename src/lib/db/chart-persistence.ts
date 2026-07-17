@@ -8,6 +8,10 @@
 import type { CreateChartInput, CreateChartOutput } from "../domain/chart";
 import { and, eq } from "drizzle-orm";
 import { charts, profiles } from "./schema";
+import {
+  runActiveProfileTransaction,
+  type ProfileLifecycleDatabase,
+} from "./profile-lifecycle";
 
 type InsertValues = Record<string, unknown>;
 
@@ -48,38 +52,45 @@ export type ChartPersistence = {
 export function createPostgresChartPersistence(database: ChartPersistenceDatabase): ChartPersistence {
   return {
     async savePrimaryChart(input, chart) {
-      const profileInsert = database.insert(profiles).values({ id: input.profileId });
-      await profileInsert.onConflictDoNothing?.();
+      await runActiveProfileTransaction(
+        database as unknown as ProfileLifecycleDatabase,
+        input.profileId,
+        async (transaction) => {
+          const writable = transaction as unknown as ChartPersistenceDatabase;
+          const profileInsert = writable.insert(profiles).values({ id: input.profileId });
+          await profileInsert.onConflictDoNothing?.();
 
-      const chartInsert = database.insert(charts).values({
-        id: chart.chartId,
-        profileId: input.profileId,
-        displayName: chart.displayName,
-        gender: input.gender,
-        birthDate: input.birthDate,
-        birthTime: input.birthTime,
-        calendarType: input.calendarType,
-        birthPlace: input.birthPlace,
-        chartJson: chart.chartJson,
-        chartSummary: chart.summary,
-        isPrimary: input.isPrimary,
-      });
-      await chartInsert.onConflictDoUpdate({
-        target: charts.profileId,
-        targetWhere: eq(charts.isPrimary, true),
-        set: {
-          id: chart.chartId,
-          displayName: chart.displayName,
-          gender: input.gender,
-          birthDate: input.birthDate,
-          birthTime: input.birthTime,
-          calendarType: input.calendarType,
-          birthPlace: input.birthPlace,
-          chartJson: chart.chartJson,
-          chartSummary: { ...chart.summary, chartId: chart.chartId },
-          isPrimary: input.isPrimary,
+          const chartInsert = writable.insert(charts).values({
+            id: chart.chartId,
+            profileId: input.profileId,
+            displayName: chart.displayName,
+            gender: input.gender,
+            birthDate: input.birthDate,
+            birthTime: input.birthTime,
+            calendarType: input.calendarType,
+            birthPlace: input.birthPlace,
+            chartJson: chart.chartJson,
+            chartSummary: chart.summary,
+            isPrimary: input.isPrimary,
+          });
+          await chartInsert.onConflictDoUpdate({
+            target: charts.profileId,
+            targetWhere: eq(charts.isPrimary, true),
+            set: {
+              id: chart.chartId,
+              displayName: chart.displayName,
+              gender: input.gender,
+              birthDate: input.birthDate,
+              birthTime: input.birthTime,
+              calendarType: input.calendarType,
+              birthPlace: input.birthPlace,
+              chartJson: chart.chartJson,
+              chartSummary: { ...chart.summary, chartId: chart.chartId },
+              isPrimary: input.isPrimary,
+            },
+          });
         },
-      });
+      );
     },
 
     async getPrimaryChart(profileId) {

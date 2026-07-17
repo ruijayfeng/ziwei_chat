@@ -15,13 +15,16 @@ import type {
   PersistedToolEvent,
 } from "../agent/chat-persistence";
 import {
-  charts,
   conversations,
-  memories,
   messages,
   profiles,
   toolEvents,
 } from "./schema";
+import {
+  runActiveProfileTransaction,
+  runProfileDeletionTransaction,
+  type ProfileLifecycleDatabase,
+} from "./profile-lifecycle";
 
 type InsertValues = Record<string, unknown>;
 
@@ -57,15 +60,31 @@ export function createPostgresChatPersistence(
 ): ChatPersistence {
   return {
     async saveMessage(message) {
-      await ensureProfileConversation(database, message.profileId, message.conversationId);
-      await database.insert(messages).values(toMessageRow(message));
-      await touchConversation(database, message);
+      await runActiveProfileTransaction(
+        database as unknown as ProfileLifecycleDatabase,
+        message.profileId,
+        async (transaction) => {
+          const writable = transaction as unknown as ChatPersistenceDatabase;
+          await ensureProfileConversation(writable, message.profileId, message.conversationId);
+          await writable.insert(messages).values(toMessageRow(message));
+          await touchConversation(writable, message);
+        },
+      );
     },
     async saveToolEvent(event) {
-      if (event.profileId) {
-        await ensureProfileConversation(database, event.profileId, event.conversationId);
+      if (!event.profileId) {
+        await database.insert(toolEvents).values(toToolEventRow(event));
+        return;
       }
-      await database.insert(toolEvents).values(toToolEventRow(event));
+      await runActiveProfileTransaction(
+        database as unknown as ProfileLifecycleDatabase,
+        event.profileId,
+        async (transaction) => {
+          const writable = transaction as unknown as ChatPersistenceDatabase;
+          await ensureProfileConversation(writable, event.profileId!, event.conversationId);
+          await writable.insert(toolEvents).values(toToolEventRow(event));
+        },
+      );
     },
     async listConversations(profileId) {
       const readable = database as unknown as ReadDatabase;
@@ -93,9 +112,14 @@ export function createPostgresChatPersistence(
       return rows.map(toConversationMessageRecord).filter(isConversationMessageRecord);
     },
     async deleteProfileData(profileId) {
-      await database.delete(memories).where(eq(memories.profileId, profileId));
-      await database.delete(charts).where(eq(charts.profileId, profileId));
-      await database.delete(conversations).where(eq(conversations.profileId, profileId));
+      await runProfileDeletionTransaction(
+        database as unknown as ProfileLifecycleDatabase,
+        profileId,
+        async (transaction) => {
+          const writable = transaction as unknown as ChatPersistenceDatabase;
+          await writable.delete(profiles).where(eq(profiles.id, profileId));
+        },
+      );
     },
   };
 }

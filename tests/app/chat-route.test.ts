@@ -156,28 +156,7 @@ describe("POST /api/chat", () => {
       );
     }
 
-    const snapshot = getChatRuntimeSnapshot();
-    expect(snapshot.messages.map((message) => message.role)).toEqual([
-      "user",
-      "assistant",
-    ]);
-    expect(snapshot.toolEvents.map((event) => event.toolName)).toEqual([
-      "createChart",
-      "getCurrentChart",
-      "summarizeChartFacts",
-      "createAnalysisPlan",
-      "getPalaceAnalysis",
-      "getLuckCycle",
-      "loadSkill",
-      "searchKnowledge",
-      "runResponseCritic",
-    ]);
-    expect(snapshot.persistedToolEvents.map((event) => event.conversationId)).toEqual([
-      conversationId,
-      conversationId,
-      conversationId,
-      conversationId,
-    ]);
+    expect(getChatRuntimeSnapshot()).toEqual({ messages: [], toolEvents: [], persistedToolEvents: [] });
   });
 
   test("never substitutes a deterministic chart answer when a configured model request fails", async () => {
@@ -229,26 +208,7 @@ describe("POST /api/chat", () => {
     expect(finalEvidence?.runs[0].steps.find((step: { id: string }) => step.id === "plan")?.detail).toContain(
       "模型规划失败，已使用确定性计划",
     );
-    expect(getChatRuntimeSnapshot().toolEvents).toContainEqual(
-      expect.objectContaining({
-        toolName: "createAnalysisPlan",
-        success: false,
-        output: expect.objectContaining({
-          source: "fallback",
-          errorCode: "MODEL_REQUEST_FAILED",
-        }),
-      }),
-    );
-    expect(getChatRuntimeSnapshot().toolEvents).toContainEqual(
-      expect.objectContaining({
-        toolName: "completeModelResponse",
-        success: false,
-        output: expect.objectContaining({
-          errorCode: "MODEL_REQUEST_FAILED",
-          telemetry: expect.objectContaining({ completionMs: expect.any(Number) }),
-        }),
-      }),
-    );
+    expect(getChatRuntimeSnapshot()).toEqual({ messages: [], toolEvents: [], persistedToolEvents: [] });
   });
 
   test("surfaces the revision provider error in final evidence", async () => {
@@ -355,6 +315,7 @@ describe("POST /api/chat", () => {
         body: JSON.stringify({
           profileId,
           conversationId,
+          chartInput,
           messages: [
             { role: "user", content: "请解释一下我的命盘重点。" },
             { role: "assistant", content: "已完成命盘解释。" },
@@ -503,6 +464,78 @@ describe("POST /api/chat", () => {
     const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
     expect(payload.messages[1]?.content).toContain("当前命盘状态：未设置。");
     expect(payload.messages[1]?.content).toContain("请自然、直接地回应用户当前消息");
+  });
+
+  test("does not recreate deleted profile data when an active model request finishes late", async () => {
+    let releaseModel: (() => void) | undefined;
+    const modelStarted = Promise.withResolvers<void>();
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => {
+      modelStarted.resolve();
+      await new Promise<void>((resolve) => {
+        releaseModel = resolve;
+      });
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: "late model answer" } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }));
+
+    const activeResponse = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          messages: [{ role: "user", content: "hello" }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    await modelStarted.promise;
+    const deleted = await DELETE(
+      new Request(`http://localhost/api/chat?profileId=${profileId}`, { method: "DELETE" }),
+    );
+    expect(deleted.status).toBe(204);
+
+    releaseModel?.();
+    await activeResponse.text();
+
+    expect(getChatRuntimeSnapshot()).toMatchObject({
+      messages: [],
+      toolEvents: [],
+      persistedToolEvents: [],
+    });
+  });
+
+  test("keeps no profile-owned server state when database persistence is disabled", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          messages: [{ role: "user", content: "hello" }],
+        }),
+      }),
+    );
+    await response.text();
+
+    expect(getChatRuntimeSnapshot()).toEqual({
+      messages: [],
+      toolEvents: [],
+      persistedToolEvents: [],
+    });
+    expect(getChatRuntimeStores()).toMatchObject({
+      memories: [],
+      conversationSummaries: [],
+      toolEvents: [],
+    });
   });
 
   test("streams model answers as evidence and token events after final critic", async () => {

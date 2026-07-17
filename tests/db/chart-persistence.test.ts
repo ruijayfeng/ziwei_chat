@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPostgresChartPersistence } from "../../src/lib/db/chart-persistence";
+import { profileDeletions } from "../../src/lib/db/schema";
 
 describe("createPostgresChartPersistence", () => {
   test("saves and restores the primary chart for a profile", async () => {
@@ -26,8 +27,8 @@ describe("createPostgresChartPersistence", () => {
       isPrimary: true,
     };
     const rows: Array<Record<string, unknown>> = [];
-    const database = {
-      insert() {
+    const baseDatabase = {
+      insert(_table?: unknown) {
         return {
           values(value: Record<string, unknown>) {
             if ("chartJson" in value) {
@@ -64,6 +65,26 @@ describe("createPostgresChartPersistence", () => {
         },
       },
     };
+    let activeProfileId = "";
+    const originalInsert = baseDatabase.insert.bind(baseDatabase);
+    const database = Object.assign(baseDatabase, {
+      async transaction<T>(callback: (transaction: typeof database) => Promise<T>) {
+        return callback(database);
+      },
+      async lockProfile(profileId: string) {
+        activeProfileId = profileId;
+      },
+      query: {
+        ...baseDatabase.query,
+        profileDeletions: { async findFirst() { return activeProfileId === "deleted" ? { profileId: activeProfileId } : undefined; } },
+      },
+      insert(table: unknown) {
+        if (table === profileDeletions) {
+          return { values() { return { async onConflictDoNothing() {} }; } };
+        }
+        return originalInsert(table);
+      },
+    });
     const persistence = createPostgresChartPersistence(database);
 
     const replacement = {

@@ -91,4 +91,30 @@ describe("chat persistence", () => {
     ]);
     await expect(persistence.listMessages?.("profile-b", "conversation-c")).resolves.toEqual([]);
   });
+
+  test("does not accept writes for a profile after its data is deleted", async () => {
+    const persistence = createInMemoryChatPersistence();
+    const message = {
+      conversationId: "conversation-deleted",
+      profileId: "profile-deleted",
+      role: "user" as const,
+      content: "must not return",
+    };
+
+    await persistence.saveMessage(message);
+    await persistence.deleteProfileData?.(message.profileId);
+    await persistence.saveMessage({ ...message, role: "assistant", content: "late answer" });
+    await persistence.saveToolEvent({
+      profileId: message.profileId,
+      conversationId: message.conversationId,
+      toolName: "lateTool",
+      input: {},
+      output: {},
+      success: true,
+      latencyMs: 1,
+    });
+
+    expect(persistence.snapshot?.()).toEqual({ messages: [], toolEvents: [] });
+    await expect(persistence.listConversations?.(message.profileId)).resolves.toEqual([]);
+  });
 });

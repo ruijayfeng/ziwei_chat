@@ -6,7 +6,7 @@
  */
 
 import {
-  createInMemoryChatPersistence,
+  createNoopChatPersistence,
   type PersistedChatMessage,
   type PersistedToolEvent,
 } from "./chat-persistence";
@@ -76,24 +76,6 @@ export function createRequestStores(): InMemoryToolStores {
 
 export function getChartPersistence(): ChartPersistence | null {
   return chartPersistence;
-}
-
-export function mergeRequestStoresToSnapshot(requestStores: InMemoryToolStores) {
-  for (const [chartId, chart] of requestStores.charts.entries()) {
-    stores.charts.set(chartId, chart);
-  }
-  for (const [profileId, chartId] of requestStores.primaryChartByProfileId.entries()) {
-    stores.primaryChartByProfileId.set(profileId, chartId);
-  }
-  for (const event of requestStores.toolEvents) {
-    stores.toolEvents.push(event);
-  }
-  for (const summary of requestStores.conversationSummaries) {
-    stores.conversationSummaries.push(summary);
-  }
-  for (const memory of requestStores.memories) {
-    stores.memories.push(memory);
-  }
 }
 
 export async function recordRouteToolEventToStores(
@@ -172,6 +154,8 @@ export async function listProfileConversationMessages(profileId: string, convers
 }
 
 export async function deleteProfileRuntimeData(profileId: string) {
+  await persistence.deleteProfileData?.(profileId);
+
   const ownedChartIds = new Set<string>();
   for (const [chartId, chart] of stores.charts.entries()) {
     if (chart.profileId === profileId) {
@@ -192,7 +176,6 @@ export async function deleteProfileRuntimeData(profileId: string) {
       stores.toolEvents.splice(index, 1);
     }
   }
-  await persistence.deleteProfileData?.(profileId);
 }
 
 export function resetChatRuntime() {
@@ -210,7 +193,7 @@ function createRuntimePersistence() {
     return createPostgresChatPersistence(getDatabaseClient());
   }
 
-  return createInMemoryChatPersistence();
+  return createNoopChatPersistence();
 }
 
 function createRuntimeChartPersistence(): ChartPersistence | null {

@@ -7,7 +7,7 @@
 
 - Service and contract layer is healthy: the complete automated gate passes.
 - `WorkspaceProvider` restores and saves charts with profile-scoped operation ownership, stores model settings, sends `/api/chat` requests, serializes chart persistence against anonymous-data deletion, and owns real chat/evidence state.
-- The transplanted chat, chart, records, sidebar, date header, and default inspector now consume real service state behind the accepted reference UI; insights remains presentation-only.
+- The transplanted chat, chart, records, sidebar, date header, and default inspector now consume real service state behind the accepted reference UI; insights shows an explicit insufficient-history state until its sourced pipeline lands.
 - Settings and the default inspector share the same confirmed, loading/error-aware anonymous-data deletion operation.
 
 ## P0 — Blocks Core Use
@@ -24,7 +24,7 @@ No open P0 integration gaps remain for the accepted chat and chart core loop.
 
 | Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `/insights` | Weekly letter and long-term patterns | Static `WEEKLY_LETTER` and `PATTERNS` | No sourced aggregation pipeline | Design an aggregation, provenance, generation-time, and critic contract before replacing static content | Medium: current content is presentation-only |
+| `/insights` | Weekly letter and long-term patterns | Explicit insufficient-history state; static personalized fixtures removed | No sourced aggregation pipeline | Implement the accepted source bundle, aggregation, provenance, generation, critic, and cache contract | Medium: first-class route remains incomplete |
 
 ## Connected Today
 

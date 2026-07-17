@@ -9,6 +9,7 @@ import {
   knowledgeChunks,
   memories,
   messages,
+  profileDeletions,
   profiles,
   skills,
   toolEvents,
@@ -16,6 +17,7 @@ import {
 
 const tableNames = [
   ["profiles", profiles],
+  ["profile_deletions", profileDeletions],
   ["charts", charts],
   ["conversations", conversations],
   ["messages", messages],
@@ -37,6 +39,7 @@ describe("database schema", () => {
   test("defines every MVP persistence table from the data model", () => {
     expect(tableNames.map(([name]) => name)).toEqual([
       "profiles",
+      "profile_deletions",
       "charts",
       "conversations",
       "messages",

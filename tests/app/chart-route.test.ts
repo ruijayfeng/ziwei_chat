@@ -39,7 +39,7 @@ describe("POST /api/chart", () => {
     expect(payload.chartJson).toBeUndefined();
   });
 
-  test("restores a saved primary chart for the same anonymous profile", async () => {
+  test("does not retain a chart on the server when database persistence is disabled", async () => {
     const profileId = "00000000-0000-4000-8000-000000000001";
     await POST(new Request("http://localhost/api/chart", {
       method: "POST",
@@ -59,21 +59,8 @@ describe("POST /api/chart", () => {
 
     const response = await GET(new Request(`http://localhost/api/chart?profileId=${profileId}`));
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      chart: {
-        profileId,
-        name: "Jay",
-        birthDate: "1990-05-17",
-        birthTime: "12:00",
-      },
-      summary: { facts: expect.any(Array) },
-      display: {
-        chartId: expect.any(String),
-        displayName: "Jay",
-        palaces: expect.any(Array),
-      },
-    });
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "primary chart not found" });
   });
 
   test("bounds a stalled persisted chart restore", async () => {

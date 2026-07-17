@@ -92,6 +92,15 @@ Apply migrations:
 npx drizzle-kit migrate
 ```
 
+Migration `0003_profile_deletion_tombstones.sql` is required before deploying
+this version with `DATABASE_URL`. It preserves deleted anonymous profile UUIDs
+outside the profile foreign-key graph so an in-flight serverless request cannot
+recreate data after deletion succeeds.
+
+The migration was applied successfully to the configured Postgres/Neon database
+on 2026-07-17. The release regression uses two independent connections to verify
+lock waiting, tombstone rejection, cascade cleanup, and rollback retry behavior.
+
 The initial migration includes:
 
 ```sql

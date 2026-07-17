@@ -16,15 +16,24 @@ describe("reference workspace pages", () => {
     expect(timeline).toContain("loadConversationMessages");
     expect(timeline).toContain("type ConversationDetailState");
     expect(timeline).toContain("retryDetail");
+    expect(timeline).toContain("retryList");
+    expect(timeline).toContain("conversationDetailView");
+    expect(timeline).toContain("AbortController");
     expect(timeline).not.toContain("MONTHLY_REFLECTION");
     expect(timeline).not.toContain("RECORDS.map");
   });
 
   test("keeps the reference insights composition", () => {
     const page = source("src/app/(workspace)/insights/page.tsx");
+    const workspaceData = source("src/lib/workspace-data.ts");
 
-    expect(page).toContain("过去的你，");
-    expect(page).toContain("<WeeklyLetter />");
-    expect(page).toContain("<PatternList />");
+    expect(page).toContain("<InsightsEmptyState />");
+    expect(page).not.toContain("WeeklyLetter");
+    expect(page).not.toContain("PatternList");
+    expect(workspaceData).not.toContain("WEEKLY_LETTER");
+    expect(workspaceData).not.toContain("PATTERNS");
+    expect(workspaceData).not.toContain("MONTHLY_REFLECTION");
+    expect(workspaceData).not.toContain("RECORDS");
+    expect(workspaceData).toContain("THEMES");
   });
 });

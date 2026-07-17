@@ -16,7 +16,6 @@ import {
   createRequestStores,
   deleteProfileRuntimeData,
   getChartPersistence,
-  mergeRequestStoresToSnapshot,
   persistChatMessage,
   recordRouteToolEventToStores,
 } from "../../../lib/agent/chat-runtime";
@@ -609,7 +608,6 @@ async function streamAndPersist({
     content,
     metadata,
   });
-  mergeRequestStoresToSnapshot(stores);
 
   return new Response(textToStream(content), {
     headers: {
@@ -673,7 +671,6 @@ function streamModelAndPersist({
           modelTelemetry: modelResult.telemetry,
         });
         enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
-        mergeRequestStoresToSnapshot(stores);
         enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
         enqueueEvent(controller, encoder, { event: "done", data: null });
         closeStream(controller);
@@ -781,7 +778,6 @@ function streamModelAndPersist({
 
       enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
       if (usedFallback) {
-        mergeRequestStoresToSnapshot(stores);
         enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
         enqueueEvent(controller, encoder, { event: "done", data: null });
         closeStream(controller);
@@ -798,7 +794,6 @@ function streamModelAndPersist({
         content: candidateContent,
         metadata,
       });
-      mergeRequestStoresToSnapshot(stores);
       enqueueEvent(controller, encoder, { event: "done", data: null });
       closeStream(controller);
       } catch (error) {
@@ -814,7 +809,6 @@ function streamModelAndPersist({
         });
         try {
           enqueueEvent(controller, encoder, { event: "evidence", data: errorEvidence });
-          mergeRequestStoresToSnapshot(stores);
           enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
           enqueueEvent(controller, encoder, { event: "done", data: null });
         } catch {

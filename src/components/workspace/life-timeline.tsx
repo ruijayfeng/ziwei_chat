@@ -1,12 +1,14 @@
 'use client'
 
 import {
+  conversationDetailView,
   conversationRecordsReducer,
   conversationTimelineItem,
   createConversationRecordsState,
   currentSessionConversation,
   loadConversationList,
   loadConversationMessages,
+  nextConversationRequest,
   type ConversationDetailState,
   type ConversationListItem,
   type ConversationMessageItem,
@@ -50,7 +52,10 @@ export function LifeTimeline() {
   const current = currentSessionConversation(conversationId, chatSession.messages)
   const [records, dispatchRecords] = useReducer(conversationRecordsReducer, '', createConversationRecordsState)
   const [loadState, setLoadState] = useState<ProfileLoadState>({ profileId: '', state: { phase: 'loading' } })
+  const [listRevision, setListRevision] = useState(0)
+  const [detailRevision, setDetailRevision] = useState(0)
   const listRequestId = useRef(0)
+  const detailRequestRef = useRef<AbortController | null>(null)
 
   const activeRecords = records.profileId === profileId ? records : createConversationRecordsState(profileId)
   const activeLoadState = loadState.profileId === profileId ? loadState.state : { phase: 'loading' as const }
@@ -62,16 +67,23 @@ export function LifeTimeline() {
   const selectedDetail = activeId === current?.conversation.id
     ? { phase: 'ready', messages: current.messages } satisfies ConversationDetailState
     : activeId ? activeRecords.details[activeId] : undefined
+  const detailSettled = selectedDetail?.phase === 'ready' || selectedDetail?.phase === 'error'
   const selectedMessages = selectedDetail?.messages ?? []
   const selectedItem = selected ? conversationTimelineItem(selected, selectedMessages) : null
 
   const retryDetail = useCallback((conversationId: string) => {
     dispatchRecords({ type: 'detail_retry', profileId, conversationId })
+    setDetailRevision((revision) => revision + 1)
   }, [profileId])
+
+  const retryList = useCallback(() => {
+    setListRevision((revision) => revision + 1)
+  }, [])
 
   useEffect(() => {
     if (!ready || !profileId) return
     const requestId = ++listRequestId.current
+    const controller = new AbortController()
 
     void (async () => {
       await Promise.resolve()
@@ -79,11 +91,12 @@ export function LifeTimeline() {
       dispatchRecords({ type: 'reset', profileId })
       setLoadState({ profileId, state: { phase: 'loading' } })
       try {
-        const result = await loadConversationList(profileId)
+        const result = await loadConversationList(profileId, fetch, controller.signal)
         if (requestId !== listRequestId.current) return
         dispatchRecords({ type: 'conversations_loaded', profileId, conversations: result.conversations })
         setLoadState({ profileId, state: { phase: 'ready', unavailable: result.unavailable } })
       } catch (error) {
+        if (controller.signal.aborted) return
         if (requestId !== listRequestId.current) return
         setLoadState({
           profileId,
@@ -91,37 +104,48 @@ export function LifeTimeline() {
         })
       }
     })()
-  }, [profileId, ready])
+    return () => controller.abort()
+  }, [listRevision, profileId, ready])
 
   useEffect(() => {
     if (!ready || !profileId || !activeId || activeId === current?.conversation.id) return
-    const detail = activeRecords.details[activeId]
-    if (detail && detail.phase !== 'idle') return
+    if (detailSettled) return
+    const controller = nextConversationRequest(detailRequestRef.current)
+    detailRequestRef.current = controller
 
     void (async () => {
       await Promise.resolve()
       dispatchRecords({ type: 'detail_loading', profileId, conversationId: activeId })
       try {
-        const messages = await loadConversationMessages(profileId, activeId)
+        const messages = await loadConversationMessages(profileId, activeId, fetch, controller.signal)
+        if (controller.signal.aborted) return
         dispatchRecords({ type: 'detail_resolved', profileId, conversationId: activeId, messages })
       } catch {
+        if (controller.signal.aborted) return
         dispatchRecords({ type: 'detail_failed', profileId, conversationId: activeId })
       }
     })()
-  }, [activeId, activeRecords.details, current?.conversation.id, profileId, ready])
+    return () => {
+      controller.abort()
+      if (detailRequestRef.current === controller) detailRequestRef.current = null
+    }
+  }, [activeId, current?.conversation.id, detailRevision, detailSettled, profileId, ready])
 
   return (
     <div className="relative">
       <div className="absolute bottom-2 left-[19px] top-2 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
       {activeLoadState.phase === 'error' && (
-        <p className="mb-4 ml-14 text-sm text-muted-foreground">{activeLoadState.message}</p>
+        <div role="alert" className="mb-4 ml-14 text-sm text-muted-foreground">
+          <p>{activeLoadState.message}</p>
+          <button type="button" onClick={retryList} className="mt-2 font-medium text-primary hover:text-primary/80">重试</button>
+        </div>
       )}
       {activeLoadState.phase === 'ready' && activeLoadState.unavailable && (
-        <p className="mb-4 ml-14 text-sm text-muted-foreground">历史记录暂不可用，当前浏览器会话仍可查看。</p>
+        <p role="status" className="mb-4 ml-14 text-sm text-muted-foreground">历史记录暂不可用，当前浏览器会话仍可查看。</p>
       )}
       {activeLoadState.phase === 'loading' && !conversations.length && (
-        <p className="mb-4 ml-14 text-sm text-muted-foreground">正在读取对话记录。</p>
+        <p role="status" aria-live="polite" className="mb-4 ml-14 text-sm text-muted-foreground">正在读取对话记录。</p>
       )}
       {!conversations.length && activeLoadState.phase !== 'loading' ? (
         <p className="ml-14 text-sm leading-relaxed text-muted-foreground">还没有可展示的真实对话记录。</p>
@@ -220,19 +244,21 @@ function ConversationMessages({
   messages: ConversationMessageItem[]
   onRetry: () => void
 }) {
-  if (detail?.phase === 'error') {
+  const view = conversationDetailView(detail)
+  if (view.phase === 'error') {
     return (
-      <div className="pt-3">
-        <p className="text-sm text-muted-foreground">{detail.message}</p>
+      <div role="alert" className="pt-3">
+        <p className="text-sm text-muted-foreground">{view.message}</p>
         <button type="button" onClick={onRetry} className="mt-2 text-sm font-medium text-primary hover:text-primary/80">重试</button>
-        {messages.length > 0 && <MessageList messages={messages} />}
+        {view.messages.length > 0 && <MessageList messages={view.messages} />}
       </div>
     )
   }
 
-  if (!messages.length) return <p className="pt-3 text-sm text-muted-foreground">正在读取这段对话。</p>
+  if (view.phase === 'loading') return <p role="status" className="pt-3 text-sm text-muted-foreground">正在读取这段对话。</p>
+  if (view.phase === 'empty') return <p className="pt-3 text-sm text-muted-foreground">这段对话没有可展示的消息。</p>
 
-  return <MessageList messages={messages} />
+  return <MessageList messages={view.messages.length ? view.messages : messages} />
 }
 
 function MessageList({ messages }: { messages: ConversationMessageItem[] }) {

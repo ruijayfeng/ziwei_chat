@@ -11,6 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 
 import type { CreateChartInput } from "@/lib/domain/chart";
 import type { ChartDisplayModel } from "@/lib/domain/chart-display";
+import { deleteAnonymousProfileData } from "@/lib/ui/anonymous-data-deletion";
 import { ChatClientError, sendChatRequest } from "@/lib/ui/chat-client";
 import { initialEvidence, type EvidenceState } from "@/lib/ui/chat-evidence";
 import { classifyChatError, type ChatErrorState } from "@/lib/ui/chat-errors";
@@ -359,37 +360,40 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setDataDeleting(true);
     setDataDeletionError(null);
     try {
-      if (chartSavePromiseRef.current) {
-        try {
-          await chartSavePromiseRef.current;
-        } catch {
-          // Save failures are represented by saveChart's resolved false result.
+      await deleteAnonymousProfileData(async () => {
+        if (chartSavePromiseRef.current) {
+          try {
+            await chartSavePromiseRef.current;
+          } catch {
+            // Save failures are represented by saveChart's resolved false result.
+          }
         }
-      }
-      const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
-      revisionRef.current += 1;
-      chartOperationRevisionRef.current += 1;
+        const response = await fetch(`/api/chat?profileId=${encodeURIComponent(profileId)}`, { method: "DELETE" });
+        if (!response.ok) throw new Error("匿名资料未能完整删除，请稍后重试。");
+      }, () => {
+        revisionRef.current += 1;
+        chartOperationRevisionRef.current += 1;
 
-      chatAbortRef.current?.abort();
-      chatAbortRef.current = null;
-      window.localStorage.removeItem("ziwei-chat-profile-id");
-      window.localStorage.removeItem(modelSettingsStorageKey);
-      window.localStorage.removeItem(chartSessionStorageKey(profileId));
-      const nextProfileId = crypto.randomUUID();
-       window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
-       revisionRef.current += 1;
-       chartOperationRevisionRef.current += 1;
-       profileIdRef.current = nextProfileId;
-      setProfileId(nextProfileId);
-      setConversationId(crypto.randomUUID());
-      setChartInput(null);
-      setChartDisplay(null);
-      setChartSynced(false);
-      setChartError(null);
-      setModelSettings(defaultModelSettingsDraft);
-      dispatchChat({ type: "session_reset" });
-      setSelectedEvidenceMessageId(null);
+        chatAbortRef.current?.abort();
+        chatAbortRef.current = null;
+        window.localStorage.removeItem("ziwei-chat-profile-id");
+        window.localStorage.removeItem(modelSettingsStorageKey);
+        window.localStorage.removeItem(chartSessionStorageKey(profileId));
+        const nextProfileId = crypto.randomUUID();
+        window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
+        revisionRef.current += 1;
+        chartOperationRevisionRef.current += 1;
+        profileIdRef.current = nextProfileId;
+        setProfileId(nextProfileId);
+        setConversationId(crypto.randomUUID());
+        setChartInput(null);
+        setChartDisplay(null);
+        setChartSynced(false);
+        setChartError(null);
+        setModelSettings(defaultModelSettingsDraft);
+        dispatchChat({ type: "session_reset" });
+        setSelectedEvidenceMessageId(null);
+      });
       return true;
     } catch (error) {
       setDataDeletionError(error instanceof Error ? error.message : "匿名资料删除失败。");

@@ -5,7 +5,7 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { createRequestStores, getChartPersistence, mergeRequestStoresToSnapshot } from "../../../lib/agent/chat-runtime";
+import { createRequestStores, getChartPersistence } from "../../../lib/agent/chat-runtime";
 import { createAgentTools } from "../../../lib/agent/tools";
 import { buildChartDisplayModel } from "../../../lib/chart/chart-display";
 import type { ChartPersistence } from "../../../lib/db/chart-persistence";
@@ -25,7 +25,6 @@ export async function POST(request: Request) {
     return Response.json({ error: result.error }, { status: 422 });
   }
 
-  mergeRequestStoresToSnapshot(stores);
   return Response.json({
     chartId: result.data.chartId,
     displayName: result.data.displayName,

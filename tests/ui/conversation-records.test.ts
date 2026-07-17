@@ -2,12 +2,14 @@ import { describe, expect, test } from "vitest";
 
 import {
   conversationDetailLoadErrorMessage,
+  conversationDetailView,
   conversationRecordsReducer,
   conversationTimelineItem,
   createConversationRecordsState,
   currentSessionConversation,
   loadConversationList,
   loadConversationMessages,
+  nextConversationRequest,
 } from "../../src/lib/ui/conversation-records";
 import { initialEvidence } from "../../src/lib/ui/chat-evidence";
 
@@ -21,6 +23,45 @@ describe("conversation records UI adapter", () => {
     await expect(
       loadConversationMessages("profile-1", "conversation-1", async () => new Response(null, { status: 503 })),
     ).rejects.toThrow("\u5bf9\u8bdd\u5185\u5bb9\u8bfb\u53d6\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002");
+  });
+
+  test("rejects malformed conversation payloads instead of treating them as empty history", async () => {
+    await expect(
+      loadConversationList("profile-1", async () => Response.json({ conversations: "invalid" })),
+    ).rejects.toThrow("对话记录响应格式无效，请稍后重试。");
+    await expect(
+      loadConversationList("profile-1", async () => Response.json({ conversations: [{ id: "missing-title" }] })),
+    ).rejects.toThrow("对话记录响应格式无效，请稍后重试。");
+  });
+
+  test("rejects malformed message payloads instead of leaving details loading forever", async () => {
+    await expect(
+      loadConversationMessages("profile-1", "conversation-1", async () => Response.json({ messages: null })),
+    ).rejects.toThrow("对话内容响应格式无效，请稍后重试。");
+    await expect(
+      loadConversationMessages("profile-1", "conversation-1", async () => Response.json({ messages: [{ id: "bad" }] })),
+    ).rejects.toThrow("对话内容响应格式无效，请稍后重试。");
+  });
+
+  test("keeps valid empty details distinct from loading", async () => {
+    const messages = await loadConversationMessages(
+      "profile-1",
+      "conversation-1",
+      async () => Response.json({ messages: [] }),
+    );
+
+    expect(messages).toEqual([]);
+    expect(conversationDetailView({ phase: "ready", messages })).toEqual({ phase: "empty" });
+    expect(conversationDetailView({ phase: "loading" })).toEqual({ phase: "loading" });
+  });
+
+  test("cancels the previous detail request before starting a replacement", () => {
+    const previous = new AbortController();
+
+    const next = nextConversationRequest(previous);
+
+    expect(previous.signal.aborted).toBe(true);
+    expect(next.signal.aborted).toBe(false);
   });
 
   test("maps only real non-empty current-session messages", () => {

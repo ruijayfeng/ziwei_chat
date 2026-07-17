@@ -15,29 +15,27 @@ describe("GET /api/conversations", () => {
     expect(response.status).toBe(400);
   });
 
-  test("returns only profile-owned conversation summaries and sanitized messages", async () => {
-    await persistChatMessage({ profileId, conversationId, role: "user", content: "我的事业问题", metadata: { secret: "not returned" } });
-    await persistChatMessage({ profileId, conversationId, role: "assistant", content: "真实回答", metadata: { critic: true } });
-    await persistChatMessage({ profileId: otherProfileId, conversationId: "00000000-0000-4000-8000-000000000004", role: "user", content: "别人的问题" });
+  test("does not expose server conversation history when database persistence is disabled", async () => {
+    await persistChatMessage({ profileId, conversationId, role: "user", content: "local-only" });
+    await persistChatMessage({
+      profileId: otherProfileId,
+      conversationId: "00000000-0000-4000-8000-000000000004",
+      role: "user",
+      content: "other",
+    });
 
     const listResponse = await GET(new Request(`http://localhost/api/conversations?profileId=${profileId}`));
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toEqual({
-      conversations: [expect.objectContaining({ id: conversationId, title: "我的事业问题" })],
-    });
+    await expect(listResponse.json()).resolves.toEqual({ conversations: [] });
 
-    const messagesResponse = await GET(new Request(`http://localhost/api/conversations?profileId=${profileId}&conversationId=${conversationId}`));
-    const payload = await messagesResponse.json();
-    expect(payload.messages).toEqual([
-      expect.objectContaining({ role: "user", content: "我的事业问题" }),
-      expect.objectContaining({ role: "assistant", content: "真实回答" }),
-    ]);
-    expect(JSON.stringify(payload)).not.toContain("secret");
-    expect(JSON.stringify(payload)).not.toContain("critic");
+    const messagesResponse = await GET(
+      new Request(`http://localhost/api/conversations?profileId=${profileId}&conversationId=${conversationId}`),
+    );
+    await expect(messagesResponse.json()).resolves.toEqual({ messages: [] });
   });
 
   test("returns an empty list for an unknown profile", async () => {
     const response = await GET(new Request(`http://localhost/api/conversations?profileId=${profileId}`));
-    expect(await response.json()).toEqual({ conversations: [] });
+    await expect(response.json()).resolves.toEqual({ conversations: [] });
   });
 });

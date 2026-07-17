@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  charts,
   conversations,
-  memories,
   messages,
+  profileDeletions,
+  profiles,
   toolEvents,
 } from "../../src/lib/db/schema";
 import { createPostgresChatPersistence } from "../../src/lib/db/chat-persistence";
@@ -13,7 +13,7 @@ describe("createPostgresChatPersistence", () => {
   test("maps chat persistence writes to messages and tool_events tables", async () => {
     const writes: Array<{ table: unknown; value: Record<string, unknown> }> = [];
     const ignoredConflicts: unknown[] = [];
-    const database = {
+    const database = withProfileLifecycle({
       insert(table: unknown) {
         return {
           values(value: Record<string, unknown>) {
@@ -31,7 +31,7 @@ describe("createPostgresChatPersistence", () => {
           async where() {},
         };
       },
-    };
+    });
     const persistence = createPostgresChatPersistence(database);
 
     await persistence.saveMessage({
@@ -89,9 +89,9 @@ describe("createPostgresChatPersistence", () => {
     expect(ignoredConflicts).toHaveLength(2);
   });
 
-  test("deletes profile-owned memories, charts, and conversations through the database adapter", async () => {
+  test("tombstones the profile before deleting its cascade-owned data", async () => {
     const deletedTables: unknown[] = [];
-    const database = {
+    const database = withProfileLifecycle({
       insert() {
         return {
           async values() {},
@@ -103,17 +103,18 @@ describe("createPostgresChatPersistence", () => {
           async where() {},
         };
       },
-    };
+    });
     const persistence = createPostgresChatPersistence(database);
 
     await persistence.deleteProfileData?.("00000000-0000-4000-8000-000000000002");
 
-    expect(deletedTables).toEqual([memories, charts, conversations]);
+    expect(database.lifecycleOperations).toEqual(["lock", "tombstone", "delete"]);
+    expect(deletedTables).toEqual([profiles]);
   });
 
   test("maps undefined tool event JSON values to database nulls", async () => {
     const writes: Array<{ table: unknown; value: Record<string, unknown> }> = [];
-    const database = {
+    const database = withProfileLifecycle({
       insert(table: unknown) {
         return {
           values(value: Record<string, unknown>) {
@@ -127,7 +128,7 @@ describe("createPostgresChatPersistence", () => {
           async where() {},
         };
       },
-    };
+    });
     const persistence = createPostgresChatPersistence(database);
 
     await persistence.saveToolEvent({
@@ -170,7 +171,7 @@ describe("createPostgresChatPersistence", () => {
 
 function readDatabase(resultSets: Array<Array<Record<string, unknown>>>) {
   let index = 0;
-  return {
+  return withProfileLifecycle({
     insert() { return { async values() {} }; },
     update() { return { set() { return { async where() {} }; } }; },
     delete() { return { async where() {} }; },
@@ -184,5 +185,57 @@ function readDatabase(resultSets: Array<Array<Record<string, unknown>>>) {
       };
       return query;
     },
-  };
+  });
+}
+
+function withProfileLifecycle<TDatabase extends {
+  insert(table: unknown): { values(value: Record<string, unknown>): unknown };
+}>(database: TDatabase) {
+  const originalInsert = database.insert.bind(database);
+  const deletedProfiles = new Set<string>();
+  const lifecycleOperations: string[] = [];
+  let activeProfileId = "";
+  const enhanced = Object.assign(database, {
+    lifecycleOperations,
+    async transaction<T>(callback: (transaction: typeof enhanced) => Promise<T>) {
+      return callback(enhanced);
+    },
+    async lockProfile(profileId: string) {
+      activeProfileId = profileId;
+      lifecycleOperations.push("lock");
+    },
+    query: {
+      ...("query" in database ? database.query as object : {}),
+      profileDeletions: {
+        async findFirst() {
+          return deletedProfiles.has(activeProfileId) ? { profileId: activeProfileId } : undefined;
+        },
+      },
+    },
+    insert(table: unknown) {
+      if (table !== profileDeletions) return originalInsert(table);
+      return {
+        values(value: { profileId: string }) {
+          return {
+            async onConflictDoNothing() {
+              deletedProfiles.add(value.profileId);
+              lifecycleOperations.push("tombstone");
+            },
+          };
+        },
+      };
+    },
+  });
+  const originalDelete = "delete" in database && typeof database.delete === "function"
+    ? database.delete.bind(database)
+    : null;
+  if (originalDelete) {
+    Object.assign(enhanced, {
+      delete(table: unknown) {
+        lifecycleOperations.push("delete");
+        return originalDelete(table);
+      },
+    });
+  }
+  return enhanced;
 }

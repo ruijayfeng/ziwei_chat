@@ -6,7 +6,7 @@
 ## UI-First Reference Transplant Status
 
 - The presentation from `ziwei-chat-redesign` is now the active source for the global shell, home/chat, radial chart, records, insights, and settings visual language.
-- `/records` is backed by profile-scoped persisted/current-browser conversation data; `/insights` intentionally retains reference presentation data while its sourced aggregation adapter remains pending.
+- `/records` is backed by profile-scoped persisted/current-browser conversation data; `/insights` shows an honest insufficient-history state while its sourced aggregation adapter remains pending.
 - Existing chart, chat/Agent, evidence, conversation, model-settings, and anonymous-profile services remain in the repository and continue to pass their targeted contracts.
 - The settings route and default inspector are connected to real browser-local model settings and the shared confirmed anonymous-data deletion operation.
 - Real chat streaming/evidence, persisted conversation history, and the real iztro chart are wired into the transplanted reference views through `WorkspaceProvider` and focused adapters.
@@ -36,17 +36,17 @@
 - Expanded `Renhuai123/ziwei-doushu` RAG seed import exists under `content/knowledge/imported/ziwei-doushu/`, with topic classification and source repo/path/license metadata exposed through evidence.
 - Six beta topic entries: recent fortune, career/work, relationships, wealth, personality, and chart explanation.
 - Chat API at `/api/chat` with response streaming surface, event-framed evidence/token streams for model-backed answers, persistence boundary, and structured error behavior.
-- Persistence boundary that uses Postgres when `DATABASE_URL` is configured and falls back to deterministic/local behavior when it is not. Each chat-message save is bounded to 3 seconds; timeout or persistence failure is logged without holding the answer path open indefinitely.
+- Persistence boundary that uses Postgres when `DATABASE_URL` is configured. Without Postgres, server routes are stateless and the browser retains only its current chart and conversation; this avoids unverifiable cross-instance deletion claims. Each Postgres chat-message save is bounded to 3 seconds; timeout or persistence failure is logged without holding the answer path open indefinitely.
 - Primary charts now persist to Neon and are restored by chart tools after a request or process cache reset.
 - The 104 bundled knowledge Markdown chunks are ingested into Neon with 1024-dimensional `BAAI/bge-large-zh-v1.5` vectors; runtime RAG queries pgvector first and labels a keyword fallback as `local`.
-- Anonymous profile data deletion through `DELETE /api/chat?profileId=...`.
+- Anonymous profile data deletion through `DELETE /api/chat?profileId=...`; Postgres mode serializes profile writes and deletion, commits a permanent UUID tombstone first, and rejects in-flight writes that resume after deletion.
 - Runtime fixed-window rate limiter for `/api/chat`.
 - Product UI rebuilt into real App Router routes `/`, `/chart`, `/records`, `/insights`, and `/settings`, with desktop navigation, mobile tabs, report/Markdown answers, and a responsive per-message evidence inspector.
 - `/api/chart` now returns a sanitized twelve-palace display DTO backed by iztro; the UI uses real palace indices for 三方四正 and distinguishes 命宫 from iztro's 来因宫 marker.
 - Browser chat transport supports static text and newline-framed evidence/token/error/done streams. Each assistant attempt owns its evidence snapshot, retry content, and failure state without carrying facts across turns.
 - Profile-scoped `/api/conversations` reads and the records route expose only real conversation/message display fields. Insights stays explicitly unavailable until a sourced aggregation and critic pipeline exists.
 - The sidebar chart card uses the real `WorkspaceProvider` restore/save state through `sidebarChartSummary`; the home header formats the current Shanghai date and refreshes at local midnight.
-- Settings and the default inspector share a confirmed deletion flow backed by `WorkspaceProvider.deleteAnonymousData`; it serializes pending chart writes, disables duplicate deletion controls, preserves local state on failure, and renders the shared error.
+- Settings and the default inspector share a confirmed deletion flow backed by `WorkspaceProvider.deleteAnonymousData`; it serializes pending chart writes, disables duplicate deletion controls, preserves the active chat and local state on failure, and aborts/resets the chat only after server deletion succeeds.
 - shadcn/Base UI owned primitives in `src/components/ui/` for buttons, cards, inputs, textarea, select, sheet, alert dialog, badge, and separator.
 - Third-party Claude Code skills are installed under `.agents/skills` with `.claude/skills` symlinks and `skills-lock.json` source hashes; use them only after reviewing scope because they run with full agent permissions.
 - CI workflow on pull requests and pushes to `master`: `npm ci`, lint, typecheck, tests, agent evals, and build.
@@ -122,7 +122,7 @@ Latest agent latency and failure hardening work:
 - RAG is hot-swappable: local Markdown keyword search remains the no-database baseline; optional embedding settings can use a local JSON embedding index for hybrid retrieval; when `DATABASE_URL` and embedding settings are present, runtime retrieval attempts Postgres/pgvector first and falls back locally if needed.
 - Product authentication, hosted accounts, payments, subscriptions, multi-chart management, reports, and large ingestion are intentionally out of V1 scope.
 - `npm audit` still reports moderate advisories in Next/PostCSS and drizzle-kit/esbuild chains. npm suggests force fixes that imply breaking downgrades, so they were not applied.
-- Weekly letters, monthly reflections, and long-term pattern insights remain intentionally unavailable because no sourced aggregation/critic pipeline exists.
+- Weekly letters, monthly reflections, and long-term pattern insights remain unavailable because no sourced aggregation/critic pipeline exists; the former static personalized fixtures and inert pattern controls have been removed from active runtime code.
 
 ## Recommended Next Work
 
