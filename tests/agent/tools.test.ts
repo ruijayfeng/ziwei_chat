@@ -217,6 +217,31 @@ describe("agent tools", () => {
     });
   });
 
+  test("maps chart explanation knowledge requests to the general corpus", async () => {
+    const tools = createAgentTools({
+      stores: createInMemoryToolStores({
+        knowledgeSources: [{
+          chunkId: "chart-structure",
+          title: "Chart structure",
+          source: "curated-internal",
+          school: "default",
+          confidence: "high",
+          excerpt: "命宫与宫位结构",
+          retrievalMode: "local",
+          topic: "general",
+          terms: ["命宫"],
+        }],
+      }),
+    });
+
+    await expect(tools.searchKnowledge({
+      query: "chart explanation",
+      topic: "chart_explanation",
+      chartTerms: ["命宫"],
+      limit: 3,
+    })).resolves.toMatchObject({ ok: true, data: [{ chunkId: "chart-structure" }] });
+  });
+
   test("missing chart errors are structured and recoverable", async () => {
     const tools = createAgentTools({ stores: createInMemoryToolStores() });
 

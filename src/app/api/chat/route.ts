@@ -8,6 +8,7 @@
 import { randomUUID } from "node:crypto";
 
 import { runResponseCritic } from "../../../lib/agent/critic";
+import { analysisTopicForIntent } from "../../../lib/agent/analysis-topic";
 import {
   chatStreamHeader,
   encodeChatStreamEvent,
@@ -327,7 +328,7 @@ async function answerWithChartContext({
   evidenceRunId: string;
   onStage: (stage: string) => void;
 }): Promise<ChartAnswer> {
-  const topic = toChartTopic(intent);
+  const topic = analysisTopicForIntent(intent);
   onStage("chart_facts");
   const summary = await tools.summarizeChartFacts({
     chartId,
@@ -1287,10 +1288,6 @@ function formatChartFact(fact: ChartFact) {
 
 function formatKnowledgeSource(source: KnowledgeSource) {
   return `${source.title}（${source.source} / ${source.school}）：${source.excerpt}`;
-}
-
-function toChartTopic(intent: Intent): ChartTopic {
-  return intent === "chart_explanation" ? "general" : (intent as ChartTopic);
 }
 
 function buildConclusion(topic: ChartTopic) {

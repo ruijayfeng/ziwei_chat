@@ -111,7 +111,7 @@ describe("knowledge embedding index", () => {
         version: 1,
         model: "test-embedding",
         generatedAt: "2026-07-07T00:00:00.000Z",
-        records: [record("career", [1, 0])],
+        records: [record("career", [1, 0], "medium", ["官禄"])],
       }),
       "utf8",
     );
@@ -121,6 +121,20 @@ describe("knowledge embedding index", () => {
       model: "test-embedding",
       records: [expect.objectContaining({ chunkId: "career", embedding: [1, 0] })],
     });
+  });
+
+  test("drops embedding records with incomplete provenance metadata", async () => {
+    const root = path.join(os.tmpdir(), `ziwei-embedding-invalid-${Date.now()}`);
+    const indexDir = path.join(root, "content", "knowledge-index");
+    await mkdir(indexDir, { recursive: true });
+    await writeFile(path.join(indexDir, "embeddings.json"), JSON.stringify({
+      version: 1,
+      model: "test",
+      generatedAt: "2026-07-17T00:00:00.000Z",
+      records: [{ ...record("invalid", [1, 0]), license: "", terms: [] }],
+    }), "utf8");
+
+    await expect(loadKnowledgeEmbeddingIndex(root)).resolves.toMatchObject({ records: [] });
   });
 
   test("ranks records by vector similarity with confidence and term boosts", () => {
@@ -159,7 +173,7 @@ function record(
     source: "curated",
     sourcePath: "",
     sourceUrl: "",
-    license: "",
+    license: "internal",
     school: "default",
     confidence,
     excerpt: `${chunkId} excerpt`,

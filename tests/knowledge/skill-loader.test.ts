@@ -8,7 +8,9 @@ import {
   loadSkill,
   parseSkillMarkdown,
 } from "../../src/lib/knowledge/skill-loader";
-import { searchKnowledge } from "../../src/lib/knowledge/search";
+import { loadKnowledgeChunks, searchKnowledge } from "../../src/lib/knowledge/search";
+import { parseKnowledgeMarkdown } from "../../src/lib/knowledge/search";
+import { analysisTopicForIntent } from "../../src/lib/agent/analysis-topic";
 
 describe("skill loader", () => {
   test("loads a valid MVP topic skill from Markdown front matter and sections", async () => {
@@ -144,6 +146,98 @@ describe("skill loader", () => {
 });
 
 describe("local knowledge search", () => {
+  test.each([
+    ["empty terms", "terms: []", "terms"],
+    ["blank source", 'source: ""', "source"],
+    ["blank license", 'license: ""', "license"],
+    ["blank school", 'school: ""', "school"],
+  ])("rejects malformed knowledge metadata: %s", (_label, replacement, field) => {
+    const markdown = [
+      "---",
+      "title: Test",
+      "topic: career",
+      "terms: [官禄]",
+      "source: curated-internal",
+      "license: internal",
+      "school: default",
+      "confidence: high",
+      "---",
+      "content",
+    ].join("\n").replace(new RegExp(`^${field}:.*$`, "m"), replacement);
+
+    expect(() => parseKnowledgeMarkdown("test.md", markdown)).toThrow(`Knowledge test.md is missing required field: ${field}`);
+  });
+
+  test.each(["curated", "curated-internal"])("rejects an imported file that declares itself %s", (source) => {
+    const markdown = [
+      "---",
+      "title: Imported",
+      "topic: general",
+      "terms: [命宫]",
+      `source: ${source}`,
+      "sourcePath: content/fake.md",
+      "sourceUrl: https://example.test",
+      "license: internal",
+      "school: default",
+      "confidence: medium",
+      "---",
+      "content",
+    ].join("\n");
+
+    expect(() => parseKnowledgeMarkdown("imported/ziwei-doushu/fake.md", markdown)).toThrow(
+      "Imported knowledge imported/ziwei-doushu/fake.md cannot declare curated provenance.",
+    );
+  });
+  test("returns attributed high-confidence local coverage for every active topic contract", async () => {
+    const contracts = [
+      { id: "career", query: "career palace", terms: ["官禄"] },
+      { id: "relationship", query: "relationship palace", terms: ["夫妻"] },
+      { id: "wealth", query: "wealth palace", terms: ["财帛"] },
+      { id: "personality", query: "life palace", terms: ["命宫"] },
+      { id: "recent_fortune", query: "recent fortune timing", terms: ["运限"] },
+      { id: "chart_explanation", query: "chart explanation", terms: ["命宫", "宫位", "星曜"] },
+    ];
+    const expectedChunks: Record<string, string[]> = {
+      career: ["career-palace"],
+      relationship: ["relationship-palace"],
+      wealth: ["wealth-palace"],
+      personality: ["personality-life-palace"],
+      recent_fortune: ["recent-fortune-timing"],
+      chart_explanation: ["renhuai-chart-structure", "renhuai-palace-complete-basics", "renhuai-star-palace-examples"],
+    };
+
+    for (const contract of contracts) {
+      const results = await searchKnowledge({
+        query: contract.query,
+        topic: analysisTopicForIntent(contract.id),
+        chartTerms: contract.terms,
+        limit: 5,
+        retrievalMode: "local",
+      });
+      expect(results.length, contract.id).toBeGreaterThanOrEqual(2);
+      expect(results.some((result) => result.confidence === "high"), contract.id).toBe(true);
+      expect(results.map((result) => result.chunkId), contract.id).toEqual(expect.arrayContaining(expectedChunks[contract.id]));
+      for (const result of results) {
+        expect(result.source, `${contract.id} source`).not.toBe("");
+        expect(result.license, `${contract.id} license`).not.toBe("");
+        expect(result.school, `${contract.id} school`).not.toBe("");
+        expect(result.retrievalMode).toBe("local");
+      }
+    }
+  });
+
+  test("keeps runtime metadata complete and imported chunks visibly non-curated", async () => {
+    for (const chunk of await loadKnowledgeChunks(process.cwd())) {
+      expect(chunk.terms.length, `${chunk.chunkId} terms`).toBeGreaterThan(0);
+      expect(chunk.source.trim(), `${chunk.chunkId} source`).not.toBe("");
+      expect(chunk.license.trim(), `${chunk.chunkId} license`).not.toBe("");
+      expect(chunk.school.trim(), `${chunk.chunkId} school`).not.toBe("");
+      if (chunk.sourcePath.includes("lib/") || chunk.sourcePath.includes("lib\\")) {
+        expect(chunk.source, `${chunk.chunkId} imported source`).not.toBe("curated-internal");
+      }
+    }
+  });
+
   test("returns source metadata from curated Markdown without embedding configuration", async () => {
     const results = await searchKnowledge({
       query: "career palace",

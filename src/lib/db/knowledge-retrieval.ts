@@ -132,7 +132,14 @@ function readConfidence(value: unknown) {
 }
 
 function isKnowledgeSource(value: KnowledgeSource | null): value is KnowledgeSource {
-  return value !== null && value.chunkId.length > 0;
+  return (
+    value !== null &&
+    value.chunkId.trim().length > 0 &&
+    value.title.trim().length > 0 &&
+    value.source.trim().length > 0 &&
+    value.license.trim().length > 0 &&
+    value.school.trim().length > 0
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

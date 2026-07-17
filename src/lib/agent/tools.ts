@@ -19,6 +19,7 @@ import type { ChartPersistence } from "../db/chart-persistence";
 import { createChart as createChartWithIztro } from "../chart/create-chart";
 import { summarizeChart } from "../chart/summarize-chart";
 import { toolError, toolOk, type ToolResult } from "./tool-result";
+import { analysisTopicForIntent } from "./analysis-topic";
 
 type GetCurrentChartInput = {
   profileId: string;
@@ -348,8 +349,9 @@ export function createAgentTools({
       "searchKnowledge",
       async (input: SearchKnowledgeInput): Promise<ToolResult<KnowledgeSource[]>> => {
         const mode = input.retrievalMode ?? "local";
+        const topic = analysisTopicForIntent(input.topic);
         const results = stores.knowledgeSources
-          .filter((source) => source.topic === input.topic)
+          .filter((source) => source.topic === topic)
           .map((source) => ({
             source,
             score: scoreKnowledgeSource(source, input.query, input.chartTerms),
@@ -490,18 +492,7 @@ function toChartOutput(chart: StoredChart): CreateChartOutput {
 }
 
 function normalizeTopic(topic: string): ChartTopic {
-  if (
-    topic === "career" ||
-    topic === "relationship" ||
-    topic === "wealth" ||
-    topic === "personality" ||
-    topic === "recent_fortune" ||
-    topic === "general"
-  ) {
-    return topic;
-  }
-
-  return "general";
+  return analysisTopicForIntent(topic);
 }
 
 function findPalaceForStar(facts: ChartFact[], star: string) {

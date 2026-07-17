@@ -70,6 +70,22 @@ describe("postgres knowledge retrieval", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  test("drops database rows with incomplete provenance metadata", async () => {
+    const retriever = createPostgresKnowledgeRetriever({ execute: vi.fn(async () => ({ rows: [{
+      chunkId: "bad",
+      title: "Bad",
+      source: "",
+      sourcePath: "",
+      sourceUrl: "",
+      license: "",
+      school: "",
+      confidence: "high",
+      excerpt: "content",
+    }] })) });
+
+    await expect(retriever.search({ queryEmbedding: [1], topic: "career", chartTerms: [], limit: 1 })).resolves.toEqual([]);
+  });
+
   test("bounds a hanging vector query so local retrieval can take over", async () => {
     vi.useFakeTimers();
 

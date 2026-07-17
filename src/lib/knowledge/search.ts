@@ -190,15 +190,21 @@ export function parseKnowledgeMarkdown(
   const parsed = matter(markdown);
   const data = parsed.data as Record<string, unknown>;
 
+  const source = requireString(data, "source", fileName);
+  const license = requireString(data, "license", fileName);
+  if (isImportedKnowledgePath(fileName) && isCuratedSource(source)) {
+    throw new Error(`Imported knowledge ${fileName} cannot declare curated provenance.`);
+  }
+
   return {
     chunkId: path.basename(fileName, ".md"),
     title: requireString(data, "title", fileName),
     topic: requireString(data, "topic", fileName),
     terms: requireStringArray(data, "terms", fileName),
-    source: requireString(data, "source", fileName),
+    source,
     sourcePath: readOptionalString(data, "sourcePath"),
     sourceUrl: readOptionalString(data, "sourceUrl"),
-    license: readOptionalString(data, "license"),
+    license,
     school: requireString(data, "school", fileName),
     confidence: requireConfidence(data, fileName),
     excerpt: parsed.content.trim().slice(0, 260),
@@ -239,11 +245,11 @@ function requireString(
   fileName: string,
 ) {
   const value = data[field];
-  if (typeof value !== "string" || value.length === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`Knowledge ${fileName} is missing required field: ${field}`);
   }
 
-  return value;
+  return value.trim();
 }
 
 function requireStringArray(
@@ -252,11 +258,23 @@ function requireStringArray(
   fileName: string,
 ) {
   const value = data[field];
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some((item) => typeof item !== "string" || item.trim().length === 0)
+  ) {
     throw new Error(`Knowledge ${fileName} is missing required field: ${field}`);
   }
 
-  return value as string[];
+  return value.map((item) => item.trim()) as string[];
+}
+
+function isCuratedSource(source: string) {
+  return source === "curated" || source === "curated-internal";
+}
+
+function isImportedKnowledgePath(fileName: string) {
+  return fileName.replaceAll("\\", "/").startsWith("imported/");
 }
 
 function requireConfidence(data: Record<string, unknown>, fileName: string) {

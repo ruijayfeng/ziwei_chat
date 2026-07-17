@@ -9,6 +9,8 @@ The Agent loop can already route intent, build a plan, run deterministic chart t
 
 The current `content/skills/` and `content/knowledge/` files include beta-level curated topic knowledge plus selected high-signal extracts adapted from `Renhuai123/ziwei-doushu`. They cover common-topic retrieval, twelve-palace structure, fourteen-major-star basics, auxiliary/malefic star interpretation, sihua basics, common patterns, star-palace examples, and practical timing boundaries.
 
+Final V1+ active-topic retrieval coverage is closed: representative local queries for career, relationship, wealth, personality, recent fortune, and chart explanation return multiple attributed sources with at least one high-confidence result. Chart explanation intentionally maps to the reviewed `general` chart-structure corpus through the shared `analysisTopicForIntent` contract; it does not duplicate generic doctrine under another topic id.
+
 `content/knowledge/imported/ziwei-doushu/` contains imported seed chunks from `Renhuai123/ziwei-doushu`. Treat it as attributed RAG source material, not final curated product doctrine. The `content/knowledge/renhuai-*.md` files are the promoted curated layer: short, source-attributed, product-safe summaries for topics, palace structure, major stars, auxiliary stars, sihua, star-palace examples, timing, and common pattern interpretation.
 
 ## Skill Content Needed
@@ -32,7 +34,7 @@ Minimum skill sections by topic:
 
 ## Knowledge Chunks Still Needed
 
-Remaining corpus needed before answer quality should be considered strong:
+Remaining corpus for future expansion beyond Final V1+:
 
 - star-by-palace matrix: 14 major stars across the 12 practical palaces. The open-source Renhuai123 repository does not expose the full `14 x 13` doctrine; it only provides selected examples and general star/palace material.
 - sihua-by-palace matrix: fuller explanations for 化禄, 化权, 化科, 化忌 across each palace and topic. Current curated content covers the common cases and boundaries.
