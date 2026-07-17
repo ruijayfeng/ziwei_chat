@@ -27,6 +27,27 @@ describe("insight report cache", () => {
     expect(storage.getItem(cacheKey(profileA, fingerprintA))).toBeNull();
   });
 
+  test("evicts envelopes that contain anything besides the versioned report", () => {
+    const storage = createStorage();
+    storage.setItem(cacheKey(profileA, fingerprintA), JSON.stringify({
+      version: 1,
+      report: approvedReport(fingerprintA),
+      apiKey: "sk-secret",
+      sourceBundle: { conversations: [{ messages: [{ content: "raw source" }] }] },
+    }));
+
+    expect(readInsightCache(profileA, fingerprintA, storage)).toEqual({ status: "miss" });
+    expect(storage.getItem(cacheKey(profileA, fingerprintA))).toBeNull();
+  });
+
+  test("rejects patterns without two distinct provenance ids", () => {
+    const storage = createStorage();
+    const report = approvedReport(fingerprintA);
+    report.patterns[0] = { ...report.patterns[0]!, sourceIds: ["conversation-1:message-1"] };
+
+    expect(writeInsightCache(profileA, report, storage)).toBe(false);
+  });
+
   test("evicts a cache key whose report fingerprint does not match", () => {
     const storage = createStorage();
     storage.setItem(cacheKey(profileA, fingerprintA), JSON.stringify({ version: 1, report: approvedReport(fingerprintB) }));

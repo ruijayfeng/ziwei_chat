@@ -103,7 +103,8 @@ function mergeCurrentSession(
   const current = currentSessionConversation(currentSession);
   if (!current) return { conversations: persisted };
   return {
-    conversations: [current, ...persisted.filter((conversation) => conversation.id !== current.id)],
+    conversations: [current, ...persisted.filter((conversation) => conversation.id !== current.id)]
+      .slice(0, MAX_CONVERSATIONS),
   };
 }
 

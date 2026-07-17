@@ -78,7 +78,7 @@ function readCacheEntry(storage: StorageLike, key: string, expectedFingerprint: 
     return null;
   }
   if (
-    !isRecord(value)
+    !hasExactKeys(value, ["version", "report"])
     || value.version !== cacheVersion
     || !isInsightReport(value.report)
     || value.report.sourceFingerprint !== expectedFingerprint
@@ -106,17 +106,17 @@ function isTimestampWindow(value: unknown) {
 }
 
 function isParagraph(value: unknown) {
-  return hasExactKeys(value, ["text", "sourceIds"]) && isText(value.text) && isSourceIds(value.sourceIds);
+  return hasExactKeys(value, ["text", "sourceIds"]) && isText(value.text) && hasDistinctSourceIds(value.sourceIds, 1);
 }
 
 function isPattern(value: unknown) {
   return hasExactKeys(value, ["id", "title", "detail", "topic", "sourceIds"])
-    && isText(value.id) && isText(value.title) && isText(value.detail) && isText(value.topic) && isSourceIds(value.sourceIds);
+    && isText(value.id) && isText(value.title) && isText(value.detail) && isText(value.topic) && hasDistinctSourceIds(value.sourceIds, 2);
 }
 
-function isSourceIds(value: unknown) {
+function hasDistinctSourceIds(value: unknown, minimum: number) {
   return Array.isArray(value)
-    && value.length > 0
+    && value.length >= minimum
     && value.every(isText)
     && new Set(value).size === value.length;
 }

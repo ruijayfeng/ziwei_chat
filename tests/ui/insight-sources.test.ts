@@ -43,6 +43,28 @@ describe("insight source loader", () => {
     expect(peakDetails).toBeLessThanOrEqual(4);
   });
 
+  test("keeps a distinct current session inside the twenty-conversation cap", async () => {
+    const currentSession = {
+      conversationId: "conversation-current",
+      messages: [{ id: "current-user", role: "user" as const, content: "Current", status: "complete" as const, evidence: initialEvidence }],
+    };
+    const result = await loadInsightSourceBundle(profileId, currentSession, async (input) => {
+      if (!String(input).includes("conversationId=")) {
+        return Response.json({ conversations: Array.from({ length: 20 }, (_, index) => ({
+          id: `conversation-${index}`,
+          title: `Conversation ${index}`,
+          lastMessageAt: `2026-07-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+        })) });
+      }
+      const id = new URL(String(input), "https://ziwei.local").searchParams.get("conversationId")!;
+      return Response.json({ messages: [{ id: `message-${id}`, conversationId: id, role: "user", content: "Saved", createdAt: "2026-07-17T00:00:00.000Z" }] });
+    });
+
+    expect(result.conversations).toHaveLength(20);
+    expect(result.conversations[0]?.id).toBe("conversation-current");
+    expect(result.conversations.some((conversation) => conversation.id === "conversation-19")).toBe(false);
+  });
+
   test("rejects aborted list and detail requests", async () => {
     const listController = new AbortController();
     listController.abort();
