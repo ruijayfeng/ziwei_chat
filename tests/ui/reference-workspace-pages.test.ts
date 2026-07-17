@@ -25,11 +25,22 @@ describe("reference workspace pages", () => {
 
   test("keeps the reference insights composition", () => {
     const page = source("src/app/(workspace)/insights/page.tsx");
+    const controller = source("src/components/insights/insights-controller.tsx");
+    const weeklyLetter = source("src/components/insights/weekly-letter.tsx");
+    const patterns = source("src/components/insights/pattern-list.tsx");
     const workspaceData = source("src/lib/workspace-data.ts");
 
-    expect(page).toContain("<InsightsEmptyState />");
-    expect(page).not.toContain("WeeklyLetter");
-    expect(page).not.toContain("PatternList");
+    expect(page).toContain("<InsightsController />");
+    expect(page).not.toContain("<InsightsEmptyState />");
+    expect(controller).toContain("loadInsightSourceBundle");
+    expect(controller).toContain("aggregateInsightSources");
+    expect(controller).toContain("<WeeklyLetter");
+    expect(controller).toContain("<PatternList");
+    expect(weeklyLetter).toContain("<InsightSources");
+    expect(patterns).toContain("<article");
+    expect(patterns).toContain("<InsightSources");
+    expect(patterns).not.toContain("<button");
+    expect(patterns).not.toContain("<a ");
     expect(workspaceData).not.toContain("WEEKLY_LETTER");
     expect(workspaceData).not.toContain("PATTERNS");
     expect(workspaceData).not.toContain("MONTHLY_REFLECTION");

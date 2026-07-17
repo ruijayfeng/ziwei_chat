@@ -1,5 +1,5 @@
 import { AppLayout } from '@/components/app-layout'
-import { InsightsEmptyState } from '@/components/insights/insights-empty-state'
+import { InsightsController } from '@/components/insights/insights-controller'
 import { PageHeader, RingGlyph } from '@/components/workspace/page-header'
 
 export default function InsightsPage() {
@@ -13,7 +13,7 @@ export default function InsightsPage() {
           aside={<RingGlyph className="size-28 opacity-80" />}
         />
 
-        <InsightsEmptyState />
+        <InsightsController />
       </div>
     </AppLayout>
   )

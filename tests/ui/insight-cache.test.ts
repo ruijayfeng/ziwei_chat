@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { clearInsightCache, readInsightCache, writeInsightCache } from "../../src/lib/ui/insight-cache";
+import { clearInsightCache, parseInsightReport, readInsightCache, writeInsightCache } from "../../src/lib/ui/insight-cache";
 import type { InsightReport } from "../../src/lib/insights/contracts";
 
 const profileA = "00000000-0000-4000-8000-000000000001";
@@ -9,6 +9,11 @@ const fingerprintA = "a".repeat(64);
 const fingerprintB = "b".repeat(64);
 
 describe("insight report cache", () => {
+  test("exports the strict report parser for API response validation", () => {
+    expect(parseInsightReport(approvedReport(fingerprintA))).toEqual(approvedReport(fingerprintA));
+    expect(parseInsightReport({ ...approvedReport(fingerprintA), sourceBundle: { conversations: [] } })).toBeNull();
+  });
+
   test("isolates reports by profile and exact source fingerprint", () => {
     const storage = createStorage();
     const report = approvedReport(fingerprintA);

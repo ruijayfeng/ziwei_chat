@@ -45,7 +45,7 @@ export function writeInsightCache(
   report: InsightReport,
   storage: StorageLike | null = browserStorage(),
 ) {
-  if (!storage || !isInsightReport(report)) return false;
+  if (!storage || !parseInsightReport(report)) return false;
   try {
     const nextKey = cacheKey(profileId, report.sourceFingerprint);
     storage.setItem(nextKey, JSON.stringify({ version: cacheVersion, report }));
@@ -68,7 +68,7 @@ export function clearInsightCache(profileId: string, storage: StorageLike | null
   }
 }
 
-function readCacheEntry(storage: StorageLike, key: string, expectedFingerprint: string) {
+function readCacheEntry(storage: StorageLike, key: string, expectedFingerprint: string): InsightReport | null {
   let value: unknown;
   try {
     const serialized = storage.getItem(key);
@@ -78,44 +78,62 @@ function readCacheEntry(storage: StorageLike, key: string, expectedFingerprint: 
     evict(storage, key);
     return null;
   }
-  if (
-    !hasExactKeys(value, ["version", "report"])
-    || value.version !== cacheVersion
-    || !isInsightReport(value.report)
-    || value.report.sourceFingerprint !== expectedFingerprint
-  ) {
+  if (!hasExactKeys(value, ["version", "report"]) || value.version !== cacheVersion) {
     evict(storage, key);
     return null;
   }
-  return value.report;
+  const report = parseInsightReport(value.report);
+  if (!report || report.sourceFingerprint !== expectedFingerprint) {
+    evict(storage, key);
+    return null;
+  }
+  return report;
 }
 
-function isInsightReport(value: unknown): value is InsightReport {
-  if (!hasExactKeys(value, ["sourceWindow", "generatedAt", "sourceFingerprint", "weeklyLetter", "patterns", "critic"])) return false;
-  if (!isTimestampWindow(value.sourceWindow) || !isCanonicalTimestamp(value.generatedAt) || !isFingerprint(value.sourceFingerprint)) return false;
-  if (!hasExactKeys(value.weeklyLetter, ["greeting", "paragraphs", "signoff"]) || !Array.isArray(value.weeklyLetter.paragraphs)) return false;
-  if (!isText(value.weeklyLetter.greeting) || !isText(value.weeklyLetter.signoff) || value.weeklyLetter.paragraphs.length < 1 || value.weeklyLetter.paragraphs.length > 3) return false;
-  if (!value.weeklyLetter.paragraphs.every(isParagraph) || !Array.isArray(value.patterns) || value.patterns.length > 3 || !value.patterns.every(isPattern)) return false;
-  return hasExactKeys(value.critic, ["passed", "issues"]) && value.critic.passed === true && Array.isArray(value.critic.issues) && value.critic.issues.length === 0;
+export function parseInsightReport(value: unknown): InsightReport | null {
+  if (!hasExactKeys(value, ["sourceWindow", "generatedAt", "sourceFingerprint", "weeklyLetter", "patterns", "critic"])) return null;
+  if (!isTimestampWindow(value.sourceWindow) || !isCanonicalTimestamp(value.generatedAt) || !isFingerprint(value.sourceFingerprint)) return null;
+  if (!hasExactKeys(value.weeklyLetter, ["greeting", "paragraphs", "signoff"]) || !Array.isArray(value.weeklyLetter.paragraphs)) return null;
+  if (!isText(value.weeklyLetter.greeting) || !isText(value.weeklyLetter.signoff) || value.weeklyLetter.paragraphs.length < 1 || value.weeklyLetter.paragraphs.length > 3) return null;
+  if (!value.weeklyLetter.paragraphs.every(isParagraph) || !Array.isArray(value.patterns) || value.patterns.length > 3 || !value.patterns.every(isPattern)) return null;
+  if (!hasExactKeys(value.critic, ["passed", "issues"]) || value.critic.passed !== true || !Array.isArray(value.critic.issues) || value.critic.issues.length !== 0) return null;
+  return {
+    sourceWindow: { from: value.sourceWindow.from, to: value.sourceWindow.to },
+    generatedAt: value.generatedAt,
+    sourceFingerprint: value.sourceFingerprint,
+    weeklyLetter: {
+      greeting: value.weeklyLetter.greeting,
+      paragraphs: value.weeklyLetter.paragraphs.map((paragraph) => ({ text: paragraph.text, sourceIds: [...paragraph.sourceIds] })),
+      signoff: value.weeklyLetter.signoff,
+    },
+    patterns: value.patterns.map((pattern) => ({
+      id: pattern.id,
+      title: pattern.title,
+      detail: pattern.detail,
+      topic: pattern.topic,
+      sourceIds: [...pattern.sourceIds],
+    })),
+    critic: { passed: true, issues: [] },
+  };
 }
 
-function isTimestampWindow(value: unknown) {
+function isTimestampWindow(value: unknown): value is { from: string; to: string } {
   return hasExactKeys(value, ["from", "to"])
     && isCanonicalTimestamp(value.from)
     && isCanonicalTimestamp(value.to)
     && value.from <= value.to;
 }
 
-function isParagraph(value: unknown) {
+function isParagraph(value: unknown): value is { text: string; sourceIds: string[] } {
   return hasExactKeys(value, ["text", "sourceIds"]) && isText(value.text) && hasDistinctSourceIds(value.sourceIds, 1);
 }
 
-function isPattern(value: unknown) {
+function isPattern(value: unknown): value is { id: string; title: string; detail: string; topic: string; sourceIds: string[] } {
   return hasExactKeys(value, ["id", "title", "detail", "topic", "sourceIds"])
     && isText(value.id) && isText(value.title) && isText(value.detail) && isText(value.topic) && hasDistinctSourceIds(value.sourceIds, 2);
 }
 
-function hasDistinctSourceIds(value: unknown, minimum: number) {
+function hasDistinctSourceIds(value: unknown, minimum: number): value is string[] {
   return Array.isArray(value)
     && value.length >= minimum
     && value.every(isCanonicalSourceId)
