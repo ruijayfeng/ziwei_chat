@@ -34,7 +34,7 @@
 | 8 Real evaluation | Complete | Commit `7e670fa`; 17 cases, real iztro timing, isolated stage failures, six rubric samples, independent Spec PASS / Quality Approved |
 | 9 Dead migration cleanup | Complete | Commit `e91c85a`; superseded presenters and the final zero-import composer are removed with replacement contracts preserved |
 | 10 Docs and UTF-8 audit | Complete | Current maps/status/L3 contracts and recursive active-source copy scan pass; final independent re-review PASS with no Critical/Important findings |
-| 11 Automated/Postgres gate | Pending | Requires configured release Postgres for mandatory persistence evidence |
+| 11 Automated/Postgres gate | Complete | Static gates, Drizzle check, serial real-Postgres lifecycle/pgvector tests, and dependency classification pass |
 | 12 Browser/provider acceptance | Pending | Requires browser matrix and usable real model settings |
 | 13 Final audit | Pending | Only step allowed to declare Final V1+ complete |
 

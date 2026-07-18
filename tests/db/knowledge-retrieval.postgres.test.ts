@@ -52,5 +52,5 @@ describePostgres("Postgres knowledge retrieval integration", () => {
     } finally {
       await client`delete from knowledge_chunks where chunk_key = ${chunkKey}`;
     }
-  });
+  }, 30_000);
 });

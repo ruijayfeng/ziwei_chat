@@ -12,8 +12,9 @@ chart, Agent, evidence, records, Insights, settings, and deletion services. The
 user-supplied `ziwei-chat-redesign/` directory remains untracked, read-only
 reference material and is not part of the application build.
 
-Final V1+ implementation Tasks 1-10 are complete. Tasks 11-13 remain mandatory
-release gates, so the release is not yet declared complete.
+Final V1+ implementation and automated release Tasks 1-11 are complete. Tasks
+12-13 remain mandatory release gates, so the release is not yet declared
+complete.
 
 ## Implemented Product
 
@@ -83,16 +84,32 @@ Task 10 verification on 2026-07-17:
   `git diff --check` passed
 - final independent Task 10 re-review: PASS; no Critical or Important findings
 
-These figures are not final release evidence. Task 11 will rerun
-lint, typecheck, full tests, evaluation, build, Drizzle, real Postgres lifecycle,
-and dependency audit and record fresh totals.
+Those Task 10 figures are not final release evidence; the fresh Task 11 gate
+below supersedes them for automated, migration, database, and dependency proof.
+
+Task 11 verification on 2026-07-18:
+
+- lint: 0 errors; 135 warnings confined to installed `.agents/skills/impeccable`
+- typecheck: passed
+- default no-database full tests: 70 passed / 3 skipped files; 749 passed / 4
+  skipped tests
+- agent evaluation: 17 cases, 0 failed, 1 explicit setup-required
+- production build: passed
+- `drizzle-kit check`: passed
+- configured release Postgres, run serially: two-connection profile lifecycle
+  2/2 passed; chart/conversation/Insights/deletion lifecycle 1/1 passed;
+  pgvector retrieval parity 1/1 passed
+- dependency audit: 6 moderate, 0 high, 0 critical. Four findings are confined
+  to the development-only drizzle-kit/esbuild chain. The Next-bundled PostCSS
+  advisory requires untrusted CSS stringify input, which this product does not
+  accept. npm's offered fixes are breaking downgrades, so no force fix was
+  applied.
 
 ## Open Release Gates
 
-1. Run Task 11 complete automated, database, migration, and security gates.
-2. Run Task 12 at 390, 1024, 1440, and 1536 pixels in no-database and Postgres
+1. Run Task 12 at 390, 1024, 1440, and 1536 pixels in no-database and Postgres
    modes, plus timed real-provider chat, Insights, and forced-failure scenarios.
-3. Close Task 13 only after every G1-G10 item links to current code, test,
+2. Close Task 13 only after every G1-G10 item links to current code, test,
    browser, database, and provider evidence.
 
 ## Intentional Non-Goals

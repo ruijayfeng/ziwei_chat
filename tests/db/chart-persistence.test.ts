@@ -28,7 +28,8 @@ describe("createPostgresChartPersistence", () => {
     };
     const rows: Array<Record<string, unknown>> = [];
     const baseDatabase = {
-      insert(_table?: unknown) {
+      insert(table?: unknown) {
+        void table;
         return {
           values(value: Record<string, unknown>) {
             if ("chartJson" in value) {

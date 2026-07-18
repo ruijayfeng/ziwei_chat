@@ -28,7 +28,7 @@ health/family/children/home workflows.
 | Sourced Insights server | Complete | Bounded aggregation, stable fingerprint, strict API parsing, provider generation, provenance/safety critic |
 | Sourced Insights browser/UI | Implementation complete, release validation pending | Source loading, profile cache, controller, provenance disclosure, and loading/insufficient/ready/stale/error states |
 | Active topic catalog | Complete | Exactly six supported entries backed by matching intent and skill contracts |
-| Skill and knowledge quality | Complete, Postgres parity pending | Six executable skill contracts and tool-aligned local knowledge coverage are enforced; pgvector parity still needs a configured database run |
+| Skill and knowledge quality | Complete | Six executable skill contracts and tool-aligned local knowledge coverage are enforced; configured release-Postgres pgvector parity passed in Task 11 |
 | Real-contract evaluation | Complete | Real deterministic stages, 17 isolated cases, required-fact coverage, six rubric samples, and independent review pass |
 | Migration cleanup and documentation | Complete | Dead migration components are removed; maps, L3 contracts, recursive active-source copy scan, UTF-8 audit, and independent re-review are current |
 | Release verification | Open | Full automated, browser, Postgres, real-provider, accessibility, responsive, and Chinese-copy evidence |
@@ -39,9 +39,9 @@ The implementation backlog is now narrow. Final V1+ is not yet releasable
 because the remaining work is mostly proof and cleanup, but those gates are
 release requirements rather than optional polish.
 
-1. **Close G10 / Tasks 11-12:** run the complete automated gate, real Postgres
-   lifecycle, browser acceptance at four widths, and timed real-provider chat
-   and Insights scenarios.
+1. **Close G10 / Task 12:** run browser acceptance at four widths and timed
+   real-provider chat and Insights scenarios. Task 11 automated, migration,
+   dependency, pgvector, and real Postgres lifecycle gates are complete.
 2. **Task 13:** audit G1-G10 against current evidence and declare Final V1+
    complete only if every mandatory gate passes.
 
@@ -154,8 +154,9 @@ route/evaluation tests prove the plan loads the intended workflow.
 
 ### G6. Curated Knowledge Coverage And Source Quality
 
-**Status:** local and contract coverage closed at `6926100`; the optional
-fixture-backed pgvector parity test still requires `DATABASE_URL` in Task 11.
+**Status:** local and contract coverage closed at `6926100`; the fixture-backed
+pgvector parity test passed against the configured release database in Task 11
+on 2026-07-18.
 
 **Original gap:** the corpus had useful beta material, but imported chunks were
 not final doctrine and active-topic retrieval coverage was not yet a release
