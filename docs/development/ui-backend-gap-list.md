@@ -1,60 +1,43 @@
-# UI / Backend Function Gap List
+# UI / Backend Integration Status
 
-> Updated: 2026-07-16
-> Baseline: the supplied `ziwei-chat-redesign` presentation has priority; backend capabilities adapt behind the accepted UI.
+> Updated: 2026-07-17
+> Authority: `docs/development/final-v1-plus-gap-register.md`
+> Baseline: the accepted `ziwei-chat-redesign/` presentation remains the visual source; runtime services adapt behind it.
 
-## Current Integration Summary
+This file is a concise integration handoff. The G1-G10 register is the only
+authoritative function-gap list and defines the evidence required for closure.
 
-- Service and contract layer is healthy: the complete automated gate passes.
-- `WorkspaceProvider` restores and saves charts with profile-scoped operation ownership, stores model settings, sends `/api/chat` requests, serializes chart persistence against anonymous-data deletion, and owns real chat/evidence state.
-- The transplanted chat, chart, records, sidebar, date header, and default inspector now consume real service state behind the accepted reference UI; insights shows an explicit insufficient-history state until its sourced pipeline lands.
-- Settings and the default inspector share the same confirmed, loading/error-aware anonymous-data deletion operation.
+## Connected Surfaces
 
-## P0 — Blocks Core Use
-
-No open P0 integration gaps remain for the accepted chat and chart core loop.
-
-## P1 — Important Integration
-
-| Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
-| --- | --- | --- | --- | --- | --- |
-| No open P1 integration gaps | - | Records and the sidebar now use their real adapters | - | - | - |
-
-## P2 — Later Enhancement
-
-| Route | UI capability | Current state | Existing backend source | Required adapter | Risk |
-| --- | --- | --- | --- | --- | --- |
-| `/insights` | Weekly letter and long-term patterns | Explicit insufficient-history state; static personalized fixtures removed | No sourced aggregation pipeline | Implement the accepted source bundle, aggregation, provenance, generation, critic, and cache contract | Medium: first-class route remains incomplete |
-
-## Connected Today
-
-| Surface | Status | Evidence |
+| Surface | Runtime source | Current contract |
 | --- | --- | --- |
-| Model settings | Connected | `/settings` consumes `WorkspaceProvider.modelSettings`, persists through the existing localStorage helpers, and keeps API keys browser-local |
-| Anonymous-data deletion on settings | Connected | `/settings` calls `WorkspaceProvider.deleteAnonymousData`, which invokes `DELETE /api/chat` before clearing local state |
-| Anonymous-data deletion in settings and default inspector | Connected | Both surfaces use the shared controlled dialog, await `WorkspaceProvider.deleteAnonymousData`, prevent pending closes, retain failures in the active modal, and render `dataDeletionError` there |
-| Conversation records | Connected | `/records` loads profile-scoped persisted conversations and current browser-session history through the records controller and displays selected-message details |
-| Global sidebar chart | Connected | `sidebarChartSummary` adapts WorkspaceProvider restore/save state to loading, error, empty, and ready card states |
-| Home current date | Connected | `currentCalendarDisplay` formats the current Asia/Shanghai date and refreshes at the next Shanghai midnight |
-| Current chart display | Connected | `ChartDisplayModel -> Palace[]` adapter feeds the unchanged reference radial chart with real palace indices, branches, stars, four transforms, brightness, body-palace, and Laiyin-palace facts |
-| Chart create/edit | Connected | Reference-style right sheet reuses `ChartOnboarding`, `WorkspaceProvider.saveChart`, `resetLocalChart`, and `/api/chart`; no duplicate transport or form contract was added |
-| Anonymous chart restore | Connected on `/chart` | Browser/server-restored `WorkspaceProvider.chartDisplay` replaces the explicitly labelled demo fallback and resets selection to the real 命宫 |
-| Unsupported chart interpretation fields | Explicit gap state | The inspector keeps the reference sections but does not fabricate ratings, personality traits, recommendations, or AI analysis when the DTO has no source; it directs interpretation to the Agent conversation |
-| Chat/Agent service | Connected | Reference `ChatProvider` adapts `WorkspaceProvider.chatSession`, `sendMessage`, retry, reset, busy, streaming, and failure states without changing the accepted UI |
-| Chat evidence and critic | Connected | Reference `ChatInspector` renders the existing `EvidenceInspector` inside the accepted rail and mobile sheet, including runs, tools, chart facts, knowledge, critic, generation, and model status |
-| Conversation service | Connected | `/api/conversations` and the conversation records controller supply the transplanted records route |
-| Deterministic fallback, planner, tools, skills, RAG, analyst, critic | Preserved server-side | Agent evaluation and route code remain unchanged |
+| Home and chat | `WorkspaceProvider`, `/api/chat` | Six canonical topics, real model/setup/error states, event-framed evidence, retry, and current-session continuity |
+| Chart | `/api/chart`, iztro, chart persistence | Explicit loading/empty/error/retry/real states; create, restore, edit, save, and delete use the anonymous profile |
+| Records | `/api/conversations`, browser session | Profile-scoped persisted conversations plus current-session history, validated details, retry, and stale-request ownership |
+| Insights | source loader, aggregator, report API, critic, cache | Real loading/insufficient/ready/stale/error states, profile/fingerprint ownership, approved reports, and provenance disclosure |
+| Settings and inspector | browser-local model settings, `DELETE /api/chat` | One confirmed remote-first anonymous deletion operation; failures preserve local state and remain visible |
+| Sidebar and header | chart adapter, Shanghai calendar helpers | Real chart summary and current date; no personalized fixture fallback |
 
-## Preserved Backend Capabilities
+## Preserved Service Boundaries
 
-- iztro deterministic chart calculation
-- `/api/chat` streaming and deterministic fallback
-- Agent planner, tools, skill loading, RAG, analyst, critic, and response composition
-- Evidence events
-- Anonymous profile and browser-local model settings
-- Conversation persistence
+- iztro owns deterministic chart and horoscope calculation.
+- Vercel AI SDK/OpenAI-compatible providers own model generation; approved text
+  is emitted only after critic validation.
+- Planner, tools, executable skills, local/optional pgvector retrieval, critic,
+  and evidence stay server-owned.
+- Postgres is the system of record when configured. Without `DATABASE_URL`,
+  server routes are stateless and the anonymous browser workspace remains the
+  honest local baseline.
+- The browser stores model credentials locally and never persists them as
+  conversation, evidence, source, or insight data.
 
-## Recommended Integration Order
+## Remaining Release Work
 
-1. Leave insights unavailable until its sourced aggregation and critic contracts exist.
-2. Attachments and background music are removed from V1 scope; do not restore controls until their product contracts are accepted.
+No known UI/backend implementation adapter is intentionally missing. Final V1+
+still requires the current Task 11-13 evidence: complete automated and Postgres
+gates, four-width browser acceptance, timed real-provider chat and Insights,
+security/log inspection, and final G1-G10 audit.
+
+Attachments, music, accounts, payments, subscriptions, community, multi-chart,
+multi-school, advanced reports, and dedicated health/family/children/home flows
+are explicit non-goals, not integration gaps.

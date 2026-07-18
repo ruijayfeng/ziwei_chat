@@ -37,14 +37,16 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* App Router owns this document head; these families match the accepted reference UI. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap"
         />
-        {/* LXGW WenKai (霞鹜文楷) — a classical brush-kai webfont with genuine
+        {/* LXGW WenKai (霞鹜文楷) - a classical brush-kai webfont with genuine
             thick/thin stroke modulation and an antique, literary character.
-            Family name is 'LXGW WenKai'. We load TWO real weights — 400
-            (regular) and 700 (bold) — so headings get true light/heavy contrast
+            Family name is 'LXGW WenKai'. We load TWO real weights - 400
+            (regular) and 700 (bold) - so headings get true light/heavy contrast
             instead of a single flat weight. woff2 is unicode-range-chunked, so
             only the glyphs actually used are downloaded. Because only 400/700
             faces exist, display type must request exactly 400 or 700 (never

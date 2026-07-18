@@ -3,14 +3,16 @@
 
 Member List
 reference-chart-contract.ts: Data-free reference palace presentation types, four-transform tones, and three-way/four-direction geometry.
-ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including its routed intent and required skill.
+utils.ts: Shared Tailwind class composition helper used by owned UI components.
+ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including safe-copy validation, routed intent, and required skill.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-scoped caches, functional iztro chart recovery, real horoscope scopes, and tool event recording.
 agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, chart-setup prompts, safety, and follow-up count.
 agent/chat-runtime.ts: Runtime tool stores, persistence selection, 3-second best-effort chat-message saves, non-blocking tool-event telemetry, and deletion guards that reject late writes for invalidated anonymous profiles.
+agent/conversation-context.ts: Bounded, speaker-labelled recent-turn context shared by planner and analyst prompts.
 agent/analysis-topic.ts: Shared active-intent mapping to deterministic chart and knowledge topics; chart explanation intentionally uses general doctrine.
 agent/chat-persistence.ts: Storage-agnostic chat persistence contract with a stateless production fallback and tombstone-aware in-memory test implementation.
-agent/intent-router.ts: Rule-based MVP intent router for Ziwei topics, management intents, and safety-sensitive prompts.
+agent/intent-router.ts: Rule-based Final V1+ intent router for Ziwei topics, management intents, and safety-sensitive prompts.
 agent/llm-analyst.ts: Optional model-backed analyst that consumes chart facts, skill steps, RAG sources, critic constraints, and streams final analysis.
 agent/llm-planner.ts: Optional 3-second model planner that proposes allowlisted tool, skill, and knowledge plans, then explicitly reports model, deterministic, or diagnostic fallback provenance.
 agent/model-provider.ts: OpenAI-compatible model adapter with total/idle timeouts, `[DONE]` and `finish_reason` validation, truncation/incomplete-stream errors, first-token/completion telemetry, and `kimi-k2.6` thinking suppression.
@@ -43,6 +45,7 @@ ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer 
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.
 ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.
+ui/chart-session.ts: Browser chart-session serialization and profile-owned restore/save helpers.
 ui/chart-route-state.ts: Pure chart-route state normalization for loading, empty, restore-error, and real-chart presentation.
 ui/chart-restore-payload.ts: Strict profile-owned parser for successful browser chart-restore envelopes; only HTTP 404 represents an empty chart.
 ui/sidebar-chart.ts: Pure WorkspaceProvider chart-state adapter for truthful sidebar loading, error, empty, and ready presentation.
@@ -54,8 +57,8 @@ ui/insight-cache.ts: Versioned profile/fingerprint-isolated localStorage cache f
 ui/profile-operation.ts: Profile/revision operation tokens that prevent stale chart restore and save mutations from winning.
 ui/chart-display.ts: Pure stable-id lookup and real-index three-way/four-direction geometry for the redesigned chart.
 ui/chart-visual.ts: Pure deterministic fact-to-disc model mapping and evidence-backed active palace selection.
-ui/topic-entry-layout.ts: Stable responsive grid policy for equal-weight quick-topic entries.
 ui/model-settings.ts: Browser-local model settings parser, serializer, provider defaults, and chat request payload shaping.
+ui/workspace-navigation.ts: Shared active-route navigation contract for desktop and mobile workspace chrome.
 ui/workspace-layout.ts: Pure responsive policy that keeps evidence available as a sheet below the desktop rail breakpoint.
 knowledge/skill-loader.ts: Markdown skill loader and validator for deterministic topic workflows.
 knowledge/search.ts: Local Markdown/keyword retrieval plus exception-safe vector-to-local fallback with truthful source-mode labels.

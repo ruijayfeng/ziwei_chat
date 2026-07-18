@@ -2,7 +2,7 @@
 > L2 | Parent: AGENTS.md
 
 Member List
-skills/career.md: Career analysis workflow for the MVP career topic.
+skills/career.md: Career analysis workflow for the Final V1+ career topic.
 skills/recent-fortune.md: Recent fortune workflow for near-term timing questions.
 skills/relationship.md: Relationship analysis workflow with non-coercive safety boundaries.
 skills/wealth.md: Wealth analysis workflow focused on risk awareness and behavior patterns.

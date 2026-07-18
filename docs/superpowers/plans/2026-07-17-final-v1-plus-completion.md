@@ -32,8 +32,8 @@
 | 6 Skill contracts | Complete | Executable fact/tool/order/safety contracts reach prompts and critics |
 | 7 Knowledge quality | Complete with external check | Local/provenance gates pass; configured pgvector parity runs in Task 11 |
 | 8 Real evaluation | Complete | Commit `7e670fa`; 17 cases, real iztro timing, isolated stage failures, six rubric samples, independent Spec PASS / Quality Approved |
-| 9 Dead migration cleanup | Pending | Starts only after Task 8 is reviewed and committed |
-| 10 Docs and UTF-8 audit | Pending | Runs after the final source tree is stable |
+| 9 Dead migration cleanup | Complete | Commit `e91c85a`; superseded presenters and the final zero-import composer are removed with replacement contracts preserved |
+| 10 Docs and UTF-8 audit | Complete | Current maps/status/L3 contracts and recursive active-source copy scan pass; final independent re-review PASS with no Critical/Important findings |
 | 11 Automated/Postgres gate | Pending | Requires configured release Postgres for mandatory persistence evidence |
 | 12 Browser/provider acceptance | Pending | Requires browser matrix and usable real model settings |
 | 13 Final audit | Pending | Only step allowed to declare Final V1+ complete |

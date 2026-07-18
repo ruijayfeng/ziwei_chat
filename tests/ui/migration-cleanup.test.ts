@@ -13,6 +13,7 @@ const obsoleteComponents = [
   "src/components/chart/chart-page.tsx",
   "src/components/chart/chart-provider.tsx",
   "src/components/chat/home-chart-ring.tsx",
+  "src/components/chat/chat-composer.tsx",
   "src/components/records/life-timeline.tsx",
   "src/lib/chart-data.ts",
   "src/components/report-message.tsx",

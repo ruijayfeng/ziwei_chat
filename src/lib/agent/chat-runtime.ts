@@ -1,7 +1,7 @@
 /**
- * [INPUT]: Depends on in-memory agent tool stores and route-level persistence needs
- * [OUTPUT]: Provides resettable runtime state for local MVP chat route and tests
- * [POS]: Temporary persistence boundary until Postgres-backed services replace it
+ * [INPUT]: Depends on in-memory tool stores, database availability, and chat/chart persistence adapters
+ * [OUTPUT]: Provides resettable runtime stores plus bounded chat, tool-event, and chart persistence operations
+ * [POS]: Runtime composition boundary selecting Postgres persistence when configured and no-op/in-memory behavior otherwise
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 

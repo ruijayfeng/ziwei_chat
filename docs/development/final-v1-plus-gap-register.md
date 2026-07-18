@@ -30,7 +30,7 @@ health/family/children/home workflows.
 | Active topic catalog | Complete | Exactly six supported entries backed by matching intent and skill contracts |
 | Skill and knowledge quality | Complete, Postgres parity pending | Six executable skill contracts and tool-aligned local knowledge coverage are enforced; pgvector parity still needs a configured database run |
 | Real-contract evaluation | Complete | Real deterministic stages, 17 isolated cases, required-fact coverage, six rubric samples, and independent review pass |
-| Migration cleanup and documentation | Open | Remove only proven dead migration components and align L1/L2/L3 maps |
+| Migration cleanup and documentation | Complete | Dead migration components are removed; maps, L3 contracts, recursive active-source copy scan, UTF-8 audit, and independent re-review are current |
 | Release verification | Open | Full automated, browser, Postgres, real-provider, accessibility, responsive, and Chinese-copy evidence |
 
 ## Remaining Critical Path
@@ -39,13 +39,10 @@ The implementation backlog is now narrow. Final V1+ is not yet releasable
 because the remaining work is mostly proof and cleanup, but those gates are
 release requirements rather than optional polish.
 
-1. **Close G9 / Tasks 9-10:** remove only import-proven dead migration code,
-   align L1/L2/L3 documentation, and audit tracked and visible Chinese copy for
-   UTF-8 corruption.
-2. **Close G10 / Tasks 11-12:** run the complete automated gate, real Postgres
+1. **Close G10 / Tasks 11-12:** run the complete automated gate, real Postgres
    lifecycle, browser acceptance at four widths, and timed real-provider chat
    and Insights scenarios.
-3. **Task 13:** audit G1-G10 against current evidence and declare Final V1+
+2. **Task 13:** audit G1-G10 against current evidence and declare Final V1+
    complete only if every mandatory gate passes.
 
 ## Gap Designs And Closure
@@ -222,7 +219,10 @@ cover empty, loading, restore error, create, edit, restored, and deleted states.
 
 ### G9. Migration Dead Code And Documentation
 
-**Status:** open. This is the only remaining implementation cleanup after G7.
+**Status:** closed at `e91c85a` plus the Task 10 zero-import composer follow-up.
+Documentation maps, strict UTF-8 and recursive active-source copy checks,
+five-route visible-copy audit, accurate L3 headers, focused verification, and
+final independent re-review are complete.
 
 **Current gap:** old approximate workspace/chart/records components remain
 beside the accepted reference implementation, and L2 documents intentionally

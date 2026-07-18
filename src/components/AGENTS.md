@@ -10,7 +10,7 @@ gradient-background.tsx: Reference ambient background, stars, vignette, and text
 glass-card.tsx: Reference surface wrapper.
 hero-header.tsx: Reference home editorial header with the current Shanghai calendar date; unsupported music control is removed from V1.
 destiny-ring.tsx: Reference home destiny-ring renderer.
-chat-composer.tsx: Reference home/docked composer presentation and theme prompts.
+chat-composer.tsx: Active reference home/docked composer backed by the canonical six-topic catalog.
 inspector-context.tsx: Inspector open/close contract used by reference shell controls.
 inspector-panel.tsx: Reference default inspector that supplies its native trigger styling to the shared, boolean-aware anonymous-data deletion dialog.
 clear-anonymous-data-dialog.tsx: Controlled shared deletion presentation that awaits the provider result, retains failures in-modal, and accepts caller-owned trigger styling.

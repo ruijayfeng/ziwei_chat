@@ -1,7 +1,7 @@
 # Agent Content Gaps
 
-> Version: 2026-07-07
-> Purpose: track remaining domain content needed after the Agent/frontend loop and beta curated knowledge layer are wired.
+> Version: 2026-07-17
+> Purpose: track optional domain expansion after the Final V1+ Agent and curated knowledge contracts are complete.
 
 ## Current State
 
@@ -29,7 +29,7 @@ Minimum skill sections by topic:
 - `relationship`: 夫妻, 命宫, 福德, 迁移/交友 as support, coercion and certainty boundaries
 - `wealth`: 财帛, 官禄, 田宅, 福德, risk language, no investment instruction boundary
 - `personality`: 命宫, 身宫, 福德, primary stars, avoid fixed-label personality claims
-- `recent_fortune`: current luck cycle, 流年/流月 placeholder rules, near-term uncertainty language
+- `recent_fortune`: deterministic horoscope scope rules for current 大限、流年 and 流月 facts, plus near-term uncertainty language
 - `chart_explanation`: beginner glossary, chart structure, palace/star/transform explanation order
 
 ## Knowledge Chunks Still Needed
@@ -40,7 +40,7 @@ Remaining corpus for future expansion beyond Final V1+:
 - sihua-by-palace matrix: fuller explanations for 化禄, 化权, 化科, 化忌 across each palace and topic. Current curated content covers the common cases and boundaries.
 - pattern-to-tool alignment: curated pattern notes should be linked to stable pattern ids only after the chart tool exposes those ids consistently.
 - advanced timing: reliable da-xian / liu-nian / liu-yue interpretation needs richer deterministic timing facts before adding more content.
-- health/family/children/home topics: palace basics exist, but these are not active beta topics and do not yet have dedicated skills or answer flows.
+- health/family/children/home topics: palace basics exist, but these are not active Final V1+ topics and do not have dedicated skills or answer flows.
 
 Each chunk should include strong `terms` metadata so local keyword retrieval can hit without embeddings.
 
