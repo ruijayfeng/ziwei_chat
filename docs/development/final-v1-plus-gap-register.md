@@ -1,6 +1,6 @@
 # Final V1+ Function Gap Register
 
-> Updated: 2026-07-17
+> Updated: 2026-07-19
 > Authority: `docs/superpowers/specs/2026-07-16-final-v1-plus-release-design.md`
 > Purpose: single register for what is complete, what remains, how each gap is designed, and what evidence closes it.
 
@@ -39,8 +39,11 @@ The implementation backlog is now narrow. Final V1+ is not yet releasable
 because the remaining work is mostly proof and cleanup, but those gates are
 release requirements rather than optional polish.
 
-1. **Close G10 / Task 12:** run browser acceptance at four widths and timed
-   real-provider chat and Insights scenarios. Task 11 automated, migration,
+1. **Close G10 / Task 12:** the four-width no-database/Postgres browser matrix
+   and timed real-provider Chat success/final critic are recorded; remaining
+   work includes eligible real-provider Insights failure/recovery, full keyboard and
+   announcement/dead-action checks, eligible Postgres Insights cache/stale/full
+   deletion, and saved screenshot visual review. Task 11 automated, migration,
    dependency, pgvector, and real Postgres lifecycle gates are complete.
 2. **Task 13:** audit G1-G10 against current evidence and declare Final V1+
    complete only if every mandatory gate passes.
@@ -243,8 +246,9 @@ tree, and full tests/build pass.
 
 ### G10. Full Release Acceptance
 
-**Status:** open. Prior focused evidence is useful but does not replace one
-current end-to-end release pass.
+**Status:** partially evidenced; release remains open. The current browser
+matrix now covers both no-database and configured Postgres modes, but real
+provider acceptance and the final G1-G10 audit are still missing.
 
 **Current gap:** focused unit gates have strong evidence, but the final product
 has not completed one current cross-environment acceptance pass.
@@ -265,6 +269,35 @@ Review all visible Chinese copy and repository text for UTF-8 corruption.
 **Closure evidence:** lint, typecheck, full tests, agent eval, build, database
 smokes, browser checklist, screenshots, real-provider timings, and copy review
 are recorded in `docs/development/project-status.md` with date and environment.
+
+**Current evidence (2026-07-19):** the production-equivalent build at
+`http://localhost:3200` passed `/`, `/chart`, `/records`, `/insights`, and
+`/settings` at 390x844, 1024x768, 1440x900, and 1536x960 in both no-database and
+configured Postgres modes. All 40 route/viewport checks had no horizontal
+overflow and zero browser console errors. The browser verified honest empty
+states, six topic prompts, real iztro chart restore/create, persisted Postgres
+conversation restore, insufficient Insights, and settings deletion controls.
+Browser-local DeepSeek settings were exercised against hostname
+`api.deepseek.com` with requested model `deepseek-v4-pro`. The real request
+ended with a retryable error before answer generation or critic, so it is not
+success evidence. A controlled local Base URL failure proved Chat exits pending,
+offers retry, preserves state, and does not expose credential/chart/source
+markers in the UI or browser console. The current profile remains Insights-
+ineligible at 3 conversations across 1 day. A later supported-model run blocked
+`deepseek-v4-pro` locally without a network request, then used `deepseek-chat`
+to complete request-local chart hydration, deterministic chart tools, skill,
+local RAG, model generation, and final critic. It exposed three chart facts and
+three attributed sources, reported about 450ms to first token and 4.6s to
+completion, made one `/api/chat` request and zero `/api/chart` requests, and
+kept the console error-free. Eligible Insights success/failure/recovery remains
+mandatory; mock or failed output is not accepted as closure evidence.
+
+The route/viewport probe does not yet prove the full Task 12 interaction and
+visual scope. Full keyboard focus order, provider-backed announcements, dead
+actions, eligible Postgres Insights generation/source disclosure/cache/stale/
+full deletion, and saved mobile/desktop screenshot review for nonblank
+rendering, overlap, scroll ownership, text fit, contrast, and reduced motion
+remain open.
 
 ## Completion Rule
 

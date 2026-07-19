@@ -27,6 +27,7 @@ describe("createPostgresChartPersistence", () => {
       isPrimary: true,
     };
     const rows: Array<Record<string, unknown>> = [];
+    const conflictUpdates: Array<Record<string, unknown>> = [];
     const baseDatabase = {
       insert(table?: unknown) {
         void table;
@@ -38,6 +39,7 @@ describe("createPostgresChartPersistence", () => {
             }
             return {
               onConflictDoUpdate: async (config: { set: Record<string, unknown> }) => {
+                conflictUpdates.push(config.set);
                 const row = rows.find((item) => "chartJson" in item);
                 if (row) Object.assign(row, config.set);
               },
@@ -94,9 +96,18 @@ describe("createPostgresChartPersistence", () => {
       summary: { ...chart.summary, chartId: "00000000-0000-4000-8000-000000000003" },
     };
 
-    await persistence.savePrimaryChart(input, chart);
-    await persistence.savePrimaryChart(input, replacement);
+    await expect(persistence.savePrimaryChart(input, chart)).resolves.toEqual(chart);
+    await expect(persistence.savePrimaryChart(input, replacement)).resolves.toEqual({
+      ...replacement,
+      chartId: chart.chartId,
+      summary: { ...replacement.summary, chartId: chart.chartId },
+    });
 
-    await expect(persistence.getPrimaryChart(input.profileId)).resolves.toEqual(replacement);
+    expect(conflictUpdates.at(-1)).not.toHaveProperty("id");
+    await expect(persistence.getPrimaryChart(input.profileId)).resolves.toEqual({
+      ...replacement,
+      chartId: chart.chartId,
+      summary: { ...replacement.summary, chartId: chart.chartId },
+    });
   });
 });

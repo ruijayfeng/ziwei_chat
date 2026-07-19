@@ -20,7 +20,7 @@ brand-mark.tsx: Reference circular compass mark used by inspector surfaces.
 chart-onboarding.tsx: Real chart/profile form reused by the active reference-style create/edit sheet.
 model-settings-panel.tsx: Real browser-local model provider controls, restyled with reference surfaces.
 ui/: Project-owned shadcn/Base UI primitives.
-workspace/workspace-provider.tsx: Persistent anonymous profile, serialized real chart restore/save ownership, model settings, real chat transport/evidence, and anonymous-data deletion boundary.
+workspace/workspace-provider.tsx: Persistent anonymous profile, serialized real chart restore/save ownership, preflight model validation, real chat transport/evidence, and anonymous-data deletion boundary.
 workspace/page-header.tsx: Reference editorial page header and ring glyph.
 workspace/life-timeline.tsx: Reference records controller rendering persisted and current-browser conversation history with detail loading and retry state.
 chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; the reference inspector rail renders real Agent evidence and critic state.

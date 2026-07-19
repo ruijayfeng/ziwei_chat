@@ -37,6 +37,7 @@ import {
   modelSettingsRequestFromDraft,
   modelSettingsStorageKey,
   modelSettingsStorageValue,
+  modelSettingsValidationError,
   type ModelSettingsDraft,
 } from "@/lib/ui/model-settings";
 
@@ -328,6 +329,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
     const nextSession = chatSessionReducer(chatSession, action);
     if (nextSession === chatSession) return;
+
+    const modelValidationError = modelSettingsValidationError(modelSettings);
+    if (modelValidationError) {
+      setSelectedEvidenceMessageId(assistantMessageId);
+      dispatchChat(action);
+      dispatchChat({
+        type: "turn_failed",
+        requestId,
+        error: { kind: "server", message: modelValidationError, canRetry: true },
+      });
+      return;
+    }
 
     const controller = new AbortController();
     chatAbortRef.current = controller;

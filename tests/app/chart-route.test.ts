@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { GET, POST, readPrimaryChartWithTimeout } from "../../src/app/api/chart/route";
+import {
+  CHART_SAVE_TIMEOUT_MS,
+  GET,
+  POST,
+  readPrimaryChartWithTimeout,
+} from "../../src/app/api/chart/route";
 import { resetChatRuntime } from "../../src/lib/agent/chat-runtime";
 import type { ChartPersistence } from "../../src/lib/db/chart-persistence";
 
 describe("POST /api/chart", () => {
   beforeEach(() => resetChatRuntime());
+
+  test("allows an explicit chart save more time than background tool persistence", () => {
+    expect(CHART_SAVE_TIMEOUT_MS).toBe(15_000);
+  });
 
   test("returns a sanitized deterministic chart visual summary after saving birth data", async () => {
     const response = await POST(new Request("http://localhost/api/chart", {

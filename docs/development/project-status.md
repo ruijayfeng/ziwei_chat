@@ -1,6 +1,6 @@
 # Project Status
 
-> Updated: 2026-07-17
+> Updated: 2026-07-19
 > Release target: Final V1+
 > Authority: `docs/superpowers/specs/2026-07-16-final-v1-plus-release-design.md`
 
@@ -35,8 +35,10 @@ complete.
 - Remote-first anonymous deletion with Postgres transaction locking and a
   permanent profile tombstone; local chart, chat, evidence, settings, and
   insight cache clear only after server deletion succeeds.
-- Browser-local OpenAI-compatible model settings. API keys are request inputs,
-  not persisted product data.
+- Browser-local OpenAI-compatible model settings. API keys persist only in the
+  current browser's localStorage so the browser can include them in model
+  requests; they are not written to Postgres or another server-side product
+  store.
 
 ## Data And Deployment Modes
 
@@ -105,12 +107,113 @@ Task 11 verification on 2026-07-18:
   accept. npm's offered fixes are breaking downgrades, so no force fix was
   applied.
 
+## Task 12 Browser Evidence (2026-07-19)
+
+Production-equivalent build served at `http://localhost:3200` with the
+configured release Postgres database. The no-database and Postgres route
+matrices covered `/`, `/chart`, `/records`, `/insights`, and `/settings` at
+390x844, 1024x768, 1440x900, and 1536x960.
+
+- 40 route/viewport checks completed across both persistence modes.
+- Every check had zero horizontal overflow and zero browser console errors.
+- `lang="zh-CN"` and the expected Chinese page title were present.
+- No-database state proved the honest no-chart, six-topic, records-empty,
+  Insights-insufficient, settings, and no-model setup-required states.
+- Chart creation through the UI restored real iztro-derived palaces, stars,
+  brightness, transformations, and 三方四正 data.
+- Postgres mode restored the persisted chart and conversation record; the
+  eligible/insufficient Insights branch and anonymous deletion control were
+  visible without fabricated content.
+- The six topic entries resolved to unique prompts; `事业` populated the
+  composer with `我目前的事业方向，适合关注什么？`.
+- Accessibility/responsive probe across the same 20 Postgres route/viewport
+  combinations found focusable controls on every route, visible focus styling
+  on interactive controls, live regions on records/Insights state changes, and
+  the global `prefers-reduced-motion` rule. No overflow was observed. A full
+  keyboard journey and provider-backed announcement pass remains part of the
+  final manual review.
+
+Browser-local DeepSeek settings were supplied and exercised on 2026-07-19.
+Only sanitized fields were recorded: provider hostname `api.deepseek.com` and
+requested model `deepseek-v4-pro`. The real chat request reached the model
+stage, then ended with the fixed retryable UI error before any answer token,
+critic result, or completed generation evidence was produced. This is failed
+acceptance evidence, not a successful provider run; no mock output is counted.
+
+Later on 2026-07-19, Chat reliability fixes separated browser chart hydration
+from durable chart persistence and added built-in DeepSeek model validation.
+The unsupported `deepseek-v4-pro` value was blocked locally with zero
+`/api/chat` requests. After changing only the browser-owned model name to the
+supported `deepseek-chat`, a real chart-explanation request completed through
+`hydrateChart`, chart restore/fact extraction, constrained planning, skill,
+local RAG, model generation, and final critic. The browser observed one
+`/api/chat` request and zero `/api/chart` requests; three chart facts and three
+attributed knowledge sources were visible. Model telemetry reported about
+450ms to first token and 4.6s to completion. The final critic passed, the
+sidebar chart remained available, and the browser console had zero errors.
+
+A controlled failure check changed only the browser-owned Base URL to the local
+non-listening address `http://127.0.0.1:9/v1`. Chat left its pending state in
+about 15 seconds, exposed the retry action, and preserved the chart and
+conversation. Restoring `api.deepseek.com` preserved the provider settings.
+The browser console contained zero entries and exposed no credential-shaped
+value, raw chart marker, or insight source-body marker. The Insights failure
+scenario could not run because the current profile had only 3 conversations
+and 3 user messages across 1 day, so the honest insufficient state correctly
+prevented provider generation. Chat recovery-to-success, timing, and final
+critic are now evidenced by the supported-model run above; eligible
+provider-backed Insights remains open. Teardown used the Settings
+UI to clear the answer API key; the key field then had length zero and the
+clear-key control was absent, without directly inspecting browser storage.
+
+The provider contract gate itself remains green: focused provider/chat/Insights
+tests passed 77/77 on 2026-07-19, covering stream telemetry, first-token and
+completion timing, final critic gating, retryable provider errors, and absence
+of API keys or raw source bodies from responses. These are contract tests, not
+real-network acceptance evidence.
+
+Local regression refresh on 2026-07-19 also passed lint (0 errors; existing
+third-party skill warnings only), typecheck, the full 70 passed / 3 skipped test
+files (749 passed / 4 skipped tests), agent evaluation (17 cases, 0 failed),
+production build, and `drizzle-kit check`. A fresh configured-Postgres rerun
+also passed all 3 integration files and 4 tests covering two-connection profile
+lifecycle, chart/conversation/Insights/deletion lifecycle, and pgvector
+retrieval. `npm audit` remained 6 moderate, 0 high, and 0 critical with the
+same Task 11 risk classification. Release assertions and `git diff --check`
+passed; `ziwei-chat-redesign/` remains untracked. This refresh does not close
+the real-provider or final G10/Task 13 gates.
+
 ## Open Release Gates
 
-1. Run Task 12 at 390, 1024, 1440, and 1536 pixels in no-database and Postgres
-   modes, plus timed real-provider chat, Insights, and forced-failure scenarios.
-2. Close Task 13 only after every G1-G10 item links to current code, test,
+1. Complete eligible real-provider Insights success and failure/recovery. Timed
+   real-provider Chat success, final critic, supported-model recovery, the
+   controlled Chat failure, and browser secrecy checks are recorded above.
+2. Finish the unproven Task 12 browser scope: full keyboard focus order,
+   provider-backed announcements and dead-action checks; eligible Postgres
+   Insights generation, source disclosure, cache/stale behavior, and full
+   deletion; plus saved mobile/desktop screenshots reviewed for nonblank
+   rendering, overlap, scroll ownership, text fit, contrast, and reduced motion.
+3. Close Task 13 only after every G1-G10 item links to current code, test,
    browser, database, and provider evidence.
+
+## Task 13 Evidence Matrix (Current)
+
+| Gap | Current evidence | Release status |
+| --- | --- | --- |
+| G1 | `src/lib/ui/insight-sources.ts`; loader tests; no-database/Postgres route probe | implementation and focused behavior evidenced; G10 browser/provider scenarios open |
+| G2 | `src/lib/ui/insight-cache.ts`; cache/deletion tests; Postgres deletion lifecycle | implementation and persistence contract evidenced; cross-route release proof open |
+| G3 | Insights controller/presenters; controller DOM tests; responsive route probe | implementation and UI states evidenced; real report/provider proof open |
+| G4 | `src/lib/ui/active-topics.ts`; catalog and router/planner tests; six browser prompts | closed with current code/test/browser evidence |
+| G5 | Six skill files; skill contract tests; deterministic evaluation | closed with current code/test/evaluation evidence |
+| G6 | curated knowledge tests; local fallback; Task 11 pgvector parity | closed with current local/Postgres evidence |
+| G7 | real deterministic evaluator; 17 cases; agent eval 0 failures | closed for deterministic contract scope; real provider remains G10 |
+| G8 | honest chart empty/create/restore paths; chart tests; browser chart lifecycle | closed with current code/test/browser evidence |
+| G9 | migration cleanup commit; source/doc/UTF-8 audits; independent review | closed with current code/doc/review evidence |
+| G10 | 40 route/viewport checks, Postgres lifecycle, accessibility probe, 77/77 provider contract tests, unsupported-model local block, real `deepseek-chat` success with timing/final critic, controlled local Chat failure, and browser secrecy probe | open: eligible real-network Insights success/failure/recovery, full keyboard/announcement/dead-action pass, eligible Insights cache/stale/deletion browser pass, screenshot visual review, and final Task 13 review |
+
+This matrix is an audit index, not a release declaration. A row marked
+implementation or contract-evidenced is not closed if its user-visible release
+scenario is still owned by G10.
 
 ## Intentional Non-Goals
 
@@ -122,9 +225,13 @@ product specification rather than expansion of this release.
 
 ## Residual External Risks
 
-- Real Postgres/pgvector proof requires a configured release database.
+- Existing Postgres/pgvector evidence depends on the configured release
+  database used by Task 11 and the 2026-07-19 refresh; reproducing that evidence
+  requires an equivalent configured database.
 - Real-provider timing and failure proof requires valid OpenAI-compatible model
-  settings. No such provider credential is currently present in this shell.
+  settings. The requested model did not produce a successful response from the
+  configured endpoint; the browser-local API key was cleared after the failed
+  acceptance run and must be configured again for a later retry.
 - Imported `Renhuai123/ziwei-doushu` chunks are attributed seed material, not
   final doctrine; curated chunks remain the preferred high-confidence layer.
 - Dependency advisories must be classified by reachable runtime risk. Breaking
@@ -137,3 +244,4 @@ product specification rather than expansion of this release.
 - Agent/content expansion: `docs/development/agent-content-gaps.md`
 - Deployment notes: `docs/development/deployment.md`
 - Manual acceptance: `docs/development/public-beta-qa.md`
+- Real Provider acceptance runbook: `docs/development/real-provider-acceptance.md`

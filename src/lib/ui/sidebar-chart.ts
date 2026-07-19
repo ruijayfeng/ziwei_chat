@@ -21,12 +21,13 @@ export function sidebarChartSummary(input: {
   chart: ChartDisplayModel | null;
 }): SidebarChartSummary {
   if (!input.ready || !input.settled || input.loading) return { phase: "loading" };
+  if (input.chart) {
+    return {
+      phase: "ready",
+      displayName: input.chart.displayName || "我的命盘",
+      detail: `${input.chart.palaces.length || 12} 宫确定性命盘`,
+    };
+  }
   if (input.error) return { phase: "error", message: "命盘暂时不可用" };
-  if (!input.chart) return { phase: "empty" };
-
-  return {
-    phase: "ready",
-    displayName: input.chart.displayName || "我的命盘",
-    detail: `${input.chart.palaces.length || 12} 宫确定性命盘`,
-  };
+  return { phase: "empty" };
 }

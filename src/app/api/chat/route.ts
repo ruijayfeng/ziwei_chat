@@ -144,10 +144,20 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
   });
 
   if (body.chartInput) {
-    diagnostics.stage = "create_chart";
-    const created = await tools.createChart({ ...body.chartInput, profileId });
-    if (!created.ok) {
-      return Response.json({ error: created.error }, { status: 422 });
+    diagnostics.stage = "chart_hydration";
+    const hydrated = await tools.hydrateChart({
+      ...body.chartInput,
+      profileId,
+      isPrimary: true,
+    });
+    if (!hydrated.ok) {
+      return Response.json(
+        { error: hydrated.error },
+        {
+          status: 422,
+          headers: { "X-Ziwei-Error-Stage": "chart_hydration" },
+        },
+      );
     }
   }
 
@@ -862,7 +872,7 @@ function streamModelAndPersist({
 
 function modelFailureEvent() {
   return {
-    message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。",
+    message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。",
     canRetry: true,
   };
 }

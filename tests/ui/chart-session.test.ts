@@ -91,3 +91,16 @@ test("falls back to the chart API when legacy storage has no display model", () 
   expect(providerSource).toContain("if (storedChart && storedDisplay)");
   expect(providerSource).toContain("fetch(`/api/chart?profileId=");
 });
+
+test("blocks invalid provider settings before opening a chat request", () => {
+  const providerSource = readFileSync(
+    resolve(process.cwd(), "src/components/workspace/workspace-provider.tsx"),
+    "utf8",
+  );
+
+  expect(providerSource).toContain("modelSettingsValidationError(modelSettings)");
+  expect(providerSource).toContain("if (modelValidationError)");
+  expect(providerSource.indexOf("if (modelValidationError)")).toBeLessThan(
+    providerSource.indexOf("await sendChatRequest"),
+  );
+});

@@ -59,6 +59,8 @@ export const defaultModelSettingsDraft: ModelSettingsDraft = {
   embedding: defaultEmbeddingSettingsDraft,
 };
 
+const supportedDeepSeekModels = new Set(["deepseek-chat", "deepseek-reasoner"]);
+
 export const modelProviderDefaults: Record<
   Exclude<ModelProviderOption, "deterministic-local">,
   { baseUrl: string; model: string; embeddingModel: string }
@@ -131,6 +133,18 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
     normalized.model ? "" : "Model",
   ].filter(Boolean);
 
+  const validationError = modelSettingsValidationError(normalized);
+
+  if (missingFields.length === 0 && validationError) {
+    return {
+      label: "模型不可用",
+      description: validationError,
+      missingFields,
+      ready: false,
+      embeddingReady,
+    };
+  }
+
   return missingFields.length === 0
     ? {
         label: "已启用",
@@ -148,6 +162,18 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
         ready: false,
         embeddingReady,
       };
+}
+
+export function modelSettingsValidationError(draft: ModelSettingsDraft): string | null {
+  const normalized = normalizeDraft(draft);
+  if (
+    normalized.provider === "deepseek" &&
+    normalized.model &&
+    !supportedDeepSeekModels.has(normalized.model)
+  ) {
+    return "DeepSeek 模型不可用，请改用 deepseek-chat 或 deepseek-reasoner。";
+  }
+  return null;
 }
 
 export function runtimeLabel(draft: ModelSettingsDraft) {

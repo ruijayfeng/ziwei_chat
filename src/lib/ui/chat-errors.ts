@@ -47,6 +47,9 @@ export function chatErrorFromResponse(response: Response): ChatErrorState | null
 }
 
 function stageMessage(stage: string | null) {
+  if (stage === "chart_hydration") {
+    return "命盘读取失败，请重新保存出生信息后重试。";
+  }
   if (stage === "analysis_preparation") {
     return "分析准备阶段失败，请重试；右侧过程可查看失败阶段。";
   }

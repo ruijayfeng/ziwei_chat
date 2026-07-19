@@ -11,6 +11,8 @@ import { buildChartDisplayModel } from "../../../lib/chart/chart-display";
 import type { ChartPersistence } from "../../../lib/db/chart-persistence";
 import type { CreateChartInput } from "../../../lib/domain/chart";
 
+export const CHART_SAVE_TIMEOUT_MS = 15_000;
+
 export async function POST(request: Request) {
   const body = (await request.json()) as { profileId?: string; chart?: CreateChartInput };
   const profileId = body.profileId ?? body.chart?.profileId;
@@ -19,7 +21,11 @@ export async function POST(request: Request) {
   }
 
   const stores = createRequestStores();
-  const tools = createAgentTools({ stores, chartPersistence: getChartPersistence() });
+  const tools = createAgentTools({
+    stores,
+    chartPersistence: getChartPersistence(),
+    persistenceTimeoutMs: CHART_SAVE_TIMEOUT_MS,
+  });
   const result = await tools.createChart({ ...body.chart, profileId, isPrimary: true });
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: 422 });

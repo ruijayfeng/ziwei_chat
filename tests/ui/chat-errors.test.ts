@@ -51,6 +51,19 @@ describe("chat error UI helpers", () => {
     });
   });
 
+  test("maps request-local chart hydration failures", () => {
+    const response = new Response("internal error", {
+      status: 500,
+      headers: { "X-Ziwei-Error-Stage": "chart_hydration" },
+    });
+
+    expect(chatErrorFromResponse(response)).toEqual({
+      kind: "server",
+      message: "命盘读取失败，请重新保存出生信息后重试。",
+      canRetry: true,
+    });
+  });
+
   test("shows a precise Agent stage and request id for diagnosis", () => {
     const response = new Response("internal error", {
       status: 500,

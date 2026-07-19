@@ -8,6 +8,7 @@ import {
   modelSettingsRequestFromDraft,
   modelSettingsStatus,
   modelSettingsStorageValue,
+  modelSettingsValidationError,
 } from "../../src/lib/ui/model-settings";
 
 describe("model settings UI helpers", () => {
@@ -96,5 +97,34 @@ describe("model settings UI helpers", () => {
       apiKey: "",
       model: "text-embedding-v4",
     });
+  });
+
+  test("validates built-in DeepSeek chat model aliases", () => {
+    const base = {
+      provider: "deepseek" as const,
+      baseUrl: "https://api.deepseek.com/v1",
+      apiKey: "sk-user",
+      embedding: defaultEmbeddingSettingsDraft,
+    };
+
+    expect(modelSettingsValidationError({ ...base, model: "deepseek-chat" })).toBeNull();
+    expect(modelSettingsValidationError({ ...base, model: "deepseek-reasoner" })).toBeNull();
+    expect(modelSettingsValidationError({ ...base, model: "deepseek-v4-pro" })).toBe(
+      "DeepSeek 模型不可用，请改用 deepseek-chat 或 deepseek-reasoner。",
+    );
+    expect(modelSettingsStatus({ ...base, model: "deepseek-v4-pro" })).toMatchObject({
+      ready: false,
+      label: "模型不可用",
+    });
+  });
+
+  test("keeps custom compatible model names free-form", () => {
+    expect(modelSettingsValidationError({
+      provider: "openai-compatible",
+      baseUrl: "https://example.test/v1",
+      apiKey: "sk-user",
+      model: "private-model-v7",
+      embedding: defaultEmbeddingSettingsDraft,
+    })).toBeNull();
   });
 });

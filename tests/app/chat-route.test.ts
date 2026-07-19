@@ -127,7 +127,7 @@ describe("POST /api/chat", () => {
     const evidence = readEvidenceHeader(response);
     expect(evidence).toMatchObject({
       toolsUsed: [
-        "createChart",
+        "hydrateChart",
         "getCurrentChart",
         "summarizeChartFacts",
         "createAnalysisPlan",
@@ -202,7 +202,7 @@ describe("POST /api/chat", () => {
     expect(answer).not.toContain("你最近更适合先观察机会");
     expect(events).toContainEqual({
       event: "error",
-      data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
+      data: { message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。", canRetry: true },
     });
     expect(finalEvidence?.generation?.mode).toBe("model_failed");
     expect(finalEvidence?.runs[0].steps.find((step: { id: string }) => step.id === "plan")?.detail).toContain(
@@ -406,6 +406,7 @@ describe("POST /api/chat", () => {
     );
 
     expect(response.status).toBe(422);
+    expect(response.headers.get("X-Ziwei-Error-Stage")).toBe("chart_hydration");
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "INVALID_BIRTH_TIME", recoverable: true },
     });
@@ -719,7 +720,7 @@ describe("POST /api/chat", () => {
     expect(answer).not.toContain("unsafe model answer");
     expect(events).toContainEqual({
       event: "error",
-      data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
+      data: { message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。", canRetry: true },
     });
     expect(events.some((event) => event.event === "evidence" && JSON.stringify(event.data).includes("降级"))).toBe(
       false,

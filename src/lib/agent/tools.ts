@@ -169,31 +169,46 @@ export function createAgentTools({
   chartPersistence = null,
   persistenceTimeoutMs = 5_000,
 }: CreateAgentToolsInput = {}) {
+  const registerChart = (input: CreateChartInput, chart: CreateChartOutput) => {
+    stores.charts.set(chart.chartId, {
+      ...chart,
+      profileId: input.profileId,
+      isPrimary: input.isPrimary,
+      input,
+    });
+    if (input.isPrimary) stores.primaryChartByProfileId.set(input.profileId, chart.chartId);
+  };
+
   return {
+    hydrateChart: withToolEvent(stores, "hydrateChart", async (input: CreateChartInput) => {
+      const result = createChartWithIztro(input);
+      if (!result.ok) return result;
+      registerChart(input, result.data);
+      return result;
+    }),
+
     createChart: withToolEvent(stores, "createChart", async (input: CreateChartInput) => {
       const result = createChartWithIztro(input);
       if (!result.ok) {
         return result;
       }
 
-      stores.charts.set(result.data.chartId, {
-        ...result.data,
-        profileId: input.profileId,
-        isPrimary: input.isPrimary,
-        input,
-      });
+      let savedChart = result.data;
       if (input.isPrimary) {
-        stores.primaryChartByProfileId.set(input.profileId, result.data.chartId);
         if (chartPersistence) {
           try {
-            await withTimeout(chartPersistence.savePrimaryChart(input, result.data), persistenceTimeoutMs);
+            savedChart = await withTimeout(
+              chartPersistence.savePrimaryChart(input, result.data),
+              persistenceTimeoutMs,
+            ) ?? result.data;
           } catch {
             return toolError("PERSISTENCE_FAILED", "The primary chart could not be saved.");
           }
         }
       }
 
-      return result;
+      registerChart(input, savedChart);
+      return toolOk(savedChart);
     }),
 
     getCurrentChart: withToolEvent(

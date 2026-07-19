@@ -8,6 +8,35 @@ import type { CreateChartOutput } from "../../src/lib/domain/chart";
 import { loadSkill } from "../../src/lib/knowledge/skill-loader";
 
 describe("agent tools", () => {
+  test("hydrates a request-local primary chart without durable persistence", async () => {
+    let saveCalls = 0;
+    const stores = createInMemoryToolStores();
+    const chartInput = {
+      profileId: "profile-hydration",
+      name: "Primary chart",
+      gender: "male" as const,
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar" as const,
+      isPrimary: true,
+    };
+    const tools = createAgentTools({
+      stores,
+      chartPersistence: {
+        async savePrimaryChart() { saveCalls += 1; },
+        async getPrimaryChart() { return null; },
+      },
+    });
+
+    const result = await tools.hydrateChart(chartInput);
+
+    expect(result.ok).toBe(true);
+    expect(saveCalls).toBe(0);
+    if (!result.ok) return;
+    expect(stores.primaryChartByProfileId.get(chartInput.profileId)).toBe(result.data.chartId);
+    expect(stores.charts.get(result.data.chartId)?.input).toEqual(chartInput);
+  });
+
   test("chart tools create, load, and summarize charts with structured results", async () => {
     const stores = createInMemoryToolStores();
     const tools = createAgentTools({ stores });
