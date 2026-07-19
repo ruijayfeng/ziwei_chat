@@ -5,6 +5,8 @@ import { Check, Copy, RotateCcw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { ChatMessage } from '@/components/chat/chat-session'
+import { MarkdownAnswer } from '@/components/chat/markdown-answer'
+import { useProgressiveReveal } from '@/components/chat/use-progressive-reveal'
 
 const EASE = [0.16, 1, 0.3, 1] as const
 
@@ -118,6 +120,10 @@ export function MessageBubble({
 }) {
   const reduceMotion = useReducedMotion()
   const isUser = message.role === 'user'
+  const { visibleContent, revealing } = useProgressiveReveal(
+    message.content,
+    Boolean(reduceMotion),
+  )
 
   if (isUser) {
     return (
@@ -143,12 +149,9 @@ export function MessageBubble({
     >
       <VoiceLine />
       <div className="min-w-0 flex-1">
-        <div
-          aria-live="polite"
-          className="max-w-[92%] whitespace-pre-wrap text-[15px] leading-[1.75] text-foreground/90"
-        >
-          {message.content}
-          {message.streaming &&
+        <div aria-live="polite" className="max-w-[92%]">
+          <MarkdownAnswer content={visibleContent} />
+          {(message.streaming || revealing) &&
             (reduceMotion ? (
               <span
                 aria-hidden
@@ -163,7 +166,7 @@ export function MessageBubble({
               />
             ))}
         </div>
-        {!message.streaming && message.content && (
+        {!message.streaming && !revealing && message.content && (
           <AssistantActions content={message.content} canRetry={message.failed || isLast} onRetry={onRetry} />
         )}
       </div>

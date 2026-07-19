@@ -41,7 +41,7 @@ ui/chat-session.ts: Per-message evidence state machine with single-flight, retry
 ui/reference-chat.ts: Pure real-session-to-reference-presentation adapter for chat phase, thinking, streaming, and failure messages.
 ui/reference-chart.ts: Pure sanitized iztro display-to-reference-palace adapter; preserves real indices, stars, four transforms, brightness, and sourced empty interpretation fields.
 ui/conversation-records.ts: Validated persisted/current-browser conversation records controller, detail-state reducer, timeline adapter, and unavailable-storage fallback.
-ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds.
+ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds and adapt reveal timing by answer length.
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.
 ui/chart-profile.ts: Chart profile label formatting and sync-state copy for current chart management UI.

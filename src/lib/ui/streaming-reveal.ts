@@ -15,6 +15,12 @@ export function revealStepForContent(contentLength: number) {
   return Math.max(1, Math.ceil(Math.max(contentLength, 0) / targetFrames));
 }
 
+export function revealDelayForContent(contentLength: number) {
+  if (contentLength < 120) return 32;
+  if (contentLength < 900) return 24;
+  return 20;
+}
+
 export function sliceByCharacters(content: string, length: number) {
   return Array.from(content).slice(0, Math.max(length, 0)).join("");
 }
