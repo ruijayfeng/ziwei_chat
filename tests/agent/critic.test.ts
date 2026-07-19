@@ -200,6 +200,56 @@ describe("runResponseCritic", () => {
     );
   });
 
+  test("allows general doctrine and interpretive extensions without blocking", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: "结论：可以先观察工作节奏。\n\n命盘依据：官禄宫有天同。\n\n现实解释：迁移宫通常也可以作为后续观察方向，巨门也常被用来解释辨析与表达。\n\n建议：记录两周沟通中的反应。\n\n追问：你最近更想改善表达还是工作节奏？",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [{ ...chartFact, palace: "官禄", stars: ["天同"] }],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result.passed).toBe(true);
+    expect(result.requiredRevision).toBe(false);
+    expect(result.structuredIssues?.every((issue) => issue.severity === "warning") ?? true).toBe(true);
+  });
+
+  test("blocks a current-chart assertion absent from deterministic facts", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: "结论：先观察机会。\n\n命盘依据：你的迁移宫有紫微。\n\n现实解释：这代表外部变化。\n\n建议：先整理选择。\n\n追问：你更想换环境还是换内容？",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [{ ...chartFact, palace: "官禄", stars: ["天同"] }],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.requiredRevision).toBe(true);
+    expect(result.structuredIssues).toContainEqual(expect.objectContaining({
+      severity: "blocking",
+      code: "unsupported_current_chart_fact",
+    }));
+  });
+
+  test("downgrades missing follow-up questions to a warning", () => {
+    const result = runResponseCritic({
+      intent: "career",
+      draft: "可以先观察工作节奏。\n\n命盘依据：官禄宫有天同。\n\n现实解释：先看现实反馈。",
+      toolsUsed: ["getCurrentChart", "summarizeChartFacts"],
+      chartFacts: [{ ...chartFact, palace: "官禄", stars: ["天同"] }],
+      knowledgeSources: [],
+      safetyLevel: "caution",
+    });
+
+    expect(result.passed).toBe(true);
+    expect(result.requiredRevision).toBe(false);
+    expect(result.structuredIssues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "follow_up_count", severity: "warning" }),
+    ]));
+  });
+
   test("accepts a chart-setup prompt that makes no chart claim", () => {
     const result = runResponseCritic({
       intent: "career",

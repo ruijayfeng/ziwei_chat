@@ -747,7 +747,8 @@ function streamModelAndPersist({
       let revisionTelemetry: ModelResponseTelemetry | null = null;
       let revisionError: string | null = null;
 
-      if (modelResult.ok && !postCritique.passed) {
+      const requiresRevision = postCritique.requiredRevision ?? !postCritique.passed;
+      if (modelResult.ok && requiresRevision) {
         revisionAttempted = true;
         enqueueEvent(controller, encoder, {
           event: "evidence",
@@ -806,7 +807,7 @@ function streamModelAndPersist({
         postCritique.passed,
         modelCriticLatencyMs,
       );
-      const usedFallback = !postCritique.passed;
+      const usedFallback = postCritique.requiredRevision ?? !postCritique.passed;
       const finalEvidence = updateEvidenceAfterModelCritic({
         evidence,
         critique: postCritique,
@@ -820,7 +821,10 @@ function streamModelAndPersist({
 
       enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
       if (usedFallback) {
-        enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
+        enqueueEvent(controller, encoder, {
+          event: "error",
+          data: revisionAttempted ? criticFailureEvent() : modelFailureEvent(),
+        });
         enqueueEvent(controller, encoder, { event: "done", data: null });
         closeStream(controller);
         return;
@@ -873,6 +877,13 @@ function streamModelAndPersist({
 function modelFailureEvent() {
   return {
     message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。",
+    canRetry: true,
+  };
+}
+
+function criticFailureEvent() {
+  return {
+    message: "这次回答与当前命盘事实存在冲突，已停止展示，请重试。",
     canRetry: true,
   };
 }
@@ -954,7 +965,7 @@ function updateEvidenceAfterModelCritic({
       ? { mode: "model_failed", detail: generationDetail }
       : { mode: "model", detail: generationDetail },
     critic: {
-      status: critique.passed ? "passed" : "needs_review",
+      status: critiqueStatus(critique),
       issues: modelError || revisionError ? [fallbackReason, ...critique.issues] : critique.issues,
     },
     runs: evidence.runs.map((run) => ({
@@ -1035,7 +1046,7 @@ function buildEvidence({
     errorCode?: string | null;
   } | null;
   const critic = {
-    status: critique === null ? ("not_run" as const) : critique.passed ? ("passed" as const) : ("needs_review" as const),
+    status: critiqueStatus(critique),
     issues: critique?.issues ?? [],
   };
   const completedAt = new Date().toISOString();
@@ -1181,7 +1192,7 @@ function buildEvidenceSteps({
       id: "critic",
       label: "critic 检查",
       detail: withStepTiming(
-        critic.status === "passed"
+        critic.status === "passed" || critic.status === "passed_with_warnings"
           ? "已通过事实与安全检查"
           : critic.status === "needs_review"
             ? critic.issues.join("；")
@@ -1189,13 +1200,21 @@ function buildEvidenceSteps({
         phaseTimings.critic,
       ),
       status:
-        critic.status === "passed"
+        critic.status === "passed" || critic.status === "passed_with_warnings"
           ? "completed"
           : critic.status === "needs_review"
             ? "failed"
             : "pending",
     },
   ];
+}
+
+function critiqueStatus(critique: CritiqueResult | null): ChatEvidence["critic"]["status"] {
+  if (!critique) return "not_run";
+  if (!critique.passed) return "needs_review";
+  return critique.structuredIssues?.some((issue) => issue.severity === "warning")
+    ? "passed_with_warnings"
+    : "passed";
 }
 
 function readToolLatency(

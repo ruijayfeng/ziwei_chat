@@ -73,7 +73,7 @@ export type EvidenceState = {
   chartFacts: EvidenceChartFact[];
   knowledgeSources: EvidenceKnowledgeSource[];
   critic: {
-    status: "not_run" | "passed" | "needs_review";
+    status: "not_run" | "passed" | "passed_with_warnings" | "needs_review";
     issues: string[];
   };
   generation: EvidenceGeneration;
@@ -234,7 +234,7 @@ function readKnowledgeSource(value: unknown): EvidenceKnowledgeSource | null {
 function readCritic(value: unknown): EvidenceState["critic"] {
   if (!isRecord(value)) return initialEvidence.critic;
   const status =
-    value.status === "passed" || value.status === "needs_review" || value.status === "not_run"
+    value.status === "passed" || value.status === "passed_with_warnings" || value.status === "needs_review" || value.status === "not_run"
       ? value.status
       : "not_run";
 

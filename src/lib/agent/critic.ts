@@ -5,7 +5,7 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import type { CritiqueResult, Intent, SafetyLevel } from "../domain/analysis";
+import type { CriticIssue, CritiqueResult, Intent, SafetyLevel } from "../domain/analysis";
 import type { ChartFact } from "../domain/chart";
 import type { KnowledgeSource } from "../knowledge/search";
 import type { SkillProhibitionId } from "../knowledge/skill-loader";
@@ -91,11 +91,14 @@ export function runResponseCritic({
   safetyLevel,
   prohibitionIds = [],
 }: RunResponseCriticInput): CritiqueResult {
-  const issues: string[] = [];
+  const structuredIssues: CriticIssue[] = [];
+  const addIssue = (code: string, message: string, severity: CriticIssue["severity"]) => {
+    structuredIssues.push({ code, message, severity });
+  };
   const chartSetupPrompt = chartFacts.length === 0 && isChartSetupPrompt(draft);
 
   if (seriousIntents.has(intent) && chartFacts.length === 0 && !chartSetupPrompt) {
-    issues.push("Serious Ziwei analysis must include chart facts.");
+    addIssue("missing_chart_facts", "Serious Ziwei analysis must include chart facts.", "blocking");
   }
 
   if (
@@ -103,38 +106,40 @@ export function runResponseCritic({
     !chartSetupPrompt &&
     !toolsUsed.some((tool) => tool === "summarizeChartFacts" || tool === "getCurrentChart")
   ) {
-    issues.push("Required chart tools did not run.");
+    addIssue("missing_chart_tools", "Required chart tools did not run.", "blocking");
   }
 
   if (overconfidentTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
-    issues.push("Response contains overconfident language.");
+    addIssue("overconfident_language", "Response contains overconfident language.", "blocking");
   }
 
-  if (seriousIntents.has(intent) && mentionsUnknownChartFact(draft, chartFacts)) {
-    issues.push("Response mentions chart facts that tools did not return.");
+  if (seriousIntents.has(intent) && hasUnsupportedCurrentChartAssertion(draft, chartFacts)) {
+    addIssue("unsupported_current_chart_fact", "Response mentions chart facts that tools did not return.", "blocking");
   }
 
   if (prohibitedAdviceTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
-    issues.push("Response contains prohibited high-stakes advice.");
+    addIssue("prohibited_high_stakes_advice", "Response contains prohibited high-stakes advice.", "blocking");
   }
 
   if (conflictsWithSkillProhibitions(draft, prohibitionIds)) {
-    issues.push("Response conflicts with the active skill's forbidden advice.");
+    addIssue("skill_prohibition", "Response conflicts with the active skill's forbidden advice.", "blocking");
   }
 
   const followUpCount = countVisibleQuestions(draft);
   if (seriousIntents.has(intent) && followUpCount !== 1) {
-    issues.push("Response must include exactly one useful follow-up question.");
+    addIssue("follow_up_count", "Response must include exactly one useful follow-up question.", "warning");
   }
 
   if (safetyLevel === "refusal" && prohibitedAdviceTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
-    issues.push("Refusal-level response contains prohibited instruction language.");
+    addIssue("refusal_instruction_language", "Refusal-level response contains prohibited instruction language.", "blocking");
   }
 
+  const blockingIssues = structuredIssues.filter((issue) => issue.severity === "blocking");
   return {
-    passed: issues.length === 0,
-    issues,
-    requiredRevision: issues.length > 0,
+    passed: blockingIssues.length === 0,
+    issues: structuredIssues.map((issue) => issue.message),
+    requiredRevision: blockingIssues.length > 0,
+    ...(structuredIssues.length > 0 ? { structuredIssues } : {}),
   };
 }
 
@@ -220,17 +225,21 @@ function qualifierPrefix(draft: string, index: number) {
   return prefix.slice(boundary + 1);
 }
 
-function mentionsUnknownChartFact(draft: string, chartFacts: ChartFact[]) {
+function hasUnsupportedCurrentChartAssertion(draft: string, chartFacts: ChartFact[]) {
   const basis = readChartBasisSection(draft);
   const knownPalaces = new Set(chartFacts.flatMap((fact) => [fact.palace, `${fact.palace}宫`]));
   const knownStars = new Set(chartFacts.flatMap((fact) => fact.stars));
 
-  const unknownPalace = palaceTerms.some(
-    (palace) => basis.includes(palace) && !knownPalaces.has(palace),
-  );
-  const unknownStar = starTerms.some((star) => basis.includes(star) && !knownStars.has(star));
-
-  return unknownPalace || unknownStar;
+  return basis.split(/[。！？\n]/).some((sentence) => {
+    const ownership = /(你的|你命盘|本命|命盘中|盘里|当前命盘)/.test(sentence);
+    const relationship = /(有|坐|落|见|化|为|是|形成|构成|位于)/.test(sentence);
+    if (!ownership && !relationship) return false;
+    if (/如果|通常|一般|可能|可以作为|并非本次命盘事实|不是本次命盘依据/.test(sentence)) return false;
+    const assertedTerms = [...palaceTerms, ...starTerms].filter((term) => sentence.includes(term));
+    const hasPalace = assertedTerms.some((term) => palaceTerms.includes(term));
+    const hasStar = assertedTerms.some((term) => starTerms.includes(term));
+    return relationship && hasPalace && hasStar && assertedTerms.some((term) => !knownPalaces.has(term) && !knownStars.has(term));
+  });
 }
 
 function readChartBasisSection(draft: string) {

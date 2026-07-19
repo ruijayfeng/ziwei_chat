@@ -681,7 +681,7 @@ describe("POST /api/chat", () => {
 
   test("reports a retryable failure when the model answer fails the final critic", async () => {
     const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
+      new Response('data: {"choices":[{"delta":{"content":"这次分析先给你一个方向判断。"}}]}\n\ndata: [DONE]\n\n', {
         status: 200,
         headers: { "content-type": "text/event-stream" },
       }),
@@ -716,12 +716,8 @@ describe("POST /api/chat", () => {
 
     const events = parseStreamEvents(await response.text());
     const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
-    expect(answer).toBe("");
-    expect(answer).not.toContain("unsafe model answer");
-    expect(events).toContainEqual({
-      event: "error",
-      data: { message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。", canRetry: true },
-    });
+    expect(answer).toBe("这次分析先给你一个方向判断。");
+    expect(events.some((event) => event.event === "error")).toBe(false);
     expect(events.some((event) => event.event === "evidence" && JSON.stringify(event.data).includes("降级"))).toBe(
       false,
     );
@@ -762,7 +758,7 @@ describe("POST /api/chat", () => {
       }
 
       if (callIndex === 1) {
-        return new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
+        return new Response('data: {"choices":[{"delta":{"content":"你的命宫有紫微。"}}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });

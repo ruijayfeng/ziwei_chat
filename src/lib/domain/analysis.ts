@@ -43,10 +43,19 @@ export type AnalysisPlan = {
   >;
 };
 
+export type CriticIssueSeverity = "blocking" | "warning";
+
+export type CriticIssue = {
+  code: string;
+  message: string;
+  severity: CriticIssueSeverity;
+};
+
 export type CritiqueResult = {
   passed: boolean;
   issues: string[];
   requiredRevision: boolean;
+  structuredIssues?: CriticIssue[];
 };
 
 export type AnalysisState = {

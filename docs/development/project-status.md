@@ -25,6 +25,9 @@ complete.
   personality, and chart explanation.
 - Real Agent chain: route, plan, deterministic tools, executable skill,
   attributed knowledge retrieval, model composition, critic, and evidence.
+- Response critic separates blocking grounding and safety errors from warning-only
+  presentation issues, so ordinary users receive natural chart-grounded answers
+  without being blocked by minor format deviations.
 - Explicit setup-required and recoverable failure states. The runtime does not
   substitute fabricated analysis when chart or model configuration is absent.
 - Real conversation records from Postgres when configured and current browser

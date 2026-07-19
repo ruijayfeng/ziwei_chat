@@ -7,7 +7,7 @@ utils.ts: Shared Tailwind class composition helper used by owned UI components.
 ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including safe-copy validation, routed intent, and required skill.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
 agent/tools.ts: Agent tool runner functions, request-local non-persisting chart hydration, durable chart creation, functional iztro recovery, real horoscope scopes, and tool event recording.
-agent/critic.ts: Deterministic response critic for grounding, fabricated chart facts, overclaiming, high-stakes advice, chart-setup prompts, safety, and follow-up count.
+agent/critic.ts: Deterministic response critic with blocking versus warning severity for grounding, fabricated chart facts, overclaiming, high-stakes advice, chart-setup prompts, safety, and follow-up count.
 agent/chat-runtime.ts: Runtime tool stores, persistence selection, 3-second best-effort chat-message saves, non-blocking tool-event telemetry, and deletion guards that reject late writes for invalidated anonymous profiles.
 agent/conversation-context.ts: Bounded, speaker-labelled recent-turn context shared by planner and analyst prompts.
 agent/analysis-topic.ts: Shared active-intent mapping to deterministic chart and knowledge topics; chart explanation intentionally uses general doctrine.
