@@ -46,6 +46,16 @@ describe("reference chat presentation", () => {
       .toBeLessThan(bubble.indexOf("if (isUser)"));
   });
 
+  test("uses distinct WenKai roles for user prompts and assistant reading", () => {
+    const bubble = source("src/components/chat/message-bubble.tsx");
+    const styles = source("src/app/globals.css");
+
+    expect(bubble).toContain("font-wenkai-medium");
+    expect(bubble).toContain("font-wenkai-regular");
+    expect(styles).toContain("--font-wenkai-regular");
+    expect(styles).toContain("--font-wenkai-medium");
+  });
+
   test("backs the reference provider with the real workspace transport", () => {
     const session = source("src/components/chat/chat-session.tsx");
 

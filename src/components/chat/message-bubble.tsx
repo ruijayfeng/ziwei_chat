@@ -133,7 +133,7 @@ export function MessageBubble({
         transition={{ duration: 0.5, ease: EASE }}
         className="flex justify-end"
       >
-        <div className="max-w-[82%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm leading-relaxed text-primary-foreground">
+        <div className="max-w-[82%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 font-wenkai-medium text-base font-medium leading-[1.65] text-primary-foreground">
           {message.content}
         </div>
       </motion.div>
@@ -150,7 +150,7 @@ export function MessageBubble({
       <VoiceLine />
       <div className="min-w-0 flex-1">
         <div aria-live="polite" className="max-w-[92%]">
-          <MarkdownAnswer content={visibleContent} />
+          <MarkdownAnswer content={visibleContent} className="font-wenkai-regular" />
           {(message.streaming || revealing) &&
             (reduceMotion ? (
               <span

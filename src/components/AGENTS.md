@@ -23,7 +23,7 @@ ui/: Project-owned shadcn/Base UI primitives.
 workspace/workspace-provider.tsx: Persistent anonymous profile, serialized real chart restore/save ownership, preflight model validation, real chat transport/evidence, and anonymous-data deletion boundary.
 workspace/page-header.tsx: Reference editorial page header and ring glyph.
 workspace/life-timeline.tsx: Reference records controller rendering persisted and current-browser conversation history with detail loading and retry state.
-chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; assistant answers use Unicode-safe progressive reveal and semantic, Ziwei-styled Markdown rendering, while the reference inspector rail renders real Agent evidence and critic state.
+chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; assistant answers use Unicode-safe progressive reveal and semantic, WenKai Regular Markdown rendering, while user bubbles use the distinct WenKai Medium role and the reference inspector rail renders real Agent evidence and critic state.
 insights/insights-controller.tsx: Browser effect adapter plus injectable source/cache/API lifecycle coordinator with fingerprint-scoped stale refresh, current-provenance validation, workspace ownership gating, cancellation, and explicit report lifecycle states.
 insights/weekly-letter.tsx: Accepted reference weekly-letter composition backed only by approved report content and aggregation-derived provenance.
 insights/pattern-list.tsx: Semantic sourced pattern observation articles with 40px topic-mapped Lucide icon treatment, backed only by approved report content and aggregation-derived provenance.

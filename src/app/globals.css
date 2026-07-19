@@ -49,6 +49,8 @@
 @theme {
   --font-sans: var(--font-geist-sans), var(--font-noto-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-wenkai-regular: 'LXGW WenKai', var(--font-noto-serif), ui-serif, Georgia, serif;
+  --font-wenkai-medium: 'LXGW WenKai Medium', 'LXGW WenKai', var(--font-noto-serif), ui-serif, Georgia, serif;
   /* Classical brush-kai (LXGW WenKai) leads, with Noto Serif SC as fallback —
      antique warmth and thick/thin stroke contrast, never a flat sans look. */
   --font-serif: 'LXGW WenKai', var(--font-noto-serif), ui-serif, Georgia, serif;
@@ -61,6 +63,20 @@
   --tracking-display: -0.02em;
   --tracking-tight: -0.01em;
   --tracking-label: 0.14em;
+}
+
+/* The user message role deliberately gets its own real Medium face. It falls
+   back to the already-loaded WenKai Regular face when the CDN is unavailable,
+   preserving one Chinese typographic voice throughout the conversation. */
+@font-face {
+  font-family: 'LXGW WenKai Medium';
+  src:
+    local('LXGW WenKai Medium'),
+    local('LXGWWenKai-Medium'),
+    url('https://cdn.jsdelivr.net/gh/lxgw/LxgwWenKai@master/fonts/TTF/LXGWWenKai-Medium.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
 }
 
 :root {
