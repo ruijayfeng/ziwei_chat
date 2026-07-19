@@ -20,9 +20,9 @@ brand-mark.tsx: Reference circular compass mark used by inspector surfaces.
 chart-onboarding.tsx: Real chart/profile form reused by the active reference-style create/edit sheet.
 model-settings-panel.tsx: Real browser-local model provider controls, restyled with reference surfaces.
 ui/: Project-owned shadcn/Base UI primitives.
-workspace/workspace-provider.tsx: Persistent anonymous profile, serialized real chart restore/save ownership, preflight model validation, real chat transport/evidence, and anonymous-data deletion boundary.
+workspace/workspace-provider.tsx: Persistent anonymous profile, serialized real chart restore/save ownership, preflight model validation, real chat transport/evidence, resumable persisted conversation ownership, and anonymous-data deletion boundary.
 workspace/page-header.tsx: Reference editorial page header and ring glyph.
-workspace/life-timeline.tsx: Reference records controller rendering persisted and current-browser conversation history with detail loading and retry state.
+workspace/life-timeline.tsx: Conversation-memory controller rendering user-question-first records, deterministic prior-answer recaps, detail loading, and resume-to-chat actions.
 chat/: Reference chat experience and message presentation backed by the real WorkspaceProvider transport/session; assistant answers use Unicode-safe progressive reveal and semantic, WenKai Regular Markdown rendering, while user bubbles use the distinct WenKai Medium role and the reference inspector rail renders real Agent evidence and critic state.
 insights/insights-controller.tsx: Browser effect adapter plus injectable source/cache/API lifecycle coordinator with fingerprint-scoped stale refresh, current-provenance validation, workspace ownership gating, cancellation, and explicit report lifecycle states.
 insights/weekly-letter.tsx: Accepted reference weekly-letter composition backed only by approved report content and aggregation-derived provenance.
@@ -33,6 +33,6 @@ chart/chart-context.tsx: Reference palace collection plus selected/hovered state
 chart/chart-hero.tsx: Reference editorial chart header, truthful data-source copy, quick-locate controls, and create/edit entry.
 chart/chart-profile-sheet.tsx: Reference-style create/edit sheet reusing WorkspaceProvider and the existing ChartOnboarding form.
 chart/destiny-chart.tsx: Reference radial twelve-palace renderer driven only by context palaces from the real adapter.
-chart/palace-inspector.tsx: Reference palace inspector showing deterministic iztro facts and explicit unsourced-analysis empty states.
+chart/palace-inspector.tsx: Reference palace inspector showing deterministic iztro facts plus explicit, per-palace on-demand short-form configuration interpretation with loading, retry, and page-session cache states.
 
 [PROTOCOL]: Update this header when changed, then check AGENTS.md

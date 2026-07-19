@@ -9,7 +9,7 @@ describe("reference workspace pages", () => {
     const page = source("src/app/(workspace)/records/page.tsx");
     const timeline = source("src/components/workspace/life-timeline.tsx");
 
-    expect(page).toContain("你的人生，");
+    expect(page).toContain("你关心过的事，");
     expect(page).toContain("<LifeTimeline />");
     expect(timeline).toContain("useWorkspace()");
     expect(timeline).toContain("loadConversationList");
@@ -19,6 +19,11 @@ describe("reference workspace pages", () => {
     expect(timeline).toContain("retryList");
     expect(timeline).toContain("conversationDetailView");
     expect(timeline).toContain("AbortController");
+    expect(timeline).toContain("resumeConversation");
+    expect(timeline).toContain("继续聊");
+    expect(timeline).toContain("MarkdownAnswer");
+    expect(timeline).toContain("px-4 pb-4");
+    expect(timeline).toContain("message.role === 'assistant' ? (");
     expect(timeline).not.toContain("MONTHLY_REFLECTION");
     expect(timeline).not.toContain("RECORDS.map");
   });

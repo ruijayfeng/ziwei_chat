@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   conversationDetailLoadErrorMessage,
   conversationDetailView,
+  conversationRecap,
   conversationRecordsReducer,
   conversationTimelineItem,
   createConversationRecordsState,
@@ -85,7 +86,7 @@ describe("conversation records UI adapter", () => {
 
     expect(item).toMatchObject({
       id: "conversation-1",
-      title: "\u4e8b\u4e1a\u65b9\u5411",
+      title: "\u6211\u8be5\u6362\u5de5\u4f5c\u5417\uff1f",
       kind: "career",
       preview: "\u5148\u770b\u5b98\u7984\u5bab\u3002",
     });
@@ -99,6 +100,19 @@ describe("conversation records UI adapter", () => {
     );
 
     expect(item.kind).toBe("conversation");
+  });
+
+  test("uses only the AI conclusion paragraph as the record recap", () => {
+    expect(conversationRecap([
+      "## 结论",
+      "你目前更适合稳住节奏，先观察机会。",
+      "",
+      "## 命盘依据",
+      "- 官禄宫主星为天同。",
+      "",
+      "## 建议",
+      "不要急于换工作。",
+    ].join("\n"))).toBe("你目前更适合稳住节奏，先观察机会。");
   });
 
   test("keeps concurrent detail results isolated across selections and profiles", () => {

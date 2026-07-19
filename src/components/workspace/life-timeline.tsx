@@ -2,6 +2,7 @@
 
 import {
   conversationDetailView,
+  conversationRecap,
   conversationRecordsReducer,
   conversationTimelineItem,
   createConversationRecordsState,
@@ -12,20 +13,16 @@ import {
   type ConversationDetailState,
   type ConversationListItem,
   type ConversationMessageItem,
-  type ConversationTimelineItem,
 } from '@/lib/ui/conversation-records'
 import { cn } from '@/lib/utils'
+import { MarkdownAnswer } from '@/components/chat/markdown-answer'
 import { useWorkspace } from '@/components/workspace/workspace-provider'
 import {
-  Briefcase,
-  Compass,
-  Heart,
-  PenLine,
-  TrendingUp,
-  UserRound,
-  type LucideIcon,
+  ArrowUpRight,
+  MessageCircle,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 
 type RecordsLoadState =
@@ -38,22 +35,15 @@ type ProfileLoadState = {
   state: RecordsLoadState
 }
 
-const KIND_DISPLAY: Record<ConversationTimelineItem['kind'], { accent: string; icon: LucideIcon; label: string }> = {
-  career: { accent: 'oklch(0.75 0.13 150)', icon: Briefcase, label: '事业' },
-  relationship: { accent: 'oklch(0.76 0.14 10)', icon: Heart, label: '感情' },
-  wealth: { accent: 'oklch(0.78 0.14 85)', icon: TrendingUp, label: '财富' },
-  personality: { accent: 'oklch(0.72 0.12 280)', icon: UserRound, label: '性格' },
-  recent_fortune: { accent: 'oklch(0.75 0.13 220)', icon: Compass, label: '近期运势' },
-  conversation: { accent: 'oklch(0.72 0.08 260)', icon: PenLine, label: '对话' },
-}
-
 export function LifeTimeline() {
-  const { ready, profileId, conversationId, chatSession } = useWorkspace()
+  const { ready, profileId, conversationId, chatSession, resumeConversation } = useWorkspace()
+  const router = useRouter()
   const current = currentSessionConversation(conversationId, chatSession.messages)
   const [records, dispatchRecords] = useReducer(conversationRecordsReducer, '', createConversationRecordsState)
   const [loadState, setLoadState] = useState<ProfileLoadState>({ profileId: '', state: { phase: 'loading' } })
   const [listRevision, setListRevision] = useState(0)
   const [detailRevision, setDetailRevision] = useState(0)
+  const [transcriptId, setTranscriptId] = useState<string | null>(null)
   const listRequestId = useRef(0)
   const detailRequestRef = useRef<AbortController | null>(null)
 
@@ -63,13 +53,10 @@ export function LifeTimeline() {
   const activeId = conversations.some((conversation) => conversation.id === activeRecords.selectedId)
     ? activeRecords.selectedId
     : conversations[0]?.id ?? null
-  const selected = conversations.find((conversation) => conversation.id === activeId) ?? null
   const selectedDetail = activeId === current?.conversation.id
     ? { phase: 'ready', messages: current.messages } satisfies ConversationDetailState
     : activeId ? activeRecords.details[activeId] : undefined
   const detailSettled = selectedDetail?.phase === 'ready' || selectedDetail?.phase === 'error'
-  const selectedMessages = selectedDetail?.messages ?? []
-  const selectedItem = selected ? conversationTimelineItem(selected, selectedMessages) : null
 
   const retryDetail = useCallback((conversationId: string) => {
     dispatchRecords({ type: 'detail_retry', profileId, conversationId })
@@ -79,6 +66,15 @@ export function LifeTimeline() {
   const retryList = useCallback(() => {
     setListRevision((revision) => revision + 1)
   }, [])
+
+  const continueConversation = useCallback((id: string, messages: ConversationMessageItem[]) => {
+    const restorable = messages
+      .filter((message): message is ConversationMessageItem & { role: 'user' | 'assistant' } => message.role === 'user' || message.role === 'assistant')
+      .map(({ id: messageId, role, content }) => ({ id: messageId, role, content }))
+    if (restorable.length === 0) return
+    resumeConversation(id, restorable)
+    router.push('/')
+  }, [resumeConversation, router])
 
   useEffect(() => {
     if (!ready || !profileId) return
@@ -132,8 +128,7 @@ export function LifeTimeline() {
   }, [activeId, current?.conversation.id, detailRevision, detailSettled, profileId, ready])
 
   return (
-    <div className="relative">
-      <div className="absolute bottom-2 left-[19px] top-2 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
+    <div>
 
       {activeLoadState.phase === 'error' && (
         <div role="alert" className="mb-4 ml-14 text-sm text-muted-foreground">
@@ -156,10 +151,7 @@ export function LifeTimeline() {
               ? current.messages
               : activeRecords.details[conversation.id]?.messages ?? []
             const item = conversationTimelineItem(conversation, messages)
-            const display = KIND_DISPLAY[item.kind]
-            const Icon = display.icon
             const isOpen = activeId === item.id
-            const isCurrent = item.id === current?.conversation.id
 
             return (
               <motion.li
@@ -167,44 +159,33 @@ export function LifeTimeline() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
-                className="relative flex gap-4"
+                className="relative"
               >
-                <div className="relative z-10 shrink-0">
-                  <div
-                    className="flex size-10 items-center justify-center rounded-full border transition-colors duration-300"
-                    style={{
-                      borderColor: `color-mix(in oklch, ${display.accent} 40%, transparent)`,
-                      background: `color-mix(in oklch, ${display.accent} 14%, oklch(0.17 0.026 283))`,
-                    }}
-                  >
-                    <Icon className="size-[18px]" strokeWidth={1.75} style={{ color: display.accent }} />
-                  </div>
-                </div>
-
                 <div className={cn(
-                  'surface surface-hover mb-1 flex-1 rounded-2xl text-left',
+                  'surface surface-hover mb-1 text-left',
                   isOpen && 'border-primary/30',
                 )}>
                   <button
                     type="button"
-                    onClick={() => dispatchRecords({ type: 'select', profileId, conversationId: item.id })}
+                    onClick={() => {
+                      dispatchRecords({ type: 'select', profileId, conversationId: item.id })
+                      setTranscriptId(null)
+                    }}
                     aria-expanded={isOpen}
                     className="w-full p-4 text-left"
                   >
                   <div className="flex items-center gap-2.5">
-                    <span
-                      className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
-                      style={{
-                        color: display.accent,
-                        background: `color-mix(in oklch, ${display.accent} 14%, transparent)`,
-                      }}
-                    >
-                      {isCurrent ? '当前浏览器会话' : display.label}
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <MessageCircle className="size-3.5" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-foreground">{item.title}</span>
                     <span className="shrink-0 font-mono text-xs text-muted-foreground">{formatDate(item.lastMessageAt)}</span>
                   </div>
-                  {!isOpen && item.preview && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{item.preview}</p>}
+                  {!isOpen && item.preview && (
+                    <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                      <span className="mr-2 text-xs text-primary/80">上次回顾</span>{item.preview}
+                    </p>
+                  )}
 
                   </button>
 
@@ -215,13 +196,26 @@ export function LifeTimeline() {
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                        className="overflow-hidden"
+                        className="overflow-hidden px-4 pb-4"
                       >
                         <ConversationMessages
                           detail={selectedDetail}
-                          messages={selectedItem?.messages ?? []}
+                          messages={messages}
                           onRetry={() => retryDetail(item.id)}
+                          showTranscript={transcriptId === item.id}
+                          onToggleTranscript={() => setTranscriptId((currentId) => currentId === item.id ? null : item.id)}
                         />
+                        {messages.length > 0 && (
+                          <div className="mt-4 flex justify-end border-t border-border/70 pt-3">
+                            <button
+                              type="button"
+                              onClick={() => continueConversation(item.id, messages)}
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                            >
+                              继续聊 <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                            </button>
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -239,10 +233,14 @@ function ConversationMessages({
   detail,
   messages,
   onRetry,
+  showTranscript,
+  onToggleTranscript,
 }: {
   detail: ConversationDetailState | undefined
   messages: ConversationMessageItem[]
   onRetry: () => void
+  showTranscript: boolean
+  onToggleTranscript: () => void
 }) {
   const view = conversationDetailView(detail)
   if (view.phase === 'error') {
@@ -258,7 +256,28 @@ function ConversationMessages({
   if (view.phase === 'loading') return <p role="status" className="pt-3 text-sm text-muted-foreground">正在读取这段对话。</p>
   if (view.phase === 'empty') return <p className="pt-3 text-sm text-muted-foreground">这段对话没有可展示的消息。</p>
 
-  return <MessageList messages={view.messages.length ? view.messages : messages} />
+  const visibleMessages = view.messages.length ? view.messages : messages
+  const latestAssistant = [...visibleMessages].reverse().find((message) => message.role === 'assistant')
+  const recap = conversationRecap(latestAssistant?.content ?? '')
+
+  return (
+    <div className="border-t border-border/70 pt-4">
+      <p className="text-xs font-medium text-primary/85">AI 回顾</p>
+      {recap ? (
+        <MarkdownAnswer content={recap} className="mt-2 max-w-none text-sm leading-relaxed text-foreground/85 [&_p]:my-0" />
+      ) : (
+        <p className="mt-2 text-sm leading-relaxed text-foreground/85">这段对话暂时还没有可回顾的 AI 回答。</p>
+      )}
+      <button
+        type="button"
+        onClick={onToggleTranscript}
+        className="mt-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        {showTranscript ? '收起完整对话' : '查看完整对话'}
+      </button>
+      {showTranscript && <MessageList messages={visibleMessages} />}
+    </div>
+  )
 }
 
 function MessageList({ messages }: { messages: ConversationMessageItem[] }) {
@@ -267,7 +286,11 @@ function MessageList({ messages }: { messages: ConversationMessageItem[] }) {
       {messages.map((message) => (
         <li key={message.id} className="grid grid-cols-[3rem_minmax(0,1fr)] gap-3 text-sm leading-relaxed">
           <span className="text-xs text-muted-foreground">{message.role === 'user' ? '你' : '紫微'}</span>
-          <p className="whitespace-pre-wrap text-foreground/90">{message.content}</p>
+          {message.role === 'assistant' ? (
+            <MarkdownAnswer content={message.content} className="max-w-none text-sm leading-relaxed text-foreground/90" />
+          ) : (
+            <p className="whitespace-pre-wrap text-foreground/90">{message.content}</p>
+          )}
         </li>
       ))}
     </ol>

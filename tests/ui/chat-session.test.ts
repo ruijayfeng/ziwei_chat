@@ -47,6 +47,22 @@ describe("chat session reducer", () => {
     expect(emptyComplete.messages.at(-1)?.status).toBe("failed");
     expect(emptyComplete.error?.kind).toBe("empty_response");
   });
+
+  test("restores a completed conversation without creating a new active request", () => {
+    const restored = chatSessionReducer(initialChatSessionState, {
+      type: "session_restored",
+      messages: [
+        { id: "user-1", role: "user", content: "我之前问过什么？" },
+        { id: "assistant-1", role: "assistant", content: "这是之前的回答。" },
+      ],
+    });
+
+    expect(restored.activeRequestId).toBeNull();
+    expect(restored.messages).toMatchObject([
+      { id: "user-1", role: "user", status: "complete" },
+      { id: "assistant-1", role: "assistant", status: "complete" },
+    ]);
+  });
 });
 
 function startTurn(

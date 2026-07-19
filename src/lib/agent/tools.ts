@@ -17,7 +17,7 @@ import type {
 import type { SkillProhibitionId } from "../knowledge/skill-loader";
 import type { ChartPersistence } from "../db/chart-persistence";
 import { createChart as createChartWithIztro } from "../chart/create-chart";
-import { summarizeChart } from "../chart/summarize-chart";
+import { summarizeChart, summarizePalace } from "../chart/summarize-chart";
 import { toolError, toolOk, type ToolResult } from "./tool-result";
 import { analysisTopicForIntent } from "./analysis-topic";
 
@@ -290,17 +290,19 @@ export function createAgentTools({
       stores,
       "getPalaceAnalysis",
       async (input: PalaceAnalysisInput) => {
-        const summary = summarizeStoredChart(stores, input.chartId, [
-          normalizeTopic(input.topic),
-        ]);
-        if (!summary.ok) return summary;
-
-        const facts = summary.data.facts.filter(
-          (fact) => fact.palace === input.palace,
-        );
-        if (facts.length === 0) {
+        const chart = stores.charts.get(input.chartId);
+        if (!chart) {
+          return toolError("CHART_NOT_FOUND", "Chart was not found.");
+        }
+        const fact = summarizePalace({
+          chartId: chart.chartId,
+          chartJson: chart.chartJson,
+          palace: input.palace,
+        });
+        if (!fact) {
           return toolError("PALACE_NOT_FOUND", "Requested palace was not found.");
         }
+        const facts = [fact];
 
         return toolOk({
           palace: input.palace,

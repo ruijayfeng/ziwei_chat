@@ -6,14 +6,14 @@ reference-chart-contract.ts: Data-free reference palace presentation types, four
 utils.ts: Shared Tailwind class composition helper used by owned UI components.
 ui/active-topics.ts: Canonical typed six-topic entry catalog for the chat composer, including safe-copy validation, routed intent, and required skill.
 agent/tool-result.ts: Structured ToolResult helpers, enforces `{ ok, data }` or `{ ok, error }` tool responses.
-agent/tools.ts: Agent tool runner functions, request-local non-persisting chart hydration, durable chart creation, functional iztro recovery, real horoscope scopes, and tool event recording.
+agent/tools.ts: Agent tool runner functions, request-local non-persisting chart hydration, durable chart creation, functional iztro recovery, all-twelve-palace deterministic fact lookup, real horoscope scopes, and tool event recording.
 agent/critic.ts: Deterministic response critic with blocking versus warning severity for grounding, fabricated chart facts, overclaiming, high-stakes advice, chart-setup prompts, safety, and follow-up count.
 agent/chat-runtime.ts: Runtime tool stores, persistence selection, 3-second best-effort chat-message saves, non-blocking tool-event telemetry, and deletion guards that reject late writes for invalidated anonymous profiles.
 agent/conversation-context.ts: Bounded, speaker-labelled recent-turn context shared by planner and analyst prompts.
 agent/analysis-topic.ts: Shared active-intent mapping to deterministic chart and knowledge topics; chart explanation intentionally uses general doctrine.
 agent/chat-persistence.ts: Storage-agnostic chat persistence contract with a stateless production fallback and tombstone-aware in-memory test implementation.
 agent/intent-router.ts: Rule-based Final V1+ intent router for Ziwei topics, management intents, and safety-sensitive prompts.
-agent/llm-analyst.ts: Optional model-backed analyst that consumes chart facts, skill steps, RAG sources, critic constraints, and streams final analysis.
+agent/llm-analyst.ts: Optional model-backed analyst for chat reports, ordinary conversation, and bounded current-palace configuration interpretation from deterministic chart facts.
 agent/llm-planner.ts: Optional 3-second model planner that proposes allowlisted tool, skill, and knowledge plans, then explicitly reports model, deterministic, or diagnostic fallback provenance.
 agent/model-provider.ts: OpenAI-compatible model adapter with total/idle timeouts, `[DONE]` and `finish_reason` validation, truncation/incomplete-stream errors, first-token/completion telemetry, and `kimi-k2.6` thinking suppression.
 agent/evidence-events.ts: Event framing contract for evidence, answer tokens, retryable model-generation errors, and stream completion.
@@ -37,10 +37,10 @@ http/rate-limit.ts: Fixed-window request limiter for API route abuse protection 
 ui/chat-evidence.ts: Chat evidence parsing and UI-ready contracts for tool, chart, actual retrieval mode, critic, generation state, planner fallback diagnostics, and model timing display.
 ui/chat-contract.ts: Shared browser-to-chat API request and evidence wire contracts.
 ui/chat-client.ts: Abortable static/event-stream chat transport with evidence and protocol validation.
-ui/chat-session.ts: Per-message evidence state machine with single-flight, retry, and empty-answer handling.
+ui/chat-session.ts: Per-message evidence state machine with single-flight, retry, empty-answer handling, and safe completed-message restoration for resumed conversations.
 ui/reference-chat.ts: Pure real-session-to-reference-presentation adapter for chat phase, thinking, streaming, and failure messages.
 ui/reference-chart.ts: Pure sanitized iztro display-to-reference-palace adapter; preserves real indices, stars, four transforms, brightness, and sourced empty interpretation fields.
-ui/conversation-records.ts: Validated persisted/current-browser conversation records controller, detail-state reducer, timeline adapter, and unavailable-storage fallback.
+ui/conversation-records.ts: Validated persisted/current-browser conversation records controller, detail-state reducer, user-question-first card adapter, deterministic prior-answer recap, and unavailable-storage fallback.
 ui/streaming-reveal.ts: Unicode-safe helpers that length-adjust approved-answer reveal batches toward roughly three seconds and adapt reveal timing by answer length.
 ui/chat-request.ts: Keeps the current primary chart in each browser-to-chat request so serverless turns remain self-contained.
 ui/chat-errors.ts: Chat error classification helpers for retryable network, rate-limit, stage-aware server, and empty-response failures.

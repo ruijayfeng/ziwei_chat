@@ -173,12 +173,21 @@ export function conversationTimelineItem(
 
   return {
     id: conversation.id,
-    title: conversation.title.trim() || firstUser.slice(0, 60) || "\u672a\u547d\u540d\u5bf9\u8bdd",
+    title: firstUser.slice(0, 60) || conversation.title.trim() || "\u672a\u547d\u540d\u5bf9\u8bdd",
     kind: inferTimelineKind(firstUser),
-    preview: (latestAssistant ?? latestVisible)?.content.slice(0, 160) ?? "",
+    preview: conversationRecap(latestAssistant?.content ?? latestVisible?.content ?? ""),
     lastMessageAt: conversation.lastMessageAt,
     messages: visible,
   };
+}
+
+export function conversationRecap(content: string) {
+  const paragraphs = content
+    .replace(/^#{1,6}\s*/gm, "")
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/^(?:结论)\s*[：:]?\s*/m, "").trim())
+    .filter(Boolean);
+  return (paragraphs[0] ?? "").replace(/\s+/g, " ").slice(0, 180);
 }
 
 function inferTimelineKind(prompt: string): ConversationTimelineKind {

@@ -55,6 +55,19 @@ export function summarizeChart({
   };
 }
 
+export function summarizePalace({
+  chartId,
+  chartJson,
+  palace,
+}: {
+  chartId: string;
+  chartJson: unknown;
+  palace: string;
+}): ChartFact | null {
+  const matchedPalace = findPalace(readPalaces(chartJson), palace);
+  return matchedPalace ? buildPalaceFact(chartId, "general", matchedPalace) : null;
+}
+
 function buildFactsForTopic(
   chartId: string,
   topic: ChartTopic,
@@ -79,26 +92,27 @@ function buildFactsForTopic(
     ];
   }
 
-  return matchedPalaces.map((palace) => {
-    const palaceName = readString(palace.name, "unknown");
-    const stars = readStars(palace);
-    const transforms = readTransforms(palace);
-    const patterns = readPatterns(palace);
-    const starText = stars.length > 0 ? stars.join("、") : "暂无主星";
-    const transformText =
-      transforms.length > 0 ? `，四化为 ${transforms.join("、")}` : "";
+  return matchedPalaces.map((palace) => buildPalaceFact(chartId, topic, palace));
+}
 
-    return {
-      id: `${chartId}:${topic}:${palaceName}`,
-      topic,
-      palace: palaceName,
-      stars,
-      transforms,
-      patterns,
-      rawText: `${palaceName}宫位主星为 ${starText}${transformText}。`,
-      confidence: stars.length > 0 ? "high" : "medium",
-    };
-  });
+function buildPalaceFact(chartId: string, topic: ChartTopic, palace: PalaceLike): ChartFact {
+  const palaceName = readString(palace.name, "unknown");
+  const stars = readStars(palace);
+  const transforms = readTransforms(palace);
+  const patterns = readPatterns(palace);
+  const starText = stars.length > 0 ? stars.join("、") : "暂无主星";
+  const transformText = transforms.length > 0 ? `，四化为 ${transforms.join("、")}` : "";
+
+  return {
+    id: `${chartId}:${topic}:${palaceName}`,
+    topic,
+    palace: palaceName,
+    stars,
+    transforms,
+    patterns,
+    rawText: `${palaceName}宫位主星为 ${starText}${transformText}。`,
+    confidence: stars.length > 0 ? "high" : "medium",
+  };
 }
 
 function readPalaces(chartJson: unknown): PalaceLike[] {

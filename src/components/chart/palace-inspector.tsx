@@ -3,9 +3,26 @@
 import { cn } from '@/lib/utils'
 import { getRelatedIndices, SIHUA_TONE } from '@/lib/reference-chart-contract'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, LoaderCircle, RefreshCw, Sparkles } from 'lucide-react'
 import { useState } from 'react'
+import { useWorkspace } from '@/components/workspace/workspace-provider'
+import { modelSettingsRequestFromDraft } from '@/lib/ui/model-settings'
 import { useChart } from './chart-context'
+
+type PalaceInterpretation =
+  | { status: 'loading' }
+  | { status: 'ready'; content: string }
+  | { status: 'error'; message: string }
+
+function PalaceReading({ content }: { content: string }) {
+  return (
+    <div className="space-y-3 text-sm leading-7 text-foreground/85">
+      {content.split(/\n\s*\n/).filter(Boolean).map((paragraph, index) => (
+        <p key={`${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>
+      ))}
+    </div>
+  )
+}
 
 /**
  * Hand-crafted luminance gauge — a 270° arc that echoes the destiny ring and
@@ -149,9 +166,43 @@ function Badge({
 
 export function PalaceInspector() {
   const { palaces, selected, setSelected } = useChart()
+  const { profileId, chartInput, modelSettings } = useWorkspace()
+  const [interpretations, setInterpretations] = useState<Record<string, PalaceInterpretation>>({})
   const palace = palaces[selected]
   const { trine, opposite } = getRelatedIndices(selected)
   const sihuaStars = palace.mainStars.filter((s) => s.sihua)
+  const interpretation = interpretations[palace.id]
+
+  async function generateInterpretation() {
+    if (!chartInput || !profileId || interpretation?.status === 'loading') return
+
+    setInterpretations((current) => ({ ...current, [palace.id]: { status: 'loading' } }))
+    try {
+      const response = await fetch('/api/chart/palace-interpretation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId,
+          palace: palace.name,
+          chartInput,
+          modelSettings: modelSettingsRequestFromDraft(modelSettings),
+        }),
+      })
+      const result = await response.json() as { content?: string; message?: string }
+      if (!response.ok || !result.content) {
+        throw new Error(result.message ?? '当前宫位暂时无法生成解读，请稍后重试。')
+      }
+      setInterpretations((current) => ({ ...current, [palace.id]: { status: 'ready', content: result.content! } }))
+    } catch (error) {
+      setInterpretations((current) => ({
+        ...current,
+        [palace.id]: {
+          status: 'error',
+          message: error instanceof Error ? error.message : '当前宫位暂时无法生成解读，请稍后重试。',
+        },
+      }))
+    }
+  }
 
   return (
     <aside className="flex h-screen w-[360px] shrink-0 flex-col px-6 py-6">
@@ -185,8 +236,10 @@ export function PalaceInspector() {
 
       {/* Scrollable detail */}
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
-        <Section title="AI 解读" hint={palace.aiTraits.length > 0 ? '演示内容' : '尚未生成'} defaultOpen>
-          {palace.aiTraits.length > 0 ? (
+        <Section title="AI 解读" hint={interpretation?.status === 'ready' ? '已生成' : '按需生成'} defaultOpen>
+          {interpretation?.status === 'ready' ? (
+            <PalaceReading content={interpretation.content} />
+          ) : palace.aiTraits.length > 0 ? (
             <ul className="flex flex-col gap-2.5">
               {palace.aiTraits.map((trait) => (
                 <li key={trait} className="flex gap-2.5 text-sm leading-relaxed text-foreground/85">
@@ -196,9 +249,35 @@ export function PalaceInspector() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              当前仅展示 iztro 的确定性排盘事实。需要解读时，可回到对话页让 Agent 基于本命盘分析。
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                当前仅展示 iztro 的确定性排盘事实。只在你点击生成时调用模型，解读仅基于当前宫位。
+              </p>
+              {interpretation?.status === 'error' ? (
+                <p role="alert" className="text-sm leading-relaxed text-destructive">
+                  {interpretation.message}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={generateInterpretation}
+                disabled={!chartInput || !profileId || interpretation?.status === 'loading'}
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-primary/45 bg-primary/10 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {interpretation?.status === 'loading' ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                ) : interpretation?.status === 'error' ? (
+                  <RefreshCw className="size-4" aria-hidden="true" />
+                ) : (
+                  <Sparkles className="size-4" aria-hidden="true" />
+                )}
+                {interpretation?.status === 'loading'
+                  ? '正在生成'
+                  : interpretation?.status === 'error'
+                    ? '重新生成 AI 解读'
+                    : '生成 AI 解读'}
+              </button>
+            </div>
           )}
           {palace.basis.length > 0 ? (
             <div className="mt-3.5 flex flex-wrap items-center gap-1.5">

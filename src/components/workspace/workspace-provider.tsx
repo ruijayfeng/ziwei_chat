@@ -70,6 +70,7 @@ type WorkspaceContextValue = {
   sendMessage: (content: string) => Promise<void>;
   retryLastMessage: () => Promise<void>;
   resetChat: () => void;
+  resumeConversation: (conversationId: string, messages: Array<{ id: string; role: "user" | "assistant"; content: string }>) => void;
   selectedEvidenceMessageId: string | null;
   setSelectedEvidenceMessageId: (messageId: string | null) => void;
   selectedEvidence: EvidenceState;
@@ -381,6 +382,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setSelectedEvidenceMessageId(null);
   }, []);
 
+  const resumeConversation = useCallback((nextConversationId: string, messages: Array<{ id: string; role: "user" | "assistant"; content: string }>) => {
+    if (!nextConversationId || messages.length === 0) return;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    setConversationId(nextConversationId);
+    dispatchChat({ type: "session_restored", messages });
+    setSelectedEvidenceMessageId(null);
+  }, []);
+
   const deleteAnonymousData = useCallback(async () => {
     if (!profileId || dataDeletingRef.current) return false;
     dataDeletingRef.current = true;
@@ -462,6 +472,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     retryLastMessage,
     resetChat,
+    resumeConversation,
     selectedEvidenceMessageId,
     setSelectedEvidenceMessageId,
     selectedEvidence,
@@ -489,6 +500,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     retryLastMessage,
     resetChat,
+    resumeConversation,
     selectedEvidenceMessageId,
     selectedEvidence,
     deleteAnonymousData,

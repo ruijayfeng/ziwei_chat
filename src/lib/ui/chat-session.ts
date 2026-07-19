@@ -38,6 +38,7 @@ export type ChatSessionAction =
   | { type: "token_received"; requestId: string; token: string }
   | { type: "turn_completed"; requestId: string }
   | { type: "turn_failed"; requestId: string; error: ChatErrorState }
+  | { type: "session_restored"; messages: Array<Pick<ChatSessionMessage, "id" | "role" | "content">> }
   | { type: "session_reset" };
 
 export const initialChatSessionState: ChatSessionState = {
@@ -53,6 +54,18 @@ export function chatSessionReducer(
   action: ChatSessionAction,
 ): ChatSessionState {
   if (action.type === "session_reset") return initialChatSessionState;
+  if (action.type === "session_restored") {
+    return {
+      ...initialChatSessionState,
+      messages: action.messages
+        .filter((message) => (message.role === "user" || message.role === "assistant") && message.content.trim())
+        .map((message) => ({
+          ...message,
+          status: "complete" as const,
+          evidence: initialEvidence,
+        })),
+    };
+  }
   if (action.type === "turn_started") return startTurn(state, action);
   if (state.activeRequestId !== action.requestId) return state;
 

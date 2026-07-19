@@ -7,7 +7,7 @@
 
 import { buildModelPrompt, generateModelResponse, type ResolvedModelSettings } from "./model-provider";
 
-export type LlmResponseMode = "analysis" | "conversation";
+export type LlmResponseMode = "analysis" | "conversation" | "palace";
 
 export type LlmAnalystInput = {
   settings: ResolvedModelSettings;
@@ -58,6 +58,24 @@ export async function generateLlmAnalysis({
       prompt: buildConversationPrompt({ userContent, conversationContext, hasChart }),
       onToken,
       maxTokens: 800,
+    });
+  }
+
+  if (responseMode === "palace") {
+    return generateModelResponse({
+      settings,
+      systemPrompt: "你是紫微知道的命盘侧栏说明助手。只解释当前选中宫位中已经给出的星曜与结构如何组合呈现，不回答用户问题，也不输出人生决策建议。",
+      prompt: [
+        `当前宫位：${userContent}`,
+        "",
+        "本宫确定性事实：",
+        chartFacts.map((fact) => `- ${fact}`).join("\n"),
+        "",
+        "请写一段 180 到 280 字的中文宫位解读，分成 2 至 3 个自然段。",
+        "第一段说明本宫主星与宫位主题形成的核心呈现；后续段落结合辅星、四化、身宫或来因等本宫已给出的信息说明细节。",
+        "只陈述观察重点与组合特征；不输出标题、Markdown、列表、结论、命盘依据、现实解释、建议或追问；不延伸到其他宫位，不给行动指令。",
+      ].join("\n"),
+      maxTokens: 520,
     });
   }
 

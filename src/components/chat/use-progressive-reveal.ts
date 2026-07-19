@@ -17,10 +17,7 @@ export function useProgressiveReveal(content: string, reducedMotion: boolean) {
   const contentLength = Array.from(content).length
 
   useEffect(() => {
-    if (reducedMotion) {
-      setVisibleLength(contentLength)
-      return
-    }
+    if (reducedMotion) return
 
     if (visibleLength >= contentLength) return
     timerRef.current = setTimeout(() => {
