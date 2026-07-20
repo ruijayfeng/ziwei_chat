@@ -56,15 +56,12 @@
 
 ## 界面预览
 
-> 正式界面截图将在首个公开 Preview 发布时补充到这里。当前可通过下方命令本地运行体验完整界面。
-
-<!--
-推荐放置两张真实界面图：
-
 | 对话与证据 | 命盘与宫位解读 |
 |:---:|:---:|
-| ![对话页](docs/images/chat.png) | ![命盘页](docs/images/chart.png) |
--->
+|<img width="2139" height="1286" alt="image" src="https://github.com/user-attachments/assets/14d0f266-6cd6-4f4e-b9f4-27ad5a1620e7" />
+|<img width="2138" height="1293" alt="image" src="https://github.com/user-attachments/assets/cfb185dd-6855-4a92-9f5f-dd3bccdd90b9" />
+|
+
 
 ## 快速开始
 
