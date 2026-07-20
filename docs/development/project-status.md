@@ -2,7 +2,7 @@
 
 > Updated: 2026-07-19
 > Release target: Final V1+
-> Authority: `docs/superpowers/specs/2026-07-16-final-v1-plus-release-design.md`
+> Authority: `docs/product/prd.md`, `docs/prompts/response-protocol.md`, and `docs/evaluation/acceptance-criteria.md`
 
 ## Current State
 
@@ -72,7 +72,7 @@ The last complete gate before Task 10 passed on 2026-07-17:
 
 Task 10 verification on 2026-07-17:
 
-- lint: 0 errors; 135 warnings confined to installed `.agents/skills/impeccable`
+- lint: passed
 - typecheck: passed
 - full tests: 70 passed / 2 skipped files; 645 passed / 3 skipped tests
 - agent evaluation: 17 cases, 0 failed, 1 explicit setup-required
@@ -94,7 +94,7 @@ below supersedes them for automated, migration, database, and dependency proof.
 
 Task 11 verification on 2026-07-18:
 
-- lint: 0 errors; 135 warnings confined to installed `.agents/skills/impeccable`
+- lint: passed
 - typecheck: passed
 - default no-database full tests: 70 passed / 3 skipped files; 749 passed / 4
   skipped tests
@@ -243,7 +243,6 @@ product specification rather than expansion of this release.
 ## Handoff
 
 - Function gaps and closure evidence: `docs/development/final-v1-plus-gap-register.md`
-- Completion plan: `docs/superpowers/plans/2026-07-17-final-v1-plus-completion.md`
 - Agent/content expansion: `docs/development/agent-content-gaps.md`
 - Deployment notes: `docs/development/deployment.md`
 - Manual acceptance: `docs/development/public-beta-qa.md`

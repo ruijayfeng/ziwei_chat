@@ -1,7 +1,7 @@
 # Final V1+ Function Gap Register
 
 > Updated: 2026-07-19
-> Authority: `docs/superpowers/specs/2026-07-16-final-v1-plus-release-design.md`
+> Authority: `docs/product/prd.md`, `docs/prompts/response-protocol.md`, and the current acceptance criteria.
 > Purpose: single register for what is complete, what remains, how each gap is designed, and what evidence closes it.
 
 ## Final Boundary

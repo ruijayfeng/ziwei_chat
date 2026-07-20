@@ -3,18 +3,14 @@
 Open-source-first Next.js application planned around Vercel AI SDK, iztro, Postgres, pgvector, and a domain-specific agent harness for Ziwei Dou Shu analysis.
 
 <directory>
-.agents/ - Project-installed third-party skills used by Claude Code and compatible agent CLIs.
-.claude/ - Claude Code project wiring, currently symlinking installed skills from `.agents/skills`.
 .github/ - CI workflow for lint, typecheck, tests, agent evaluation, and build.
-.superpowers/ - Generated Superpowers workflow and review reports retained as development evidence.
-docs/ - Product, architecture, knowledge, prompt, evaluation, and development planning documents.
+docs/ - Product, architecture, knowledge, prompt, evaluation, and development documents.
 docs/product/ - Product positioning, final-state PRD, and roadmap.
 docs/architecture/ - Agent architecture, tool contracts, and data model.
 docs/knowledge/ - Skills, RAG, source policy, and knowledge quality rules.
 docs/prompts/ - Response protocol, persona rules, and safety boundaries.
 docs/evaluation/ - Acceptance criteria and agent quality evaluation.
 docs/development/ - Implementation plan, deployment notes, dependency decisions, and current project status.
-docs/superpowers/ - Superpowers-compatible specs and implementation plans.
 content/ - Runtime skill workflows and curated local Markdown knowledge.
 drizzle/ - Generated Drizzle SQL migrations and migration metadata.
 public/ - Static assets served by Next.js.
@@ -37,7 +33,6 @@ package.json - Node package manifest and development scripts.
 postcss.config.mjs - Tailwind CSS PostCSS configuration.
 PRODUCT.md - Product register, audience, brand personality, anti-references, and design principles for UI work.
 README.md - Contributor setup, verification, database, and deployment pointers.
-skills-lock.json - Lockfile for installed third-party agent skills and source hashes.
 tsconfig.json - TypeScript compiler configuration.
 vitest.config.ts - Vitest aliases and test discovery configuration.
 </config>

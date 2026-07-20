@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Tooling dependencies are not application source and own their lint state.
-    ".agents/**",
     // Read-only source repository used during the UI migration.
     "ziwei-chat-redesign/**",
   ]),
