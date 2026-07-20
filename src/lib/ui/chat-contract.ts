@@ -10,7 +10,7 @@ import type { EvidenceState } from "./chat-evidence";
 import type { ModelSettingsRequest } from "./model-settings";
 
 export type ChatRequestMessage = {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
   content: string;
 };
 

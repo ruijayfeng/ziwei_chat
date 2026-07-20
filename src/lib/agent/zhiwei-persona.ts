@@ -59,8 +59,8 @@ export function buildZhiweiRuntimePrompt({
     `当前任务规则：\n${formatLines(taskRules)}`,
     `<chart_facts>\n${formatLines(chartFacts)}\n</chart_facts>`,
     `<knowledge>\n${formatLines(knowledgeSources)}\n</knowledge>`,
-    `<conversation_context>\n${conversationContext || "无"}\n</conversation_context>`,
-    `用户当前消息：\n${userContent}`,
+    `<conversation_context>\n${escapePromptData(conversationContext || "无")}\n</conversation_context>`,
+    `用户当前消息：\n${escapePromptData(userContent)}`,
     [
       "重要约束：",
       "- 只有 <chart_facts> 可被描述为用户的命盘事实。",
@@ -71,5 +71,9 @@ export function buildZhiweiRuntimePrompt({
 }
 
 function formatLines(values: string[]) {
-  return values.length > 0 ? values.join("\n") : "无";
+  return values.length > 0 ? values.map(escapePromptData).join("\n") : "无";
+}
+
+function escapePromptData(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

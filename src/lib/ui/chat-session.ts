@@ -9,7 +9,9 @@ import type { ChatRequestMessage } from "./chat-contract";
 import { initialEvidence, type EvidenceState } from "./chat-evidence";
 import { emptyAssistantResponseError, type ChatErrorState } from "./chat-errors";
 
-export type ChatSessionMessage = ChatRequestMessage & {
+export type ChatSessionMessage = {
+  role: ChatRequestMessage["role"] | "system";
+  content: string;
   id: string;
   status: "thinking" | "streaming" | "complete" | "failed";
   evidence: EvidenceState;
@@ -96,7 +98,7 @@ export function chatRequestMessages(state: ChatSessionState): ChatRequestMessage
   return state.messages
     .filter((message) => message.role === "user" || message.status === "complete")
     .filter((message) => message.content.trim().length > 0)
-    .map(({ role, content }) => ({ role, content }));
+    .map(({ role, content }) => ({ role: role === "assistant" ? "assistant" : "user", content }));
 }
 
 function startTurn(

@@ -232,6 +232,23 @@ describe("runResponseCritic", () => {
     }));
   });
 
+  test("blocks a current-chart palace assertion even when it does not name a star", () => {
+    const result = runResponseCritic({
+      intent: "chart_explanation",
+      draft: "你的迁移宫形成了稳定的外部机会，这就是当前命盘的重点。",
+      toolsUsed: ["getPalaceAnalysis"],
+      chartFacts: [{ ...chartFact, topic: "general", palace: "官禄", stars: ["天同"] }],
+      knowledgeSources: [],
+      safetyLevel: "normal",
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.structuredIssues).toContainEqual(expect.objectContaining({
+      severity: "blocking",
+      code: "unsupported_current_chart_fact",
+    }));
+  });
+
   test("does not require a follow-up question for a self-contained answer", () => {
     const result = runResponseCritic({
       intent: "career",

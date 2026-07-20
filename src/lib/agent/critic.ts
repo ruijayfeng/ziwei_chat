@@ -83,6 +83,8 @@ const starTerms = [
   "破军",
 ];
 
+const transformTerms = ["化禄", "化权", "化科", "化忌"];
+
 export function runResponseCritic({
   intent,
   draft,
@@ -104,7 +106,9 @@ export function runResponseCritic({
   if (
     seriousIntents.has(intent) &&
     !chartSetupPrompt &&
-    !toolsUsed.some((tool) => tool === "summarizeChartFacts" || tool === "getCurrentChart")
+    !toolsUsed.some((tool) =>
+      tool === "summarizeChartFacts" || tool === "getCurrentChart" || tool === "getPalaceAnalysis",
+    )
   ) {
     addIssue("missing_chart_tools", "Required chart tools did not run.", "blocking");
   }
@@ -219,15 +223,29 @@ function qualifierPrefix(draft: string, index: number) {
 function hasUnsupportedCurrentChartAssertion(draft: string, chartFacts: ChartFact[]) {
   const knownPalaces = new Set(chartFacts.flatMap((fact) => [fact.palace, `${fact.palace}宫`]));
   const knownStars = new Set(chartFacts.flatMap((fact) => fact.stars));
+  const knownTransforms = new Set(chartFacts.flatMap((fact) => fact.transforms.map((transform) => `化${transform}`)));
+  const hasPatternFacts = chartFacts.some((fact) => fact.patterns.length > 0);
 
   return draft.split(/[。！？\n]/).some((sentence) => {
     const ownership = /(你的|你命盘|本命|命盘中|盘里|当前命盘|这张盘)/.test(sentence);
     const relationship = /(有|坐|落|见|化|为|是|形成|构成|位于)/.test(sentence);
     if (!ownership && !relationship) return false;
     if (/如果|通常|一般|可能|可以作为|并非本次命盘事实|不是本次命盘依据/.test(sentence)) return false;
-    const assertedTerms = [...palaceTerms, ...starTerms].filter((term) => sentence.includes(term));
+    const assertedTerms = [...palaceTerms, ...starTerms, ...transformTerms].filter((term) => sentence.includes(term));
     const hasPalace = assertedTerms.some((term) => palaceTerms.includes(term));
-    const hasStar = assertedTerms.some((term) => starTerms.includes(term));
-    return relationship && hasPalace && hasStar && assertedTerms.some((term) => !knownPalaces.has(term) && !knownStars.has(term));
+    const hasPatternClaim = /(格局|结构|三方四正|会照)/.test(sentence);
+    const isKnownTerm = (term: string) =>
+      knownPalaces.has(term) || knownStars.has(term) || knownTransforms.has(term);
+
+    return relationship && (
+      ((ownership || (hasPalace && hasStarAssertion(sentence)) && assertedTerms.some((term) => starTerms.includes(term))) &&
+        hasPalace &&
+        assertedTerms.some((term) => !isKnownTerm(term))) ||
+      (ownership && hasPatternClaim && !hasPatternFacts)
+    );
   });
+}
+
+function hasStarAssertion(sentence: string) {
+  return starTerms.some((term) => sentence.includes(term));
 }

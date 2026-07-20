@@ -7,7 +7,8 @@
 
 import { randomUUID } from "node:crypto";
 
-import { generateLlmAnalysis } from "@/lib/agent/llm-analyst";
+import { runResponseCritic } from "@/lib/agent/critic";
+import { generateLlmAnalysis, reviseLlmAnalysis } from "@/lib/agent/llm-analyst";
 import { normalizeModelSettings, type IncomingModelSettings } from "@/lib/agent/model-provider";
 import { createAgentTools } from "@/lib/agent/tools";
 import type { CreateChartInput } from "@/lib/domain/chart";
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
 
   const deterministicDraft = createPalaceDraft(palace, chartFacts.map(formatChartFact));
 
-  const modelResult = await generateLlmAnalysis({
+  const analysisInput = {
     settings,
     userContent: `请只解读我的${palace}，不要延伸到其他宫位。`,
     deterministicDraft,
@@ -70,18 +71,58 @@ export async function POST(request: Request) {
     skillForbiddenAdvice: ["不要提供医疗、法律、投资或不可逆的人生指令。"],
     skillCommonQuestionPaths: ["说明倾向、现实观察方向与可实践的建议。"],
     knowledgeSources: [],
-    criticStatus: "passed",
+    criticStatus: "not_run" as const,
     criticIssues: [],
-    responseMode: "palace",
-  });
+    responseMode: "palace" as const,
+  };
+  const modelResult = await generateLlmAnalysis(analysisInput);
   if (!modelResult.ok) {
     return errorResponse("MODEL_UNAVAILABLE", "模型暂时没有完成解读，请检查模型设置和网络后重试。", 503);
+  }
+
+  let content = modelResult.content;
+  let critique = runResponseCritic({
+    intent: "chart_explanation",
+    draft: content,
+    toolsUsed: ["getPalaceAnalysis"],
+    chartFacts,
+    knowledgeSources: [],
+    safetyLevel: "normal",
+    prohibitionIds: ["single_factor_determinism", "chart_explanation_prediction", "invented_chart_fact"],
+  });
+
+  if (critique.requiredRevision) {
+    const revision = await reviseLlmAnalysis({
+      ...analysisInput,
+      criticStatus: "needs_review",
+      criticIssues: critique.issues,
+      failedContent: content,
+      finalCriticIssues: critique.issues,
+    });
+    if (!revision.ok) {
+      return errorResponse("MODEL_UNAVAILABLE", "模型暂时没有完成解读，请检查模型设置和网络后重试。", 503);
+    }
+
+    content = revision.content;
+    critique = runResponseCritic({
+      intent: "chart_explanation",
+      draft: content,
+      toolsUsed: ["getPalaceAnalysis"],
+      chartFacts,
+      knowledgeSources: [],
+      safetyLevel: "normal",
+      prohibitionIds: ["single_factor_determinism", "chart_explanation_prediction", "invented_chart_fact"],
+    });
+  }
+
+  if (!critique.passed) {
+    return errorResponse("MODEL_RESPONSE_REJECTED", "模型解读未能通过命盘事实校验，请重试。", 503);
   }
 
   return Response.json({
     id: randomUUID(),
     palace,
-    content: normalizePalaceContent(modelResult.content),
+    content: normalizePalaceContent(content),
   });
 }
 
