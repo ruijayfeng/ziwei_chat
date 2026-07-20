@@ -35,7 +35,7 @@ A passing answer:
 - translates Ziwei terms into plain language
 - avoids absolute claims
 - gives grounded advice
-- asks exactly one useful follow-up question
+- asks a useful follow-up only when the available chart facts and user context leave a material gap
 
 A failing answer:
 

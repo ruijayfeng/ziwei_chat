@@ -176,7 +176,7 @@ After local or Vercel deployment:
 1. Open the app without registration or login.
 2. Create a primary chart from birth date, time, gender, and calendar type.
 3. Ask a career, relationship, wealth, personality, or recent-fortune question.
-4. Confirm the response includes conclusion, chart basis, plain explanation, suggestion, and one follow-up.
+4. Confirm the response reads as a natural 知微 dialogue, refers only to available chart facts as personal facts, and asks a follow-up only when necessary.
 5. Confirm the evidence panel shows tool, chart, knowledge, and critic state.
 6. Run the local regression suite:
 

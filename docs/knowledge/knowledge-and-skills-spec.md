@@ -58,7 +58,7 @@ tools:
 2. Compare chart tendency with current luck-cycle context.
 3. Separate stable personality tendency from near-term timing.
 4. Translate findings into practical work choices.
-5. Ask one follow-up about the user's real-world situation.
+5. Ask one follow-up about the user's real-world situation only when that context is necessary to answer responsibly.
 
 ## Response Rules
 

@@ -13,6 +13,13 @@ import type { CreateChartInput } from "@/lib/domain/chart";
 import type { ChartDisplayModel } from "@/lib/domain/chart-display";
 import { deleteAnonymousProfileData } from "@/lib/ui/anonymous-data-deletion";
 import { clearInsightCache } from "@/lib/ui/insight-cache";
+import {
+  localConversationArchiveFromStorage,
+  localConversationArchiveStorageKey,
+  localConversationArchiveValue,
+  updateLocalConversationArchive,
+  type LocalConversation,
+} from "@/lib/ui/local-conversation-session";
 import { ChatClientError, sendChatRequest } from "@/lib/ui/chat-client";
 import { initialEvidence, type EvidenceState } from "@/lib/ui/chat-evidence";
 import { classifyChatError, type ChatErrorState } from "@/lib/ui/chat-errors";
@@ -54,6 +61,7 @@ type WorkspaceContextValue = {
   ready: boolean;
   profileId: string;
   conversationId: string;
+  localConversations: LocalConversation[];
   chartInput: CreateChartInput | null;
   chartDisplay: ChartDisplayModel | null;
   chartLoading: boolean;
@@ -87,6 +95,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [profileId, setProfileId] = useState("");
   const [conversationId, setConversationId] = useState("");
+  const [localConversations, setLocalConversations] = useState<LocalConversation[]>([]);
   const [chartInput, setChartInput] = useState<CreateChartInput | null>(null);
   const [chartDisplay, setChartDisplay] = useState<ChartDisplayModel | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
@@ -115,9 +124,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
         revisionRef.current += 1;
         chartOperationRevisionRef.current += 1;
-        profileIdRef.current = nextProfileId;
+      profileIdRef.current = nextProfileId;
+      const archive = localConversationArchiveFromStorage(
+        window.localStorage.getItem(localConversationArchiveStorageKey(nextProfileId)),
+      );
       setProfileId(nextProfileId);
-      setConversationId(crypto.randomUUID());
+      setLocalConversations(archive);
+      setConversationId(archive[0]?.conversationId ?? crypto.randomUUID());
+      if (archive[0]) dispatchChat({ type: "session_restored", messages: archive[0].messages });
       setModelSettings(modelSettingsDraftFromStorage(window.localStorage.getItem(modelSettingsStorageKey)));
       setModelSettingsLoaded(true);
       setReady(true);
@@ -130,6 +144,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!modelSettingsLoaded) return;
     window.localStorage.setItem(modelSettingsStorageKey, modelSettingsStorageValue(modelSettings));
   }, [modelSettings, modelSettingsLoaded]);
+
+  useEffect(() => {
+    if (!ready || !profileId || !conversationId) return;
+    const previous = localConversationArchiveFromStorage(
+      window.localStorage.getItem(localConversationArchiveStorageKey(profileId)),
+    );
+    const next = updateLocalConversationArchive(previous, conversationId, chatSession.messages, new Date().toISOString());
+    window.localStorage.setItem(localConversationArchiveStorageKey(profileId), localConversationArchiveValue(next));
+  }, [chatSession.messages, conversationId, profileId, ready]);
 
   useEffect(() => {
     if (!profileId) return;
@@ -378,9 +401,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     chatAbortRef.current?.abort();
     chatAbortRef.current = null;
     dispatchChat({ type: "session_reset" });
+    if (profileId) {
+      setLocalConversations(localConversationArchiveFromStorage(
+        window.localStorage.getItem(localConversationArchiveStorageKey(profileId)),
+      ));
+    }
     setConversationId(crypto.randomUUID());
     setSelectedEvidenceMessageId(null);
-  }, []);
+  }, [profileId]);
 
   const resumeConversation = useCallback((nextConversationId: string, messages: Array<{ id: string; role: "user" | "assistant"; content: string }>) => {
     if (!nextConversationId || messages.length === 0) return;
@@ -388,8 +416,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     chatAbortRef.current = null;
     setConversationId(nextConversationId);
     dispatchChat({ type: "session_restored", messages });
+    if (profileId) {
+      setLocalConversations(localConversationArchiveFromStorage(
+        window.localStorage.getItem(localConversationArchiveStorageKey(profileId)),
+      ));
+    }
     setSelectedEvidenceMessageId(null);
-  }, []);
+  }, [profileId]);
 
   const deleteAnonymousData = useCallback(async () => {
     if (!profileId || dataDeletingRef.current) return false;
@@ -417,6 +450,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         window.localStorage.removeItem("ziwei-chat-profile-id");
         window.localStorage.removeItem(modelSettingsStorageKey);
         window.localStorage.removeItem(chartSessionStorageKey(profileId));
+        window.localStorage.removeItem(localConversationArchiveStorageKey(profileId));
         const nextProfileId = crypto.randomUUID();
         window.localStorage.setItem("ziwei-chat-profile-id", nextProfileId);
         revisionRef.current += 1;
@@ -424,6 +458,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         profileIdRef.current = nextProfileId;
         setProfileId(nextProfileId);
         setConversationId(crypto.randomUUID());
+        setLocalConversations([]);
         setChartInput(null);
         setChartDisplay(null);
         setChartSynced(false);
@@ -456,6 +491,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     ready,
     profileId,
     conversationId,
+    localConversations,
     chartInput,
     chartDisplay,
     chartLoading,
@@ -485,6 +521,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     ready,
     profileId,
     conversationId,
+    localConversations,
     chartInput,
     chartDisplay,
     chartLoading,

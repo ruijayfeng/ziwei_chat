@@ -15,6 +15,7 @@ function Probe() {
         {workspace.chartLoading ? "loading" : workspace.chartError ?? workspace.chartDisplay?.chartId ?? (workspace.chartRestoreSettled ? "empty" : "pending")}
       </span>
       <span data-testid="profile">{workspace.profileId}</span>
+      <span data-testid="conversation">{workspace.conversationId}:{workspace.chatSession.messages.map((message) => message.content).join("|")}</span>
       <button type="button" onClick={workspace.retryChartRestore}>retry</button>
       <button type="button" onClick={() => void workspace.deleteAnonymousData()}>delete</button>
     </div>
@@ -32,6 +33,26 @@ afterEach(() => {
 });
 
 describe("WorkspaceProvider chart restore lifecycle", () => {
+  test("restores the latest profile-scoped local conversation after refresh", async () => {
+    window.localStorage.setItem(`ziwei-chat-conversations:${profileId}`, JSON.stringify({
+      conversations: [{
+        conversationId: "conversation-restored",
+        updatedAt: "2026-07-20T12:00:00.000Z",
+        messages: [
+          { id: "user-1", role: "user", content: "之前的问题" },
+          { id: "assistant-1", role: "assistant", content: "之前的回答" },
+        ],
+      }],
+    }));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 404 })));
+
+    render(<WorkspaceProvider><Probe /></WorkspaceProvider>);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("conversation").textContent).toBe("conversation-restored:之前的问题|之前的回答");
+    });
+  });
+
   test("does not treat a null 2xx body as an empty chart", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json(null)));
 

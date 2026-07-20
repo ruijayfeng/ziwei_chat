@@ -132,7 +132,7 @@ V1 is complete when all of these are true:
 - The five MVP topics work: recent fortune, career/work, relationships, wealth, personality.
 - Serious Ziwei questions trigger chart-related tools.
 - Local Markdown/keyword knowledge search works without an embedding API key.
-- The response protocol is followed: conclusion, chart basis, plain explanation, suggestion, one follow-up.
+- The 知微 response protocol is followed: warm, natural dialogue grounded in deterministic chart facts; a follow-up is used only when essential context is missing.
 - The critic runs before final answer for serious analysis.
 - Seed eval cases pass according to `docs/evaluation/acceptance-criteria.md`.
 
@@ -200,7 +200,7 @@ Agent:
 Experience:
 
 - Streaming starts within 3 seconds under normal service conditions.
-- Answers use plain language and end with one useful follow-up question.
+- Answers use plain, companion-like language and ask a follow-up only when it meaningfully advances the conversation.
 - User-visible terminology is explained when introduced.
 
 ## Product Voice

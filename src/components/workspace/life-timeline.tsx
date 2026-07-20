@@ -36,7 +36,7 @@ type ProfileLoadState = {
 }
 
 export function LifeTimeline() {
-  const { ready, profileId, conversationId, chatSession, resumeConversation } = useWorkspace()
+  const { ready, profileId, conversationId, chatSession, localConversations, resumeConversation } = useWorkspace()
   const router = useRouter()
   const current = currentSessionConversation(conversationId, chatSession.messages)
   const [records, dispatchRecords] = useReducer(conversationRecordsReducer, '', createConversationRecordsState)
@@ -49,12 +49,26 @@ export function LifeTimeline() {
 
   const activeRecords = records.profileId === profileId ? records : createConversationRecordsState(profileId)
   const activeLoadState = loadState.profileId === profileId ? loadState.state : { phase: 'loading' as const }
-  const conversations = useMemo(() => mergeCurrentSession(activeRecords.conversations, current), [activeRecords.conversations, current])
+  const localMessagesByConversation = useMemo(() => new Map(localConversations.map((conversation) => [
+    conversation.conversationId,
+    conversation.messages.map((message) => ({ ...message, conversationId: conversation.conversationId, createdAt: conversation.updatedAt })),
+  ])), [localConversations])
+  const localConversationList = useMemo(() => localConversations.map((conversation) => ({
+    id: conversation.conversationId,
+    title: conversation.messages.find((message) => message.role === 'user')?.content.slice(0, 60) || '未命名对话',
+    lastMessageAt: conversation.updatedAt,
+  })), [localConversations])
+  const conversations = useMemo(
+    () => mergeCurrentSession([...activeRecords.conversations, ...localConversationList], current),
+    [activeRecords.conversations, current, localConversationList],
+  )
   const activeId = conversations.some((conversation) => conversation.id === activeRecords.selectedId)
     ? activeRecords.selectedId
     : conversations[0]?.id ?? null
   const selectedDetail = activeId === current?.conversation.id
     ? { phase: 'ready', messages: current.messages } satisfies ConversationDetailState
+    : localMessagesByConversation.has(activeId ?? '')
+      ? { phase: 'ready', messages: localMessagesByConversation.get(activeId ?? '') ?? [] } satisfies ConversationDetailState
     : activeId ? activeRecords.details[activeId] : undefined
   const detailSettled = selectedDetail?.phase === 'ready' || selectedDetail?.phase === 'error'
 
@@ -104,7 +118,7 @@ export function LifeTimeline() {
   }, [listRevision, profileId, ready])
 
   useEffect(() => {
-    if (!ready || !profileId || !activeId || activeId === current?.conversation.id) return
+    if (!ready || !profileId || !activeId || activeId === current?.conversation.id || localMessagesByConversation.has(activeId)) return
     if (detailSettled) return
     const controller = nextConversationRequest(detailRequestRef.current)
     detailRequestRef.current = controller
@@ -125,7 +139,7 @@ export function LifeTimeline() {
       controller.abort()
       if (detailRequestRef.current === controller) detailRequestRef.current = null
     }
-  }, [activeId, current?.conversation.id, detailRevision, detailSettled, profileId, ready])
+  }, [activeId, current?.conversation.id, detailRevision, detailSettled, localMessagesByConversation, profileId, ready])
 
   return (
     <div>
@@ -137,7 +151,7 @@ export function LifeTimeline() {
         </div>
       )}
       {activeLoadState.phase === 'ready' && activeLoadState.unavailable && (
-        <p role="status" className="mb-4 ml-14 text-sm text-muted-foreground">历史记录暂不可用，当前浏览器会话仍可查看。</p>
+        <p role="status" className="mb-4 ml-14 text-sm text-muted-foreground">数据库记录暂不可用，浏览器中已保存的本地对话仍可查看。</p>
       )}
       {activeLoadState.phase === 'loading' && !conversations.length && (
         <p role="status" aria-live="polite" className="mb-4 ml-14 text-sm text-muted-foreground">正在读取对话记录。</p>
@@ -149,7 +163,7 @@ export function LifeTimeline() {
           {conversations.map((conversation, index) => {
             const messages = conversation.id === current?.conversation.id
               ? current.messages
-              : activeRecords.details[conversation.id]?.messages ?? []
+              : localMessagesByConversation.get(conversation.id) ?? activeRecords.details[conversation.id]?.messages ?? []
             const item = conversationTimelineItem(conversation, messages)
             const isOpen = activeId === item.id
 
