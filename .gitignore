@@ -45,6 +45,7 @@ next-dev*.log
 /ref.png
 /public/screenshots/
 /public/brand/icon-explorations/
+.worktrees/
 
 # typescript
 *.tsbuildinfo

@@ -2,10 +2,10 @@
   <img src="./docs/images/zhiwei-mark.png" alt="知微，紫微知道的对话伙伴" width="132" />
 </p>
 
-<h1 align="center">紫微知道</h1>
+<h1 align="center">紫微知道 · 问盘 | Ziwei Chat</h1>
 
 <p align="center"><strong>让「知微」陪你读懂命盘里的线索。</strong></p>
-<p align="center">一个面向普通用户的开源紫微斗数 Agent，强调可追溯的命盘事实、自然的对谈体验与可本地运行的基础能力。</p>
+<p align="center">紫微知道系列中的开源紫微斗数 Agent：围绕可追溯的命盘事实，以自然对谈帮助普通用户追问真正关心的问题。</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js 16" />
@@ -16,7 +16,26 @@
   <img src="https://img.shields.io/badge/License-Apache--2.0-d22128" alt="Apache-2.0 license" />
 </p>
 
+<p align="center">
+  <a href="https://ziweichat.vercel.app/"><strong>在线体验 Ziwei Chat</strong></a> ·
+  <a href="#紫微知道产品生态">认识紫微知道产品生态</a>
+</p>
+
+<!-- Future Ziwei Knows mascot variations for peer products are intentionally left blank. -->
+
 ---
+
+## 紫微知道产品生态
+
+紫微知道（Ziwei Knows）由三款平级、互补的开源产品组成。它们服务不同的探索方式，不要求账号、命盘或数据互通。
+
+| 产品 | 适合什么需求 | 访问 |
+| --- | --- | --- |
+| **Ziwei Chart** | 想准确排盘、浏览十二宫、流年、合盘和长期趋势。 | [在线体验](https://zwknows.vercel.app/) · [GitHub](https://github.com/ruijayfeng/ziwei) |
+| **Ziwei Chat** `当前产品` | 已有命盘，想围绕事业、关系、财富或近况继续追问。 | [在线体验](https://ziweichat.vercel.app/) · [GitHub](https://github.com/ruijayfeng/ziwei_chat) |
+| **ZATI** | 不想先填写出生信息，想通过行为选择探索人格原型。 | [查看项目](https://github.com/ruijayfeng/ZATI) |
+
+想先看完整盘面和趋势，可以使用 [Ziwei Chart](https://zwknows.vercel.app/)；想从行为倾向开始认识自己，可以探索 [ZATI 东方人格原型](https://github.com/ruijayfeng/ZATI)。Ziwei Chat 不要求它们作为前置条件，但会在个人盘面问题上使用确定性排盘事实。
 
 ## 目录
 
@@ -35,7 +54,7 @@
 
 ## 这是什么
 
-**紫微知道** 是一个消费级紫微斗数对话产品。你可以创建自己的命盘，和「知微」聊事业、关系、财富、近况，也可以从任何你真正关心的问题开始。
+**Ziwei Chat** 是一个消费级紫微斗数对话产品。你可以创建自己的命盘，和「知微」聊事业、关系、财富、近况，也可以从任何你真正关心的问题开始。
 
 它不要求注册、登录、支付或使用托管账号。没有数据库时，依然可以排盘、使用本地知识检索，并在浏览器中保存匿名命盘与对话；接入 Postgres 与 pgvector 后，可获得持久化和增强检索能力。
 
@@ -146,6 +165,28 @@ npm run build:knowledge-embeddings
 - 知识库用于解释，不用于补造盘面信息。
 - 对话应当自然、有温度，但不把倾向说成确定命运。
 - 医疗、法律、投资、紧急决策等高风险问题只提供反思性、非替代性的建议。
+
+## 常见问题
+
+### Ziwei Chat 会自己计算命盘吗？
+
+不会。命盘中的星曜、宫位和其他个人盘面事实只来自 `iztro` 的确定性工具输出；模型负责组织语言、调用工作流和解释已经取得的事实与知识来源。
+
+### 它和 Ziwei Chart 有什么区别？
+
+[Ziwei Chart](https://github.com/ruijayfeng/ziwei) 用于完整排盘与可视化浏览趋势、合盘和人生 K 线；Ziwei Chat 用于在事实基础上继续问“这对我当前的选择意味着什么”，并提供证据面板。
+
+### 不配置模型还能做什么？
+
+可以生成命盘、查看盘面、本地保存匿名资料、使用本地知识检索与查看工具状态。涉及个性化长回答时，产品会提示完成模型设置，而不会伪造看似可靠的分析。
+
+### 我的出生信息和 API Key 会被上传吗？
+
+当前首版不要求产品账号。模型 API Key 仅保存在当前浏览器的 `localStorage`，请求时才发送给 `/api/chat`；匿名命盘与会话可在本地模式下保存在浏览器，并能在设置页清除。部署方可选择接入 Postgres 以获得增强持久化与检索。
+
+### ZATI 是 Ziwei Chat 的前置步骤吗？
+
+不是。[ZATI](https://github.com/ruijayfeng/ZATI) 是紫微知道系列中独立的东方人格探索工具，不需要出生信息。它适合希望先从行为选择理解自己的人。
 
 ## 项目结构
 
