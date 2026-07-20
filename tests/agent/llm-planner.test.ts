@@ -10,7 +10,7 @@ const fallbackPlan: AnalysisPlan = {
   requiredSkills: ["career"],
   knowledgeQueries: ["career palace"],
   safetyLevel: "caution",
-  expectedResponseShape: ["conclusion", "chart_basis", "plain_explanation", "suggestion", "follow_up"],
+  expectedResponseShape: ["natural_dialogue", "grounded_interpretation", "practical_direction"],
 };
 
 const route: IntentRoute = {

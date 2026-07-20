@@ -8,7 +8,9 @@ import {
   loadSkill,
   parseSkillMarkdown,
 } from "../../src/lib/knowledge/skill-loader";
-import { searchKnowledge } from "../../src/lib/knowledge/search";
+import { loadKnowledgeChunks, searchKnowledge } from "../../src/lib/knowledge/search";
+import { parseKnowledgeMarkdown } from "../../src/lib/knowledge/search";
+import { analysisTopicForIntent } from "../../src/lib/agent/analysis-topic";
 
 describe("skill loader", () => {
   test("loads a valid MVP topic skill from Markdown front matter and sections", async () => {
@@ -45,42 +47,197 @@ describe("skill loader", () => {
     ).toThrow("Skill bad.md is missing required field: version");
   });
 
-  test("all beta skills define analysis order, conservative boundaries, and common question paths", async () => {
-    const skillIds = [
-      "career",
-      "relationship",
-      "wealth",
-      "personality",
-      "recent_fortune",
-      "chart_explanation",
-    ] as const;
+  test("rejects unknown machine-enforced prohibition ids", () => {
+    expect(() =>
+      parseSkillMarkdown({
+        filePath: "bad-prohibition.md",
+        markdown: "---\nid: career\nversion: 1.0.0\ntopic: career\nrequiredFacts: []\nprohibitionIds: [unknown_rule]\ntools: []\n---\n",
+      }),
+    ).toThrow("Skill bad-prohibition.md has an invalid prohibition id.");
+  });
 
-    for (const skillId of skillIds) {
+  test("all beta skills define analysis order, conservative boundaries, and common question paths", async () => {
+    const contracts = {
+      career: {
+        facts: ["career palace", "life palace", "wealth palace", "current luck cycle"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getLuckCycle", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认官禄宫事实",
+        condition: "resign",
+        prohibition: "resign immediately",
+        prohibitionIds: ["immediate_career_exit", "career_outcome_certainty", "legal_or_retaliation_instruction", "timing_certainty"],
+      },
+      relationship: {
+        facts: ["relationship palace", "life palace"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认夫妻宫事实",
+        condition: "coercion",
+        prohibition: "surveillance",
+        prohibitionIds: ["relationship_manipulation", "relationship_fatalism", "unsafe_relationship_advice", "relationship_outcome_certainty"],
+      },
+      wealth: {
+        facts: ["wealth palace", "career palace", "current luck cycle"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getLuckCycle", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认财帛宫事实",
+        condition: "investing",
+        prohibition: "buy, sell, borrow",
+        prohibitionIds: ["financial_action_instruction", "financial_outcome_certainty", "professional_financial_boundary", "exact_income_prediction"],
+      },
+      personality: {
+        facts: ["life palace", "body palace", "major stars"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getStarAnalysis", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认命宫和身宫事实",
+        condition: "diagnosis",
+        prohibition: "diagnose personality disorders",
+        prohibitionIds: ["clinical_diagnosis", "fixed_personality_label", "fixed_personality_certainty", "harmful_behavior_excuse"],
+      },
+      recent_fortune: {
+        facts: ["life palace", "current luck cycle"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getLuckCycle", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认用户问的是哪一个近期主题",
+        condition: "irreversible decisions",
+        prohibition: "predict accidents",
+        prohibitionIds: ["fear_prediction", "disaster_or_windfall_prediction", "regulated_instruction", "unsupported_lucky_date"],
+      },
+      chart_explanation: {
+        facts: ["life palace", "major stars", "key palaces"],
+        tools: ["getCurrentChart", "summarizeChartFacts", "getPalaceAnalysis", "getStarAnalysis", "loadSkill", "searchKnowledge", "runResponseCritic"],
+        firstStep: "先确认用户问的是哪个命盘事实或术语",
+        condition: "chart facts are missing",
+        prohibition: "Do not provide predictions in this workflow",
+        prohibitionIds: ["single_factor_determinism", "undisclosed_school_mixing", "invented_chart_fact", "chart_explanation_prediction"],
+      },
+    } as const;
+
+    for (const [skillId, contract] of Object.entries(contracts) as Array<
+      [keyof typeof contracts, (typeof contracts)[keyof typeof contracts]]
+    >) {
       const skill = await loadSkill(skillId);
 
+      expect(skill.skillId, `${skillId} id`).toBe(skillId);
+      expect(skill.topic, `${skillId} topic`).toBe(skillId);
+      expect(skill.requiredFacts, `${skillId} required facts`).toEqual(contract.facts);
+      expect(skill.tools, `${skillId} tools`).toEqual(contract.tools);
+      expect(skill.prohibitionIds, `${skillId} prohibition ids`).toEqual(contract.prohibitionIds);
+      expect(new Set(skill.prohibitionIds).size, `${skillId} unique prohibition ids`).toBe(skill.prohibitionIds.length);
       expect(skill.analysisSteps.length, `${skillId} analysis steps`).toBeGreaterThanOrEqual(5);
       expect(skill.responseRules.length, `${skillId} response rules`).toBeGreaterThanOrEqual(4);
       expect(skill.safetyNotes.length, `${skillId} safety notes`).toBeGreaterThanOrEqual(3);
-      expect(skill.body, `${skillId} primary facts`).toContain("## Primary Facts");
-      expect(skill.body, `${skillId} auxiliary signals`).toContain("## Auxiliary Signals");
-      expect(skill.body, `${skillId} conservative conditions`).toContain(
-        "## Conservative Conditions",
-      );
-      expect(skill.body, `${skillId} forbidden advice`).toContain("## Forbidden Advice");
-      expect(skill.body, `${skillId} common question paths`).toContain(
-        "## Common Question Paths",
-      );
+      expect(skill.conservativeConditions.length, `${skillId} conservative conditions`).toBeGreaterThanOrEqual(3);
+      expect(skill.forbiddenAdvice.length, `${skillId} forbidden advice`).toBeGreaterThanOrEqual(3);
+      expect(skill.commonQuestionPaths.length, `${skillId} common question paths`).toBeGreaterThanOrEqual(3);
+      expect(skill.analysisSteps[0], `${skillId} first analysis step`).toContain(contract.firstStep);
+      expect(skill.conservativeConditions.join(" "), `${skillId} topic condition`).toContain(contract.condition);
+      expect(skill.forbiddenAdvice.join(" "), `${skillId} topic prohibition`).toContain(contract.prohibition);
+      expect(skill.forbiddenAdvice.some((rule) => /^Do not /i.test(rule)), `${skillId} explicit prohibition`).toBe(true);
       expect(
-        skill.body
-          .split("\n")
-          .filter((line) => line.startsWith("- Path: ")).length,
-        `${skillId} common question path count`,
-      ).toBeGreaterThanOrEqual(3);
+        skill.responseRules.some((rule) => /plain language|terminology|Ziwei terms/i.test(rule)),
+        `${skillId} plain-language rule`,
+      ).toBe(true);
+      expect(
+        skill.responseRules.filter((rule) => /follow-up/i.test(rule)),
+        `${skillId} optional follow-up rule`,
+      ).toHaveLength(1);
+      expect(
+        skill.responseRules.find((rule) => /follow-up/i.test(rule)),
+        `${skillId} optional follow-up wording`,
+      ).toMatch(/\b(only when|if needed|when needed)\b/i);
     }
   });
 });
 
 describe("local knowledge search", () => {
+  test.each([
+    ["empty terms", "terms: []", "terms"],
+    ["blank source", 'source: ""', "source"],
+    ["blank license", 'license: ""', "license"],
+    ["blank school", 'school: ""', "school"],
+  ])("rejects malformed knowledge metadata: %s", (_label, replacement, field) => {
+    const markdown = [
+      "---",
+      "title: Test",
+      "topic: career",
+      "terms: [官禄]",
+      "source: curated-internal",
+      "license: internal",
+      "school: default",
+      "confidence: high",
+      "---",
+      "content",
+    ].join("\n").replace(new RegExp(`^${field}:.*$`, "m"), replacement);
+
+    expect(() => parseKnowledgeMarkdown("test.md", markdown)).toThrow(`Knowledge test.md is missing required field: ${field}`);
+  });
+
+  test.each(["curated", "curated-internal"])("rejects an imported file that declares itself %s", (source) => {
+    const markdown = [
+      "---",
+      "title: Imported",
+      "topic: general",
+      "terms: [命宫]",
+      `source: ${source}`,
+      "sourcePath: content/fake.md",
+      "sourceUrl: https://example.test",
+      "license: internal",
+      "school: default",
+      "confidence: medium",
+      "---",
+      "content",
+    ].join("\n");
+
+    expect(() => parseKnowledgeMarkdown("imported/ziwei-doushu/fake.md", markdown)).toThrow(
+      "Imported knowledge imported/ziwei-doushu/fake.md cannot declare curated provenance.",
+    );
+  });
+  test("returns attributed high-confidence local coverage for every active topic contract", async () => {
+    const contracts = [
+      { id: "career", query: "career palace", terms: ["官禄"] },
+      { id: "relationship", query: "relationship palace", terms: ["夫妻"] },
+      { id: "wealth", query: "wealth palace", terms: ["财帛"] },
+      { id: "personality", query: "life palace", terms: ["命宫"] },
+      { id: "recent_fortune", query: "recent fortune timing", terms: ["运限"] },
+      { id: "chart_explanation", query: "chart explanation", terms: ["命宫", "宫位", "星曜"] },
+    ];
+    const expectedChunks: Record<string, string[]> = {
+      career: ["career-palace"],
+      relationship: ["relationship-palace"],
+      wealth: ["wealth-palace"],
+      personality: ["personality-life-palace"],
+      recent_fortune: ["recent-fortune-timing"],
+      chart_explanation: ["renhuai-chart-structure", "renhuai-palace-complete-basics", "renhuai-star-palace-examples"],
+    };
+
+    for (const contract of contracts) {
+      const results = await searchKnowledge({
+        query: contract.query,
+        topic: analysisTopicForIntent(contract.id),
+        chartTerms: contract.terms,
+        limit: 5,
+        retrievalMode: "local",
+      });
+      expect(results.length, contract.id).toBeGreaterThanOrEqual(2);
+      expect(results.some((result) => result.confidence === "high"), contract.id).toBe(true);
+      expect(results.map((result) => result.chunkId), contract.id).toEqual(expect.arrayContaining(expectedChunks[contract.id]));
+      for (const result of results) {
+        expect(result.source, `${contract.id} source`).not.toBe("");
+        expect(result.license, `${contract.id} license`).not.toBe("");
+        expect(result.school, `${contract.id} school`).not.toBe("");
+        expect(result.retrievalMode).toBe("local");
+      }
+    }
+  });
+
+  test("keeps runtime metadata complete and imported chunks visibly non-curated", async () => {
+    for (const chunk of await loadKnowledgeChunks(process.cwd())) {
+      expect(chunk.terms.length, `${chunk.chunkId} terms`).toBeGreaterThan(0);
+      expect(chunk.source.trim(), `${chunk.chunkId} source`).not.toBe("");
+      expect(chunk.license.trim(), `${chunk.chunkId} license`).not.toBe("");
+      expect(chunk.school.trim(), `${chunk.chunkId} school`).not.toBe("");
+      if (chunk.sourcePath.includes("lib/") || chunk.sourcePath.includes("lib\\")) {
+        expect(chunk.source, `${chunk.chunkId} imported source`).not.toBe("curated-internal");
+      }
+    }
+  });
+
   test("returns source metadata from curated Markdown without embedding configuration", async () => {
     const results = await searchKnowledge({
       query: "career palace",

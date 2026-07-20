@@ -39,14 +39,23 @@ export type AnalysisPlan = {
   knowledgeQueries: string[];
   safetyLevel: SafetyLevel;
   expectedResponseShape: Array<
-    "conclusion" | "chart_basis" | "plain_explanation" | "suggestion" | "follow_up"
+    "natural_dialogue" | "grounded_interpretation" | "practical_direction"
   >;
+};
+
+export type CriticIssueSeverity = "blocking" | "warning";
+
+export type CriticIssue = {
+  code: string;
+  message: string;
+  severity: CriticIssueSeverity;
 };
 
 export type CritiqueResult = {
   passed: boolean;
   issues: string[];
   requiredRevision: boolean;
+  structuredIssues?: CriticIssue[];
 };
 
 export type AnalysisState = {

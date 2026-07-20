@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Depends on Vercel AI SDK text streaming, deterministic agent core, chart tools, skills, and local knowledge
- * [OUTPUT]: Provides POST /api/chat streaming response and evidence metadata for the MVP chat surface
+ * [OUTPUT]: Provides POST /api/chat critic-gated streaming, real supplemental evidence, and safe chart errors
  * [POS]: App Router API boundary that wires session context, tool-grounded analysis, critic, evidence, and persistence
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
@@ -8,6 +8,7 @@
 import { randomUUID } from "node:crypto";
 
 import { runResponseCritic } from "../../../lib/agent/critic";
+import { analysisTopicForIntent } from "../../../lib/agent/analysis-topic";
 import {
   chatStreamHeader,
   encodeChatStreamEvent,
@@ -16,7 +17,6 @@ import {
   createRequestStores,
   deleteProfileRuntimeData,
   getChartPersistence,
-  mergeRequestStoresToSnapshot,
   persistChatMessage,
   recordRouteToolEventToStores,
 } from "../../../lib/agent/chat-runtime";
@@ -27,60 +27,21 @@ import { createLlmAnalysisPlan } from "../../../lib/agent/llm-planner";
 import { buildConversationContext } from "../../../lib/agent/conversation-context";
 import {
   normalizeModelSettings,
-  type IncomingModelSettings,
   type ModelResponseTelemetry,
 } from "../../../lib/agent/model-provider";
 import { buildAnalysisPlan } from "../../../lib/agent/planner";
 import { composeResponse } from "../../../lib/agent/response-composer";
 import { createAgentTools, type InMemoryToolStores } from "../../../lib/agent/tools";
 import type { CritiqueResult, Intent } from "../../../lib/domain/analysis";
-import type { ChartFact, ChartTopic, CreateChartInput } from "../../../lib/domain/chart";
+import type { ChartFact, ChartTopic } from "../../../lib/domain/chart";
 import { getDatabaseClient } from "../../../lib/db/client";
 import { createPostgresKnowledgeRetriever } from "../../../lib/db/knowledge-retrieval";
 import { checkRateLimit } from "../../../lib/http/rate-limit";
 import { loadSkill, type SkillId } from "../../../lib/knowledge/skill-loader";
 import { searchKnowledge, type KnowledgeSource } from "../../../lib/knowledge/search";
 import type { EvidenceGeneration } from "../../../lib/ui/chat-evidence";
-
-type IncomingMessage = {
-  role: "user" | "assistant" | "system";
-  content: string;
-};
-
-type ChatRequestBody = {
-  profileId?: string;
-  conversationId?: string;
-  messages?: IncomingMessage[];
-  message?: string;
-  chartInput?: CreateChartInput;
-  modelSettings?: IncomingModelSettings;
-  evidenceRunId?: string;
-};
-
-type ChatEvidence = {
-  toolsUsed: string[];
-  chartFacts: Array<Pick<ChartFact, "id" | "topic" | "palace" | "stars" | "transforms" | "patterns" | "rawText" | "confidence">>;
-  knowledgeSources: KnowledgeSource[];
-  critic: {
-    status: "not_run" | "passed" | "needs_review";
-    issues: string[];
-  };
-  generation: EvidenceGeneration;
-  runs: Array<{
-    runId: string;
-    title: string;
-    summary: string;
-    status: "running" | "completed" | "failed";
-    startedAt: string;
-    completedAt: string;
-    steps: Array<{
-      id: string;
-      label: string;
-      detail: string;
-      status: "pending" | "running" | "completed" | "failed";
-    }>;
-  }>;
-};
+import type { ChatEvidence, ChatRequestBody } from "../../../lib/ui/chat-contract";
+import { formatShanghaiDateKey } from "../../../lib/ui/current-calendar";
 
 type StaticChartAnswer = {
   kind: "static";
@@ -97,6 +58,10 @@ type StreamingChartAnswer = {
     deterministicDraft: string;
     chartFacts: string[];
     skillSteps: string[];
+    skillResponseRules: string[];
+    skillConservativeConditions: string[];
+    skillForbiddenAdvice: string[];
+    skillCommonQuestionPaths: string[];
     knowledgeSources: string[];
     criticStatus: "not_run" | "passed" | "needs_review";
     criticIssues: string[];
@@ -110,6 +75,7 @@ type StreamingChartAnswer = {
     chartFacts: ChartFact[];
     knowledgeSources: KnowledgeSource[];
     safetyLevel: ReturnType<typeof buildAnalysisPlan>["safetyLevel"];
+    prohibitionIds: import("../../../lib/knowledge/skill-loader").SkillProhibitionId[];
   };
 };
 
@@ -178,8 +144,21 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
   });
 
   if (body.chartInput) {
-    diagnostics.stage = "create_chart";
-    await tools.createChart({ ...body.chartInput, profileId });
+    diagnostics.stage = "chart_hydration";
+    const hydrated = await tools.hydrateChart({
+      ...body.chartInput,
+      profileId,
+      isPrimary: true,
+    });
+    if (!hydrated.ok) {
+      return Response.json(
+        { error: hydrated.error },
+        {
+          status: 422,
+          headers: { "X-Ziwei-Error-Stage": "chart_hydration" },
+        },
+      );
+    }
   }
 
   const route = routeIntent(userContent);
@@ -192,7 +171,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
     const currentChart = await tools.getCurrentChart({ profileId, conversationId });
     if (!currentChart.ok) {
       return await streamAndPersist({
-        stores,
         profileId,
         conversationId,
         content:
@@ -243,7 +221,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
             modelSettings: answer.modelSettings,
           })
         : await streamAndPersist({
-            stores,
             profileId,
             conversationId,
             content: answer.content,
@@ -260,7 +237,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
         ? "Ziwei Chat 首版只处理紫微斗数相关问题，暂不做八字、塔罗、风水或其他体系。你可以问我事业、感情、财富、性格或近期运势。"
         : "这个问题涉及高风险领域，我不适合给出具体建议。";
     return await streamAndPersist({
-      stores,
       profileId,
       conversationId,
       content: refusal,
@@ -285,6 +261,10 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
         deterministicDraft: generalChatFallback,
         chartFacts: [],
         skillSteps: [],
+        skillResponseRules: [],
+        skillConservativeConditions: [],
+        skillForbiddenAdvice: [],
+        skillCommonQuestionPaths: [],
         knowledgeSources: [],
         criticStatus: "not_run",
         criticIssues: [],
@@ -297,6 +277,7 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
         chartFacts: [],
         knowledgeSources: [],
         safetyLevel: route.safetyLevel,
+        prohibitionIds: [],
       },
     });
   }
@@ -304,7 +285,6 @@ async function handlePost(request: Request, diagnostics: RouteDiagnostics) {
   const fallback = "我在。你想聊什么？";
 
   return await streamAndPersist({
-    stores,
     profileId,
     conversationId,
     content: fallback,
@@ -358,13 +338,14 @@ async function answerWithChartContext({
   evidenceRunId: string;
   onStage: (stage: string) => void;
 }): Promise<ChartAnswer> {
-  const topic = toChartTopic(intent);
+  const topic = analysisTopicForIntent(intent);
   onStage("chart_facts");
   const summary = await tools.summarizeChartFacts({
     chartId,
     topics: [topic],
   });
-  const chartFacts = summary.ok ? summary.data.facts : [];
+  if (!summary.ok) throw new Error(`chart_facts: ${summary.error.code}`);
+  const chartFacts = summary.data.facts;
   const firstFact = chartFacts[0];
   onStage("planner");
   const planStartedAt = Date.now();
@@ -396,7 +377,13 @@ async function answerWithChartContext({
   );
 
   onStage("supplemental_tools");
-  await runSupplementalTools({ tools, chartId, topic, plan: agentPlan, firstFact });
+  const supplementalEvidence = await runSupplementalTools({
+    tools,
+    chartId,
+    topic,
+    plan: agentPlan,
+    firstFact,
+  });
 
   onStage("skill");
   const skillStartedAt = Date.now();
@@ -444,7 +431,7 @@ async function answerWithChartContext({
     conclusion: buildConclusion(topic),
     chartBasis:
       firstFact !== undefined
-        ? [formatChartFact(firstFact)]
+        ? [formatChartFact(firstFact), ...supplementalEvidence]
         : ["当前命盘事实不足，回答需要保持保守。"],
     plainExplanation: buildPlainExplanation(topic, firstFact, skill !== null, knowledgeSources),
     suggestion: buildSuggestion(topic),
@@ -462,6 +449,7 @@ async function answerWithChartContext({
     chartFacts,
     knowledgeSources,
     safetyLevel: agentPlan.safetyLevel,
+    prohibitionIds: skill?.prohibitionIds ?? [],
   });
   await recordRouteToolEventToStores(
     stores,
@@ -506,8 +494,12 @@ async function answerWithChartContext({
       analysisContext: {
         userContent,
         deterministicDraft: deterministicContent,
-        chartFacts: chartFacts.map(formatChartFact),
+        chartFacts: [...chartFacts.map(formatChartFact), ...supplementalEvidence],
         skillSteps: skill?.analysisSteps ?? [],
+        skillResponseRules: skill?.responseRules ?? [],
+        skillConservativeConditions: skill?.conservativeConditions ?? [],
+        skillForbiddenAdvice: skill?.forbiddenAdvice ?? [],
+        skillCommonQuestionPaths: skill?.commonQuestionPaths ?? [],
         knowledgeSources: knowledgeSources.map(formatKnowledgeSource),
         criticStatus: critique.passed ? "passed" : "needs_review",
         criticIssues: critique.issues,
@@ -529,6 +521,7 @@ async function answerWithChartContext({
         chartFacts,
         knowledgeSources,
         safetyLevel: agentPlan.safetyLevel,
+        prohibitionIds: skill?.prohibitionIds ?? [],
       },
     };
   }
@@ -562,35 +555,43 @@ async function runSupplementalTools({
   plan: ReturnType<typeof buildAnalysisPlan>;
   firstFact: ChartFact | undefined;
 }) {
+  const evidence: string[] = [];
   if (plan.requiredTools.includes("getPalaceAnalysis") && firstFact) {
-    await tools.getPalaceAnalysis({
+    const result = await tools.getPalaceAnalysis({
       chartId,
       palace: firstFact.palace,
       topic,
     });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
   }
 
   if (plan.requiredTools.includes("getStarAnalysis") && firstFact?.stars.length) {
-    await tools.getStarAnalysis({
+    const result = await tools.getStarAnalysis({
       chartId,
       stars: firstFact.stars.slice(0, 3),
       palace: firstFact.palace,
       topic,
     });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
   }
 
   if (plan.requiredTools.includes("getPatternAnalysis")) {
-    await tools.getPatternAnalysis({ chartId, topic });
+    const result = await tools.getPatternAnalysis({ chartId, topic });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
   }
 
   if (plan.requiredTools.includes("getLuckCycle")) {
-    await tools.getLuckCycle({
+    const result = await tools.getLuckCycle({
       chartId,
-      date: new Date().toISOString().slice(0, 10),
+      date: formatShanghaiDateKey(new Date()),
       range: topic === "recent_fortune" ? "three_months" : "current",
       topic,
     });
+    if (!result.ok) throw new Error(`supplemental_tools: ${result.error.code}`);
+    evidence.push(`运限范围：${result.data.range}；${result.data.activePeriods.join("；")}`);
   }
+
+  return evidence;
 }
 
 async function loadRouteSkill(skillId: string | undefined) {
@@ -628,14 +629,12 @@ async function searchRouteKnowledge(
 }
 
 async function streamAndPersist({
-  stores,
   profileId,
   conversationId,
   content,
   metadata,
   evidence,
 }: {
-  stores: InMemoryToolStores;
   profileId: string;
   conversationId: string;
   content: string;
@@ -649,7 +648,6 @@ async function streamAndPersist({
     content,
     metadata,
   });
-  mergeRequestStoresToSnapshot(stores);
 
   return new Response(textToStream(content), {
     headers: {
@@ -713,7 +711,6 @@ function streamModelAndPersist({
           modelTelemetry: modelResult.telemetry,
         });
         enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
-        mergeRequestStoresToSnapshot(stores);
         enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
         enqueueEvent(controller, encoder, { event: "done", data: null });
         closeStream(controller);
@@ -743,13 +740,15 @@ function streamModelAndPersist({
         chartFacts: postCriticContext.chartFacts,
         knowledgeSources: postCriticContext.knowledgeSources,
         safetyLevel: postCriticContext.safetyLevel,
+        prohibitionIds: postCriticContext.prohibitionIds,
       });
       let modelCriticLatencyMs = Date.now() - modelCriticStartedAt;
       let revisionAttempted = false;
       let revisionTelemetry: ModelResponseTelemetry | null = null;
       let revisionError: string | null = null;
 
-      if (modelResult.ok && !postCritique.passed) {
+      const requiresRevision = postCritique.requiredRevision ?? !postCritique.passed;
+      if (modelResult.ok && requiresRevision) {
         revisionAttempted = true;
         enqueueEvent(controller, encoder, {
           event: "evidence",
@@ -786,6 +785,7 @@ function streamModelAndPersist({
             chartFacts: postCriticContext.chartFacts,
             knowledgeSources: postCriticContext.knowledgeSources,
             safetyLevel: postCriticContext.safetyLevel,
+            prohibitionIds: postCriticContext.prohibitionIds,
           });
           modelCriticLatencyMs += Date.now() - modelCriticStartedAt;
         } else {
@@ -807,7 +807,7 @@ function streamModelAndPersist({
         postCritique.passed,
         modelCriticLatencyMs,
       );
-      const usedFallback = !postCritique.passed;
+      const usedFallback = postCritique.requiredRevision ?? !postCritique.passed;
       const finalEvidence = updateEvidenceAfterModelCritic({
         evidence,
         critique: postCritique,
@@ -821,8 +821,10 @@ function streamModelAndPersist({
 
       enqueueEvent(controller, encoder, { event: "evidence", data: finalEvidence });
       if (usedFallback) {
-        mergeRequestStoresToSnapshot(stores);
-        enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
+        enqueueEvent(controller, encoder, {
+          event: "error",
+          data: revisionAttempted ? criticFailureEvent() : modelFailureEvent(),
+        });
         enqueueEvent(controller, encoder, { event: "done", data: null });
         closeStream(controller);
         return;
@@ -838,7 +840,6 @@ function streamModelAndPersist({
         content: candidateContent,
         metadata,
       });
-      mergeRequestStoresToSnapshot(stores);
       enqueueEvent(controller, encoder, { event: "done", data: null });
       closeStream(controller);
       } catch (error) {
@@ -854,7 +855,6 @@ function streamModelAndPersist({
         });
         try {
           enqueueEvent(controller, encoder, { event: "evidence", data: errorEvidence });
-          mergeRequestStoresToSnapshot(stores);
           enqueueEvent(controller, encoder, { event: "error", data: modelFailureEvent() });
           enqueueEvent(controller, encoder, { event: "done", data: null });
         } catch {
@@ -876,7 +876,14 @@ function streamModelAndPersist({
 
 function modelFailureEvent() {
   return {
-    message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。",
+    message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。",
+    canRetry: true,
+  };
+}
+
+function criticFailureEvent() {
+  return {
+    message: "这次回答与当前命盘事实存在冲突，已停止展示，请重试。",
     canRetry: true,
   };
 }
@@ -958,7 +965,7 @@ function updateEvidenceAfterModelCritic({
       ? { mode: "model_failed", detail: generationDetail }
       : { mode: "model", detail: generationDetail },
     critic: {
-      status: critique.passed ? "passed" : "needs_review",
+      status: critiqueStatus(critique),
       issues: modelError || revisionError ? [fallbackReason, ...critique.issues] : critique.issues,
     },
     runs: evidence.runs.map((run) => ({
@@ -1039,7 +1046,7 @@ function buildEvidence({
     errorCode?: string | null;
   } | null;
   const critic = {
-    status: critique === null ? ("not_run" as const) : critique.passed ? ("passed" as const) : ("needs_review" as const),
+    status: critiqueStatus(critique),
     issues: critique?.issues ?? [],
   };
   const completedAt = new Date().toISOString();
@@ -1185,7 +1192,7 @@ function buildEvidenceSteps({
       id: "critic",
       label: "critic 检查",
       detail: withStepTiming(
-        critic.status === "passed"
+        critic.status === "passed" || critic.status === "passed_with_warnings"
           ? "已通过事实与安全检查"
           : critic.status === "needs_review"
             ? critic.issues.join("；")
@@ -1193,13 +1200,21 @@ function buildEvidenceSteps({
         phaseTimings.critic,
       ),
       status:
-        critic.status === "passed"
+        critic.status === "passed" || critic.status === "passed_with_warnings"
           ? "completed"
           : critic.status === "needs_review"
             ? "failed"
             : "pending",
     },
   ];
+}
+
+function critiqueStatus(critique: CritiqueResult | null): ChatEvidence["critic"]["status"] {
+  if (!critique) return "not_run";
+  if (!critique.passed) return "needs_review";
+  return critique.structuredIssues?.some((issue) => issue.severity === "warning")
+    ? "passed_with_warnings"
+    : "passed";
 }
 
 function readToolLatency(
@@ -1303,10 +1318,6 @@ function toUuid(value: string | undefined) {
   );
 
   return match?.[0];
-}
-
-function toChartTopic(intent: Intent): ChartTopic {
-  return intent === "chart_explanation" ? "general" : (intent as ChartTopic);
 }
 
 function formatChartFact(fact: ChartFact) {

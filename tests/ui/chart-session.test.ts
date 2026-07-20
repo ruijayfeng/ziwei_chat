@@ -3,11 +3,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
+  chartDisplayModelFromStorage,
   chartSessionFromStorage,
   chartSessionStorageKey,
   chartSessionStorageValue,
   chartVisualModelFromStorage,
 } from "../../src/lib/ui/chart-session";
+import type { ChartDisplayModel } from "../../src/lib/domain/chart-display";
 
 const chartInput = {
   profileId: "profile-1",
@@ -34,11 +36,71 @@ describe("chart session storage", () => {
     expect(chartSessionFromStorage("not-json", "profile-1")).toBeNull();
     expect(chartSessionFromStorage(chartSessionStorageValue(chartInput), "profile-2")).toBeNull();
   });
+
+  test("round-trips a deeply validated full chart display model", () => {
+    const display: ChartDisplayModel = {
+      chartId: "chart-1",
+      displayName: "我的命盘",
+      palaces: Array.from({ length: 12 }, (_, index) => ({
+        id: `palace-${index}`,
+        index,
+        name: index === 0 ? "命宫" : `宫位${index}`,
+        heavenlyStem: "甲",
+        earthlyBranch: "子",
+        majorStars: [],
+        minorStars: [],
+        adjectiveStars: [],
+        isBodyPalace: index === 0,
+        isLaiyinPalace: index === 1,
+      })),
+    };
+
+    const stored = chartSessionStorageValue(chartInput, null, display);
+    expect(chartDisplayModelFromStorage(stored, "profile-1")).toEqual(display);
+
+    const malformed = JSON.stringify({
+      chart: chartInput,
+      display: { ...display, palaces: [{ id: "broken" }] },
+    });
+    expect(chartDisplayModelFromStorage(malformed, "profile-1")).toBeNull();
+
+    const duplicateGeometry = JSON.stringify({
+      chart: chartInput,
+      display: {
+        ...display,
+        palaces: display.palaces.map((palace) => ({ ...palace, id: "duplicate", index: 0 })),
+      },
+    });
+    expect(chartDisplayModelFromStorage(duplicateGeometry, "profile-1")).toBeNull();
+  });
 });
 
 test("defers local chart restoration outside the effect body", () => {
-  const shellSource = readFileSync(resolve(process.cwd(), "src/components/ziwei-chat-shell.tsx"), "utf8");
+  const providerSource = readFileSync(resolve(process.cwd(), "src/components/workspace/workspace-provider.tsx"), "utf8");
 
-  expect(shellSource).toContain("window.setTimeout(() => {");
-  expect(shellSource).not.toContain('if (restored) {\n      setChartInput(restored);');
+  expect(providerSource).toContain("const restoreTimer = window.setTimeout(() => {");
+  expect(providerSource).not.toContain('if (restored) {\n      setChartInput(restored);');
+});
+
+test("falls back to the chart API when legacy storage has no display model", () => {
+  const providerSource = readFileSync(
+    resolve(process.cwd(), "src/components/workspace/workspace-provider.tsx"),
+    "utf8",
+  );
+
+  expect(providerSource).toContain("if (storedChart && storedDisplay)");
+  expect(providerSource).toContain("fetch(`/api/chart?profileId=");
+});
+
+test("blocks invalid provider settings before opening a chat request", () => {
+  const providerSource = readFileSync(
+    resolve(process.cwd(), "src/components/workspace/workspace-provider.tsx"),
+    "utf8",
+  );
+
+  expect(providerSource).toContain("modelSettingsValidationError(modelSettings)");
+  expect(providerSource).toContain("if (modelValidationError)");
+  expect(providerSource.indexOf("if (modelValidationError)")).toBeLessThan(
+    providerSource.indexOf("await sendChatRequest"),
+  );
 });

@@ -1,127 +1,249 @@
 # Project Status
 
-> Version: 2026-07-13
-> Purpose: agent/frontend hardening handoff after Neon RAG, chart persistence, and answer-presentation updates.
+> Updated: 2026-07-19
+> Release target: Final V1+
+> Authority: `docs/product/prd.md`, `docs/prompts/response-protocol.md`, and `docs/evaluation/acceptance-criteria.md`
 
-## Current Branch State
+## Current State
 
-- Default integration branch: `master`
-- Current local state: agent, Neon RAG, chart persistence, workspace UI, and answer presentation work are implemented; commits are being organized from the validated local changes.
-- Latest merged PR before this beta pass: `#2 MVP hardening and product UI refinement`
-- Latest merge commit before this beta pass: `4ae68a7`
-- CI status at merge: GitHub Actions `Verify` passed; Vercel preview passed.
+Ziwei Chat is an anonymous, Vercel-first Ziwei Dou Shu workspace on branch
+`codex/ui-redesign-prep`. The accepted dark editorial UI is connected to real
+chart, Agent, evidence, records, Insights, settings, and deletion services. The
+user-supplied `ziwei-chat-redesign/` directory remains untracked, read-only
+reference material and is not part of the application build.
 
-## Implemented MVP Surface
+Final V1+ implementation and automated release Tasks 1-11 are complete. Tasks
+12-13 remain mandatory release gates, so the release is not yet declared
+complete.
 
-- Next.js App Router application with TypeScript, Tailwind CSS v4, React 19, and Next 16.
-- Anonymous local profile identity using browser local storage.
-- One primary chart input flow with name, gender, birth date, birth time, calendar type, and optional birthplace.
-- Ziwei chart creation and chart summary boundary using `iztro`.
-- Deterministic chart tools, planning, skill loading, and knowledge retrieval remain available without a hosted model key; chart-analysis prose requires a configured LLM and is never synthesized from a deterministic response template.
-- Page-configured OpenAI-compatible model runtime: users can enter provider, Base URL, API key, and model in the browser; provider output is buffered for final critic validation before safe event-framed tokens are emitted to the chat stream.
-- When model settings are incomplete, chart analysis stops with an explicit configuration prompt. When provider generation fails or final critic rejects the answer, the event stream reports a recoverable error and the UI exposes retry; neither case substitutes a deterministic analysis template.
-- Agent pipeline components: intent router, deterministic planner fallback, optional LLM planner, request-scoped tool stores, deterministic tools, skill loader, local/hybrid knowledge search, optional LLM analyst, response composer, pre-answer critic, and final model-output critic with one bounded revision attempt.
-- Provider-backed general chat now goes through the Agent/model path when model settings are enabled, so non-Ziwei messages behave like a normal web chat instead of returning a static Ziwei prompt.
-- Chat streams now close defensively on model/API failures: the API emits failed evidence, a retryable error event, and `done` rather than leaving the frontend stuck in a pending evidence run or displaying a fabricated fallback answer.
-- Expanded `Renhuai123/ziwei-doushu` RAG seed import exists under `content/knowledge/imported/ziwei-doushu/`, with topic classification and source repo/path/license metadata exposed through evidence.
-- Six beta topic entries: recent fortune, career/work, relationships, wealth, personality, and chart explanation.
-- Chat API at `/api/chat` with response streaming surface, event-framed evidence/token streams for model-backed answers, persistence boundary, and structured error behavior.
-- Persistence boundary that uses Postgres when `DATABASE_URL` is configured and falls back to deterministic/local behavior when it is not. Each chat-message save is bounded to 3 seconds; timeout or persistence failure is logged without holding the answer path open indefinitely.
-- Primary charts now persist to Neon and are restored by chart tools after a request or process cache reset.
-- The 104 bundled knowledge Markdown chunks are ingested into Neon with 1024-dimensional `BAAI/bge-large-zh-v1.5` vectors; runtime RAG queries pgvector first and labels a keyword fallback as `local`.
-- Anonymous profile data deletion through `DELETE /api/chat?profileId=...`.
-- Runtime fixed-window rate limiter for `/api/chat`.
-- Product UI rebuilt into the reference-led "紫微知道" workspace: fixed desktop identity/navigation rail, client-side chat/chart/topics/records/settings views, report-style chat responses, real-evidence analysis rail, and mobile navigation/evidence sheets.
-- Critic-approved answers now reveal progressively in the client over roughly 3 seconds using Unicode-safe, length-adjusted batches; loading skeletons and reduced-motion support remain available. Ordinary model prose is rendered through an HTML-free Markdown renderer, while complete five-part analysis responses retain the structured report layout.
-- shadcn/Base UI owned primitives in `src/components/ui/` for buttons, cards, inputs, textarea, select, sheet, alert dialog, badge, and separator.
-- Third-party Claude Code skills are installed under `.agents/skills` with `.claude/skills` symlinks and `skills-lock.json` source hashes; use them only after reviewing scope because they run with full agent permissions.
-- CI workflow on pull requests and pushes to `master`: `npm ci`, lint, typecheck, tests, agent evals, and build.
+## Implemented Product
 
-## Verification Baseline
+- Anonymous browser workspace with one primary chart and no product account.
+- Deterministic chart creation, restore, edit, display, timing scopes, and facts
+  through iztro; no hand-written chart calculation or demo personalization.
+- Six canonical workflows: recent fortune, career, relationship, wealth,
+  personality, and chart explanation.
+- Real Agent chain: route, plan, deterministic tools, executable skill,
+  attributed knowledge retrieval, model composition, critic, and evidence.
+- Response critic separates blocking grounding and safety errors from warning-only
+  presentation issues, so ordinary users receive natural chart-grounded answers
+  without being blocked by minor format deviations.
+- Explicit setup-required and recoverable failure states. The runtime does not
+  substitute fabricated analysis when chart or model configuration is absent.
+- Real conversation records from Postgres when configured and current browser
+  history in stateless mode.
+- Sourced Insights with bounded conversation aggregation, strict report shape,
+  provenance/safety critic, profile/fingerprint cache, and
+  loading/insufficient/ready/stale/error states.
+- Remote-first anonymous deletion with Postgres transaction locking and a
+  permanent profile tombstone; local chart, chat, evidence, settings, and
+  insight cache clear only after server deletion succeeds.
+- Browser-local OpenAI-compatible model settings. API keys persist only in the
+  current browser's localStorage so the browser can include them in model
+  requests; they are not written to Postgres or another server-side product
+  store.
 
-Use this command set before claiming a change is complete:
+## Data And Deployment Modes
 
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run eval:agent
-npm run build
-```
+Without `DATABASE_URL`, server persistence is intentionally stateless. The
+browser retains the current anonymous chart and conversation, local Markdown
+keyword retrieval remains available, and Insights honestly reports insufficient
+history until eligible sources exist.
 
-Latest verified local results for the agent/frontend hardening pass:
+With Postgres, Drizzle owns profile, chart, conversation, message, knowledge,
+tool-event, evaluation, and deletion-tombstone schemas. pgvector retrieval is an
+optional enhanced path and falls back to attributed local knowledge when it is
+unavailable or empty.
 
-- `npx tsc --noEmit`: passed
-- `npm test`: 26 files / 112 tests passed
-- Dev server smoke: `npm run dev` served `http://localhost:3000` with HTTP 200 after restarting the stale process
-- Browser QA: provider-backed general chat passed with saved localStorage model settings, no hydration errors, assistant response rendered, and `正在分析` cleared
-- Browser QA: provider-backed chart question passed after saving a chart, evidence completed, critic passed, no hydration or uncontrolled field warnings
+Vercel is the primary deployment target. Provider generation is buffered until
+the final critic accepts it; evidence exposes planner, tool, knowledge,
+generation, timing, and critic state without exposing raw chart JSON, source
+bodies, or credentials.
 
-Latest verified UI rebuild results:
+## Verified Baseline
 
-- `npm run lint`: passed with no application errors; warnings are limited to installed `.agents/skills/impeccable` scripts.
-- `npm run typecheck`: passed.
-- `npm run test`: 28 files / 117 tests passed.
-- `npm run eval:agent`: 10 cases / 0 failures.
-- `npm run build`: passed.
-- Browser QA: desktop `1536px` reference review confirmed the fixed three-column workspace, topic view switch, honest runtime labels, and no fake evidence data.
-- Browser QA: mobile `390px` review confirmed no horizontal overflow, chat-first layout, reachable navigation/evidence sheets, and readable topic controls.
-- Agent continuity repair: every browser chat request now includes the current primary chart, so serverless cold starts or process changes cannot drop chart context between turns. The runtime also restores chart ownership for same-process requests.
-- Agent context repair: the planner and analyst now receive an explicit, speaker-labeled window of the latest 12 non-empty turns. This is bounded conversation context, not implicit durable memory.
-- Generation integrity repair: evidence explicitly identifies whether the current answer was LLM-generated, awaiting model configuration, or failed before completion; the right runtime rail and retry UI use that state directly.
-- Moonshot compatibility repair: `kimi-k2.6` omits the generic `temperature: 0.4` field and explicitly sends `thinking: { type: "disabled" }`. Moonshot returns reasoning in `reasoning_content`, which shares the request's `max_tokens` budget with final content; disabling thinking preserves the bounded budget for the user-visible answer.
-- Evidence continuity regression: a second chart-related request in the same anonymous workspace is verified to return a grounded answer with chart facts and an evidence summary whose fact count matches the evidence payload.
+The last complete gate before Task 10 passed on 2026-07-17:
 
-Latest verified answer-presentation results:
+- full tests: 70 passed / 2 skipped files; 539 passed / 3 skipped tests
+- agent evaluation: 17 cases, 0 failed, 1 explicit setup-required
+- typecheck and production build: passed
+- migration cleanup focused gate: 7 files / 52 tests passed
+- independent Task 8 and Task 9 reviews: Spec PASS / Quality Approved
 
-- `npm test`: 33 files / 131 tests passed, including Markdown parsing and Unicode-safe progressive reveal coverage.
-- `npm run typecheck`: passed.
-- `npm run lint`: passed with no application errors; warnings are confined to installed `.agents/skills/impeccable` scripts.
-- `npm run build`: passed.
-- Browser reload smoke: local `http://localhost:3000` loaded without console errors.
+Task 10 verification on 2026-07-17:
 
-Latest chart-visual and motion work:
+- lint: passed
+- typecheck: passed
+- full tests: 70 passed / 2 skipped files; 645 passed / 3 skipped tests
+- agent evaluation: 17 cases, 0 failed, 1 explicit setup-required
+- production build and `git diff --check`: passed
+- strict UTF-8 scan: every tracked non-binary file decoded successfully; all
+  active source TS/TSX and runtime knowledge Markdown files are guarded against
+  replacement characters and common mojibake; the importer permits only an
+  exact allowlist of historical upstream input spellings
+- production-browser copy audit at `http://localhost:3107`: `/`, `/chart`,
+  `/records`, `/insights`, and `/settings` rendered readable Chinese with the
+  correct `紫微知道 · 你的命盘分析助手` title and no replacement or common
+  mojibake markers
+- focused final gate: 2 files / 228 tests passed; typecheck and
+  `git diff --check` passed
+- final independent Task 10 re-review: PASS; no Critical or Important findings
 
-- Saving birth data now calls a dedicated deterministic `/api/chart` boundary and returns a sanitized chart summary without exposing raw chart JSON.
-- The sidebar and chart workspace share one SVG chart-disc component backed only by iztro-derived facts; current evidence can highlight the palaces used for an answer.
-- GSAP React timelines communicate calculation, analysis, critic, and completion states with scoped cleanup and reduced-motion handling.
-- The right evidence rail uses a continuous hierarchy instead of repeated desktop cards, while compact mobile sheets preserve bordered sections.
+Those Task 10 figures are not final release evidence; the fresh Task 11 gate
+below supersedes them for automated, migration, database, and dependency proof.
 
-Latest agent latency and failure hardening work:
+Task 11 verification on 2026-07-18:
 
-- Optional LLM planning is bounded to 3 seconds, and planner-proposed tools and skills are filtered through server-side allowlists before execution. Timeout, provider failure, or invalid JSON falls back to the deterministic plan while recording the fallback source and error code in the plan tool event and evidence step.
-- Embedding requests and Postgres/pgvector retrieval are each bounded to 8 seconds. After an empty database result the enhanced path may still use the local JSON embedding index; if enhanced retrieval yields nothing or throws, Markdown keyword fallback is reported as `local` rather than claiming hybrid retrieval.
-- OpenAI-compatible model generation accepts compact or event-framed SSE `[DONE]` and `finish_reason: "stop"` as successful completion. It rejects `finish_reason: "length"` as token-limit truncation and a connection EOF with content but no completion marker as an incomplete stream. Initial generation uses a 45-second total timeout and 12-second stream-idle timeout; a critic-requested revision uses a separate 20-second total and 10-second idle budget. Evidence records first-token and completion latency for both attempts.
-- Planner, skill, RAG, deterministic critic, model completion/revision, and final critic stages record latency in tool events. Tool-event persistence is best-effort so Neon telemetry latency or failure cannot block the answer path.
-- User and assistant message persistence each have a 3-second wait ceiling. A timeout or database failure emits a credential-free diagnostic warning and lets the request continue; tool-event telemetry remains fire-and-forget.
-- Pre-stream failures return a safe stage identifier and request ID without logging provider credentials. Undefined tool-event JSON values are normalized to `null` before Postgres persistence so telemetry cannot violate `jsonb NOT NULL` columns.
+- lint: passed
+- typecheck: passed
+- default no-database full tests: 70 passed / 3 skipped files; 749 passed / 4
+  skipped tests
+- agent evaluation: 17 cases, 0 failed, 1 explicit setup-required
+- production build: passed
+- `drizzle-kit check`: passed
+- configured release Postgres, run serially: two-connection profile lifecycle
+  2/2 passed; chart/conversation/Insights/deletion lifecycle 1/1 passed;
+  pgvector retrieval parity 1/1 passed
+- dependency audit: 6 moderate, 0 high, 0 critical. Four findings are confined
+  to the development-only drizzle-kit/esbuild chain. The Next-bundled PostCSS
+  advisory requires untrusted CSS stringify input, which this product does not
+  accept. npm's offered fixes are breaking downgrades, so no force fix was
+  applied.
 
-## Known Gaps
+## Task 12 Browser Evidence (2026-07-19)
 
-- Neon is the configured hosted Postgres path. The live database has pgvector enabled, the knowledge embedding column and HNSW index use 1024 dimensions for `BAAI/bge-large-zh-v1.5`, and the bundled seed knowledge is ingested. Future knowledge sources still require source/license review before ingestion.
-- The Agent/frontend evidence loop is now the main active development path. Domain skill and knowledge content remains seed-level; see `docs/development/agent-content-gaps.md`.
-- Provider-backed token streaming remains intentionally critic-gated rather than live-forwarded: the model response is buffered, checked, then emitted as event-framed tokens. Total/idle timeouts and first-token/completion telemetry now bound and expose failures, but users still wait for the complete response and critic before approved text appears; a real-provider timed browser pass is still required to calibrate the current code-level defaults.
-- Imported RAG content is broader than the MVP seed, but still needs editorial curation before it should be treated as high-confidence domain doctrine.
-- RAG is hot-swappable: local Markdown keyword search remains the no-database baseline; optional embedding settings can use a local JSON embedding index for hybrid retrieval; when `DATABASE_URL` and embedding settings are present, runtime retrieval attempts Postgres/pgvector first and falls back locally if needed.
-- Product authentication, hosted accounts, payments, subscriptions, multi-chart management, reports, and large ingestion are intentionally out of V1 scope.
-- `npm audit` still reports moderate advisories in Next/PostCSS and drizzle-kit/esbuild chains. npm suggests force fixes that imply breaking downgrades, so they were not applied.
-- UI is a stronger MVP product shell, but not yet a final flagship design pass. Future design work should continue using `impeccable`/product UI review with browser evidence.
+Production-equivalent build served at `http://localhost:3200` with the
+configured release Postgres database. The no-database and Postgres route
+matrices covered `/`, `/chart`, `/records`, `/insights`, and `/settings` at
+390x844, 1024x768, 1440x900, and 1536x960.
 
-## Recommended Next Work
+- 40 route/viewport checks completed across both persistence modes.
+- Every check had zero horizontal overflow and zero browser console errors.
+- `lang="zh-CN"` and the expected Chinese page title were present.
+- No-database state proved the honest no-chart, six-topic, records-empty,
+  Insights-insufficient, settings, and no-model setup-required states.
+- Chart creation through the UI restored real iztro-derived palaces, stars,
+  brightness, transformations, and 三方四正 data.
+- Postgres mode restored the persisted chart and conversation record; the
+  eligible/insufficient Insights branch and anonymous deletion control were
+  visible without fabricated content.
+- The six topic entries resolved to unique prompts; `事业` populated the
+  composer with `我目前的事业方向，适合关注什么？`.
+- Accessibility/responsive probe across the same 20 Postgres route/viewport
+  combinations found focusable controls on every route, visible focus styling
+  on interactive controls, live regions on records/Insights state changes, and
+  the global `prefers-reduced-motion` rule. No overflow was observed. A full
+  keyboard journey and provider-backed announcement pass remains part of the
+  final manual review.
 
-1. Run a timed browser regression against the real OpenAI-compatible provider, inspect stage and model telemetry for both success and forced failure, then calibrate the current initial-generation 45-second total / 12-second idle, revision 20-second total / 10-second idle, 3-second planner, and 8-second embedding/RAG limits before deciding whether they need deployment-level configuration.
-2. Review user-facing Chinese copy in the browser before public announcement.
-3. Continue curating imported `ziwei-doushu` chunks by topic, then decide which chunks should graduate from imported seed content to curated product knowledge.
-4. Fill the remaining skill and knowledge gaps listed in `docs/development/agent-content-gaps.md`.
-5. Add persisted conversation list and reload behavior if the product should feel stateful beyond the current session.
-6. If database-backed mode matters later, configure a local or Neon `DATABASE_URL`, run Drizzle migrations, and add one smoke test against real Postgres.
+Browser-local DeepSeek settings were supplied and exercised on 2026-07-19.
+Only sanitized fields were recorded: provider hostname `api.deepseek.com` and
+requested model `deepseek-v4-pro`. The real chat request reached the model
+stage, then ended with the fixed retryable UI error before any answer token,
+critic result, or completed generation evidence was produced. This is failed
+acceptance evidence, not a successful provider run; no mock output is counted.
 
-## Handoff Entry Points
+Later on 2026-07-19, Chat reliability fixes separated browser chart hydration
+from durable chart persistence and added built-in DeepSeek model validation.
+The unsupported `deepseek-v4-pro` value was blocked locally with zero
+`/api/chat` requests. After changing only the browser-owned model name to the
+supported `deepseek-chat`, a real chart-explanation request completed through
+`hydrateChart`, chart restore/fact extraction, constrained planning, skill,
+local RAG, model generation, and final critic. The browser observed one
+`/api/chat` request and zero `/api/chart` requests; three chart facts and three
+attributed knowledge sources were visible. Model telemetry reported about
+450ms to first token and 4.6s to completion. The final critic passed, the
+sidebar chart remained available, and the browser console had zero errors.
 
-- Project protocol: `AGENTS.md`
-- Current status: `docs/development/project-status.md`
-- MVP implementation plan: `docs/development/implementation-plan.md`
-- Deployment and CI notes: `docs/development/deployment.md`
-- Product UI direction: `PRODUCT.md`
-- Product UI design spec: `docs/superpowers/specs/2026-07-05-product-experience-ui-design.md`
-- Product UI implementation plan: `docs/superpowers/plans/2026-07-05-product-experience-ui.md`
+A controlled failure check changed only the browser-owned Base URL to the local
+non-listening address `http://127.0.0.1:9/v1`. Chat left its pending state in
+about 15 seconds, exposed the retry action, and preserved the chart and
+conversation. Restoring `api.deepseek.com` preserved the provider settings.
+The browser console contained zero entries and exposed no credential-shaped
+value, raw chart marker, or insight source-body marker. The Insights failure
+scenario could not run because the current profile had only 3 conversations
+and 3 user messages across 1 day, so the honest insufficient state correctly
+prevented provider generation. Chat recovery-to-success, timing, and final
+critic are now evidenced by the supported-model run above; eligible
+provider-backed Insights remains open. Teardown used the Settings
+UI to clear the answer API key; the key field then had length zero and the
+clear-key control was absent, without directly inspecting browser storage.
+
+The provider contract gate itself remains green: focused provider/chat/Insights
+tests passed 77/77 on 2026-07-19, covering stream telemetry, first-token and
+completion timing, final critic gating, retryable provider errors, and absence
+of API keys or raw source bodies from responses. These are contract tests, not
+real-network acceptance evidence.
+
+Local regression refresh on 2026-07-19 also passed lint (0 errors; existing
+third-party skill warnings only), typecheck, the full 70 passed / 3 skipped test
+files (749 passed / 4 skipped tests), agent evaluation (17 cases, 0 failed),
+production build, and `drizzle-kit check`. A fresh configured-Postgres rerun
+also passed all 3 integration files and 4 tests covering two-connection profile
+lifecycle, chart/conversation/Insights/deletion lifecycle, and pgvector
+retrieval. `npm audit` remained 6 moderate, 0 high, and 0 critical with the
+same Task 11 risk classification. Release assertions and `git diff --check`
+passed; `ziwei-chat-redesign/` remains untracked. This refresh does not close
+the real-provider or final G10/Task 13 gates.
+
+## Open Release Gates
+
+1. Complete eligible real-provider Insights success and failure/recovery. Timed
+   real-provider Chat success, final critic, supported-model recovery, the
+   controlled Chat failure, and browser secrecy checks are recorded above.
+2. Finish the unproven Task 12 browser scope: full keyboard focus order,
+   provider-backed announcements and dead-action checks; eligible Postgres
+   Insights generation, source disclosure, cache/stale behavior, and full
+   deletion; plus saved mobile/desktop screenshots reviewed for nonblank
+   rendering, overlap, scroll ownership, text fit, contrast, and reduced motion.
+3. Close Task 13 only after every G1-G10 item links to current code, test,
+   browser, database, and provider evidence.
+
+## Task 13 Evidence Matrix (Current)
+
+| Gap | Current evidence | Release status |
+| --- | --- | --- |
+| G1 | `src/lib/ui/insight-sources.ts`; loader tests; no-database/Postgres route probe | implementation and focused behavior evidenced; G10 browser/provider scenarios open |
+| G2 | `src/lib/ui/insight-cache.ts`; cache/deletion tests; Postgres deletion lifecycle | implementation and persistence contract evidenced; cross-route release proof open |
+| G3 | Insights controller/presenters; controller DOM tests; responsive route probe | implementation and UI states evidenced; real report/provider proof open |
+| G4 | `src/lib/ui/active-topics.ts`; catalog and router/planner tests; six browser prompts | closed with current code/test/browser evidence |
+| G5 | Six skill files; skill contract tests; deterministic evaluation | closed with current code/test/evaluation evidence |
+| G6 | curated knowledge tests; local fallback; Task 11 pgvector parity | closed with current local/Postgres evidence |
+| G7 | real deterministic evaluator; 17 cases; agent eval 0 failures | closed for deterministic contract scope; real provider remains G10 |
+| G8 | honest chart empty/create/restore paths; chart tests; browser chart lifecycle | closed with current code/test/browser evidence |
+| G9 | migration cleanup commit; source/doc/UTF-8 audits; independent review | closed with current code/doc/review evidence |
+| G10 | 40 route/viewport checks, Postgres lifecycle, accessibility probe, 77/77 provider contract tests, unsupported-model local block, real `deepseek-chat` success with timing/final critic, controlled local Chat failure, and browser secrecy probe | open: eligible real-network Insights success/failure/recovery, full keyboard/announcement/dead-action pass, eligible Insights cache/stale/deletion browser pass, screenshot visual review, and final Task 13 review |
+
+This matrix is an audit index, not a release declaration. A row marked
+implementation or contract-evidenced is not closed if its user-visible release
+scenario is still owned by G10.
+
+## Intentional Non-Goals
+
+Accounts, login, payment, subscriptions, quotas, attachments, background music,
+push notifications, community, multi-chart comparison, multi-school switching,
+advanced annual reports, hosted administration, and dedicated
+health/family/children/home workflows are outside Final V1+. They require a new
+product specification rather than expansion of this release.
+
+## Residual External Risks
+
+- Existing Postgres/pgvector evidence depends on the configured release
+  database used by Task 11 and the 2026-07-19 refresh; reproducing that evidence
+  requires an equivalent configured database.
+- Real-provider timing and failure proof requires valid OpenAI-compatible model
+  settings. The requested model did not produce a successful response from the
+  configured endpoint; the browser-local API key was cleared after the failed
+  acceptance run and must be configured again for a later retry.
+- Imported `Renhuai123/ziwei-doushu` chunks are attributed seed material, not
+  final doctrine; curated chunks remain the preferred high-confidence layer.
+- Dependency advisories must be classified by reachable runtime risk. Breaking
+  force fixes are not accepted merely to make an audit count zero.
+
+## Handoff
+
+- Function gaps and closure evidence: `docs/development/final-v1-plus-gap-register.md`
+- Agent/content expansion: `docs/development/agent-content-gaps.md`
+- Deployment notes: `docs/development/deployment.md`
+- Manual acceptance: `docs/development/public-beta-qa.md`
+- Real Provider acceptance runbook: `docs/development/real-provider-acceptance.md`

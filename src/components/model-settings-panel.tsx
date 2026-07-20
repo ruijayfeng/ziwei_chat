@@ -70,7 +70,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
   }
 
   return (
-    <Card className="border-border/90 bg-card shadow-none ring-0" size="sm">
+    <Card className="surface overflow-hidden border-0 bg-transparent shadow-none ring-0" size="sm">
       <CardHeader className="gap-3">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
@@ -90,7 +90,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
       </CardHeader>
 
       <CardContent className="grid gap-4">
-        <p className="rounded-lg bg-muted px-3 py-2 text-xs leading-5 text-muted-foreground">
+        <p className="surface-well rounded-lg px-3 py-2 text-xs leading-5 text-muted-foreground">
           {status.description}
         </p>
 
@@ -106,7 +106,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               onValueChange={(nextValue) => applyProvider(nextValue as ModelProviderOption)}
               value={value.provider}
             >
-              <SelectTrigger className="w-full bg-background">
+              <SelectTrigger className="surface-well w-full bg-transparent">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -123,6 +123,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
             <>
               <Field label="Base URL">
                 <Input
+                  className="surface-well bg-transparent"
                   disabled={!loaded}
                   name="modelBaseUrl"
                   onChange={(event) => update({ baseUrl: event.target.value })}
@@ -132,6 +133,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               </Field>
               <Field label="API Key">
                 <Input
+                  className="surface-well bg-transparent"
                   disabled={!loaded}
                   name="modelApiKey"
                   onChange={(event) => update({ apiKey: event.target.value })}
@@ -142,6 +144,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               </Field>
               <Field label="Model">
                 <Input
+                  className="surface-well bg-transparent"
                   disabled={!loaded}
                   name="modelName"
                   onChange={(event) => update({ model: event.target.value })}
@@ -186,7 +189,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               }
               value={value.embedding.provider}
             >
-              <SelectTrigger className="w-full bg-background">
+              <SelectTrigger className="surface-well w-full bg-transparent">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -206,6 +209,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
             <>
               <Field label="Embedding Base URL">
                 <Input
+                  className="surface-well bg-transparent"
                   disabled={!loaded}
                   name="embeddingBaseUrl"
                   onChange={(event) => updateEmbedding({ baseUrl: event.target.value })}
@@ -215,6 +219,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               </Field>
               <Field label="Embedding API Key">
                 <Input
+                  className="surface-well bg-transparent"
                   disabled={!loaded}
                   name="embeddingApiKey"
                   onChange={(event) => updateEmbedding({ apiKey: event.target.value })}
@@ -225,6 +230,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               </Field>
               <Field label="Embedding Model">
                 <Input
+                  className="surface-well bg-transparent"
                   disabled={!loaded}
                   name="embeddingModel"
                   onChange={(event) => updateEmbedding({ model: event.target.value })}
@@ -234,7 +240,7 @@ export function ModelSettingsPanel({ value, loaded, onChange }: ModelSettingsPan
               </Field>
             </>
           ) : (
-            <p className="rounded-lg bg-muted px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <p className="surface-well rounded-lg px-3 py-2 text-xs leading-5 text-muted-foreground">
               关闭时使用本地关键词 RAG；配置后可生成知识库 embedding 并启用语义检索。
             </p>
           )}

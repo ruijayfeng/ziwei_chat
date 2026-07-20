@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Depends on natural-language user messages
- * [OUTPUT]: Provides deterministic intent routing for MVP Ziwei topics and safety boundaries
+ * [OUTPUT]: Provides deterministic intent routing for the six active Ziwei workflows and safety boundaries
  * [POS]: First agent-core step before planning and tool selection
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */

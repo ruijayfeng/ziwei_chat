@@ -35,7 +35,7 @@ Ziwei Chat should not look like:
 - red-and-gold fortune-telling pages
 - parchment, temple, oracle, or antique interfaces
 - generic purple AI-gradient SaaS pages
-- game-like dark celestial consoles as the primary app shell
+- game-like celestial consoles, starfields, outer glows, or decorative orbit animations
 - marketing landing pages that hide the product behind a hero section
 
 ## Design Principles
@@ -47,6 +47,8 @@ Ziwei Chat should not look like:
    product-specific experience.
 5. Treat every loading, empty, error, and deletion state as part of the product,
    not an afterthought.
+6. Use a deep warm-indigo night palette with restrained cinnabar punctuation and
+   editorial Chinese typography; motion must explain state rather than simulate mysticism.
 
 ## Accessibility & Inclusion
 

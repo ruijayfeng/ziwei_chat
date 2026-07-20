@@ -1,82 +1,175 @@
-# Ziwei Chat
+<p align="center">
+  <img src="./docs/images/zhiwei-mark.png" alt="知微，紫微知道的对话伙伴" width="132" />
+</p>
 
-Ziwei Chat is an open-source-first Ziwei Dou Shu agent. It lets a user create one anonymous primary chart, ask natural-language questions, and receive answers grounded in deterministic chart facts, topic skills, local knowledge retrieval, and a response critic.
+<h1 align="center">紫微知道</h1>
 
-The beta does not require product login, payment, a hosted Ziwei Chat account, Postgres, pgvector, or an embedding service.
+<p align="center"><strong>让「知微」陪你读懂命盘里的线索。</strong></p>
+<p align="center">一个面向普通用户的开源紫微斗数 Agent，强调可追溯的命盘事实、自然的对谈体验与可本地运行的基础能力。</p>
 
-## What Works In Beta
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-149eca?logo=react" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Chart%20Engine-iztro-4b5563" alt="iztro" />
+  <img src="https://img.shields.io/badge/Database-Optional-64748b" alt="Optional database" />
+  <img src="https://img.shields.io/badge/License-Apache--2.0-d22128" alt="Apache-2.0 license" />
+</p>
 
-- Anonymous local profile and one primary chart.
-- Deterministic chart generation through `iztro`.
-- Chat flow: user message -> intent -> deterministic chart facts -> optional LLM planner -> tools -> skill -> local/hybrid RAG -> optional LLM analyst -> critic -> response.
-- OpenAI-compatible real model streaming from page-supplied provider, Base URL, API key, and model.
-- Optional OpenAI-compatible embedding settings for semantic RAG.
-- Deterministic-local fallback when no model is configured or a model call fails.
-- Evidence drawer for tools, chart facts, knowledge sources, critic status, and dynamic Agent run events.
-- Model-backed answers stream evidence events and answer tokens; final model output is checked by the critic before user-visible text is emitted.
-- Local Markdown/keyword knowledge search, including curated notes and imported `Renhuai123/ziwei-doushu` chunks with source/license metadata.
+---
 
-## Local Development
+## 目录
+
+1. [这是什么](#这是什么)
+2. [核心能力](#核心能力)
+3. [界面预览](#界面预览)
+4. [快速开始](#快速开始)
+5. [配置模型](#配置模型)
+6. [可选数据库与知识检索](#可选数据库与知识检索)
+7. [工作原理](#工作原理)
+8. [项目结构](#项目结构)
+9. [验证与部署](#验证与部署)
+10. [边界与贡献](#边界与贡献)
+
+---
+
+## 这是什么
+
+**紫微知道** 是一个消费级紫微斗数对话产品。你可以创建自己的命盘，和「知微」聊事业、关系、财富、近况，也可以从任何你真正关心的问题开始。
+
+它不要求注册、登录、支付或使用托管账号。没有数据库时，依然可以排盘、使用本地知识检索，并在浏览器中保存匿名命盘与对话；接入 Postgres 与 pgvector 后，可获得持久化和增强检索能力。
+
+「知微」不是用固定报告模板回答问题。她会自然地和你对谈，但涉及个人命盘时，只会把确定性排盘工具给出的信息当作你的盘面事实。
+
+## 核心能力
+
+| 能力 | 说明 |
+|---|---|
+| **确定性排盘** | 使用 [iztro](https://github.com/SylarLong/iztro) 生成命盘，不让模型自行计算星曜或宫位。 |
+| **知微对谈** | 温柔、细腻、坚定的对话人格；按语境组织回答，而不是强制五段式报告。 |
+| **事实可追溯** | 每次严肃分析都可查看工具调用、命盘事实、知识来源与 critic 状态。 |
+| **按需宫位解读** | 命盘页只在你点击后生成当前宫位的 AI 解读，避免自动消耗 Token。 |
+| **流式回答体验** | 回答渐进呈现，支持 Markdown、证据面板和回答过程状态。 |
+| **连续对话记录** | 匿名对话可从记录页恢复；无数据库时，浏览器本地保留最近的完整会话。 |
+| **本地优先检索** | 默认使用 Markdown / 关键词知识检索；Embedding 与 pgvector 都是可选增强。 |
+| **隐私优先** | 模型 API Key 仅保存在当前浏览器本地；匿名数据可从设置页清除。 |
+
+## 界面预览
+
+> 正式界面截图将在首个公开 Preview 发布时补充到这里。当前可通过下方命令本地运行体验完整界面。
+
+<!--
+推荐放置两张真实界面图：
+
+| 对话与证据 | 命盘与宫位解读 |
+|:---:|:---:|
+| ![对话页](docs/images/chat.png) | ![命盘页](docs/images/chart.png) |
+-->
+
+## 快速开始
+
+### 环境要求
+
+- Node.js 22+
+- npm 10+
+- 可选：Docker Desktop / Postgres 16（用于持久化与 pgvector）
+
+### 本地运行
 
 ```bash
+git clone https://github.com/ruijayfeng/ziwei_chat.git
+cd ziwei_chat
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+打开 [http://localhost:3000](http://localhost:3000)。首次进入后：
 
-## Configure A Real Model
+1. 在「命盘」页填写出生信息并生成命盘。
+2. 回到对话页，直接说出你关心的事。
+3. 需要 AI 正文时，在「设置」页配置模型。
+4. 在回答旁打开证据面板，查看本次分析实际使用了什么。
 
-Open the app, use the **模型设置** panel, and choose a provider.
+### 不配置模型时能做什么？
 
-Required fields:
+排盘、命盘展示、本地知识检索、工具链准备和证据状态仍可运行。涉及个性化长回答时，产品会提示你完成模型设置，而不会伪造一段看似可靠的分析。
+
+## 配置模型
+
+在 `/settings` 的模型设置中填写 OpenAI 兼容服务的：
 
 - Provider
 - Base URL
 - API Key
 - Model
 
-The API key is stored only in this browser's `localStorage`; it is sent to `/api/chat` for that request and is not written to the project database by this MVP. Use the **清空 API Key** button to remove it from browser storage.
+模型 Key 只保存在**当前浏览器的 localStorage**，请求时发送给 `/api/chat`，不会写入项目数据库。你可以随时在设置页清除。
 
-If settings are incomplete, Ziwei Chat stays in deterministic-local mode.
+## 可选数据库与知识检索
 
-The Embedding section is optional. When it is not configured, Ziwei Chat uses local Markdown keyword RAG. With `DATABASE_URL`, a configured embedding provider, and ingested knowledge, the app uses Neon/pgvector first and falls back to local retrieval when needed.
+### 运行模式
 
-## Optional Knowledge Embeddings
+| 模式 | 需要什么 | 可获得什么 |
+|---|---|---|
+| **本地基础模式** | Node.js | 排盘、匿名浏览器数据、本地 Markdown / 关键词检索、模型对话。 |
+| **本地语义检索** | Embedding Provider | 构建本地 JSON Embedding 索引，增强无数据库检索。 |
+| **Postgres / pgvector** | Postgres、`DATABASE_URL`、Embedding Provider | 对话与命盘持久化、知识向量检索、跨请求的数据恢复。 |
 
-Build a local no-database semantic RAG index:
+### 启动本地 Postgres
 
 ```bash
-EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1" \
+docker compose up -d postgres
+npx drizzle-kit migrate
+```
+
+环境变量参考 [`.env.example`](./.env.example)。数据库是可选的：不配置时，产品仍能以本地模式启动。
+
+### 构建本地 Embedding 索引
+
+```bash
+EMBEDDING_BASE_URL="https://api.openai.com/v1" \
 EMBEDDING_API_KEY="sk-..." \
-EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \
+EMBEDDING_MODEL="text-embedding-3-small" \
 npm run build:knowledge-embeddings
 ```
 
-This reads `content/knowledge/**/*.md` and writes `content/knowledge-index/embeddings.json`. Without this file, retrieval automatically falls back to local Markdown keyword search.
+这会读取 `content/knowledge/**/*.md` 并生成本地索引。未配置时，系统自动回退到 Markdown / 关键词检索。
 
-For database-backed pgvector RAG, run migrations and ingest the same Markdown
-knowledge into Postgres:
+## 工作原理
 
-```bash
-npx drizzle-kit migrate
-EMBEDDING_BASE_URL="https://api.siliconflow.cn/v1" \
-EMBEDDING_API_KEY="sk-..." \
-EMBEDDING_MODEL="BAAI/bge-large-zh-v1.5" \
-npm run ingest:knowledge-postgres
+```text
+出生信息
+  -> iztro 确定性命盘
+  -> 命盘事实与问题路由
+  -> 主题工作流 + 本地 / 向量知识检索
+  -> 知微生成自然回答
+  -> critic 审核与证据输出
 ```
 
-When `DATABASE_URL` and browser Embedding settings are both present, runtime RAG
-tries Postgres/pgvector first, then falls back to the local JSON embedding index,
-then to Markdown keyword search.
+核心原则：
 
-The checked-in Neon schema uses `vector(1024)`, matching
-`BAAI/bge-large-zh-v1.5`. If you choose another embedding model, migrate the
-vector dimension and re-embed all knowledge before querying it.
+- 只有确定性工具返回的信息可以被描述为用户的命盘事实。
+- 知识库用于解释，不用于补造盘面信息。
+- 对话应当自然、有温度，但不把倾向说成确定命运。
+- 医疗、法律、投资、紧急决策等高风险问题只提供反思性、非替代性的建议。
 
-## Verification
+## 项目结构
 
-Run the full beta gate:
+```text
+src/
+  app/          Next.js 路由与 API
+  components/   对话、命盘、记录、洞见、设置界面
+  lib/          Agent、命盘、数据库、检索与领域契约
+content/        运行时主题工作流与本地知识
+drizzle/        数据库迁移
+scripts/        知识导入、Embedding 构建、Provider 诊断
+tests/          单元、集成与 Agent 评估测试
+docs/           产品、架构、提示词、知识与部署文档
+```
+
+## 验证与部署
+
+### 本地质量门禁
 
 ```bash
 npm run lint
@@ -86,54 +179,32 @@ npm run eval:agent
 npm run build
 ```
 
-## Deploy To Vercel
+### 部署到 Vercel
 
-1. Push this repository to GitHub.
-2. Import it in Vercel as a Next.js project.
-3. Set `NEXT_PUBLIC_APP_URL` to your deployed URL.
-4. Deploy.
+1. Fork 或推送此仓库到 GitHub。
+2. 在 Vercel 导入 Next.js 项目。
+3. 设置 `NEXT_PUBLIC_APP_URL` 为部署地址。
+4. 若要启用持久化，额外配置 `DATABASE_URL` 并先执行迁移。
+5. 部署。
 
-Database variables are optional for the current beta path. The app can run in database-optional deterministic-local mode while hosted Postgres and pgvector provide the production-grade RAG/persistence path. User accounts and payments remain intentionally out of scope.
+详细部署、数据库和知识导入说明见 [部署文档](./docs/development/deployment.md)。
 
-## Local Database Optional
+## 边界与贡献
 
-```bash
-docker compose up -d postgres
-```
+紫微知道提供的是基于命盘事实的倾向性解读和现实反思，不替代医疗、法律、心理、投资或职业专业建议，也不承诺确定结果。
 
-The default local URL is documented in `.env.example`. The compose file uses a pgvector-enabled image. With database and embedding configuration, knowledge chunks can be stored with vectors for database-backed RAG; without database configuration, local Markdown and optional JSON embedding index retrieval still work.
+欢迎提交 Issue 和 PR。对产品使用、Agent 协议、知识来源或界面体验的改进，请先阅读：
 
-## Demo Script
+- [产品定义](./docs/product/prd.md)
+- [Agent 架构](./docs/architecture/agent-architecture.md)
+- [提示词与响应协议](./docs/prompts/response-protocol.md)
+- [知识与 Skills 规范](./docs/knowledge/knowledge-and-skills-spec.md)
+- [验收标准](./docs/evaluation/acceptance-criteria.md)
 
-1. Start the app with `npm run dev`.
-2. Fill the chart form with birth date, time, gender, and calendar type.
-3. Ask: `我最近想换工作，适合动吗？`
-4. Watch the assistant answer.
-5. Open evidence and confirm tools, chart facts, knowledge sources, and critic status are present.
-6. Configure a real OpenAI-compatible model and ask another question to verify token streaming.
+## 许可证
 
-## Screenshots
+除明确标注为第三方来源的知识内容外，本项目按 [Apache License 2.0](./LICENSE) 发布；第三方知识来源及其保留的许可证声明见 [NOTICE](./NOTICE)。
 
-Beta screenshots live in `public/screenshots/`:
+---
 
-- `desktop-chat-evidence.png` - chart panel, chat answer, and evidence drawer after a career question.
-- `desktop-model-settings.png` - model settings panel with a configured provider.
-- `mobile-chart-sheet.png` - mobile chart/profile sheet.
-- `mobile-evidence-sheet.png` - mobile evidence sheet.
-
-## Safety And Scope
-
-- Ziwei Chat does not replace professional medical, legal, financial, psychological, or career advice.
-- Answers describe chart tendencies and practical reflection points, not guaranteed predictions.
-- The LLM must not invent chart facts or calculate chart positions. Chart facts must come from deterministic tools.
-- Missing Ziwei content should stay a gap; do not fill it with unsupported claims.
-
-## Continuous Integration
-
-GitHub Actions runs the same verification gate on pull requests and pushes to `master`: install with `npm ci`, then lint, typecheck, test, evaluate the agent, and build.
-
-## More Docs
-
-- `docs/development/deployment.md`
-- `docs/development/project-status.md`
-- `docs/development/public-beta-qa.md`
+<p align="center">如果紫微知道对你有帮助，欢迎点亮 Star，让更多人以更清楚的方式认识自己的命盘。</p>

@@ -1,6 +1,7 @@
 # Public Beta QA Checklist
 
-Run these manually before public beta announcements. Use one deterministic-local pass and one real OpenAI-compatible model pass when possible.
+Run these manually before public beta announcements. A current production-equivalent
+browser matrix was recorded on 2026-07-19 at `http://localhost:3200`.
 
 ## Setup
 
@@ -14,6 +15,40 @@ Run these manually before public beta announcements. Use one deterministic-local
 8. Model settings clearly shows missing Base URL, API Key, or Model.
 9. API Key can be cleared from the UI.
 10. Deleting anonymous data clears chart, chat, evidence, and model settings.
+
+## Current Browser Evidence
+
+- Routes `/`, `/chart`, `/records`, `/insights`, and `/settings` passed at
+  390x844, 1024x768, 1440x900, and 1536x960 in both no-database and Postgres
+  modes.
+- All 40 checks had no horizontal overflow and zero browser console errors.
+- No-database mode showed the honest empty chart, six supported topics, empty
+  records, insufficient Insights, settings deletion, and setup-required
+  no-model behavior.
+- Postgres mode restored the saved chart and a persisted conversation record;
+  Insights remained honest when history was insufficient.
+- An accessibility probe across the same 20 Postgres checks found focusable
+  controls on every route, visible focus styling on interactive controls, live
+  regions on records/Insights state changes, and the reduced-motion CSS rule.
+- Browser-local DeepSeek settings were exercised with hostname
+  `api.deepseek.com` and requested model `deepseek-v4-pro`. The real request
+  ended with the fixed retryable error before answer generation or critic, so
+  it does not count as provider success.
+- The unsupported model is now blocked locally before `/api/chat`. Changing
+  only the browser-owned model name to `deepseek-chat` produced a real grounded
+  chart answer: request-local hydration, chart facts, skill, local RAG, model
+  generation, and final critic all completed. First token was about 450ms and
+  completion about 4.6s; one `/api/chat` and zero `/api/chart` requests were
+  observed, with three chart facts, three attributed sources, and zero browser
+  console errors.
+- A local non-listening Base URL proved Chat leaves pending, offers retry, keeps
+  chart/conversation state, and exposes no credential, raw chart marker, or
+  source-body marker in the UI or browser console. The valid Base URL was then
+  restored. Recovery-to-success and eligible Insights failure/recovery remain
+  open; the current profile has only 3 conversations across 1 day.
+- The focused provider/chat/Insights contract suite passed 77/77 tests,
+  covering telemetry, critic gating, retryable failures, and response secrecy;
+  this does not replace real-network acceptance.
 
 ## Common Questions
 

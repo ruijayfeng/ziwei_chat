@@ -1,12 +1,12 @@
 /**
- * [INPUT]: Depends on in-memory agent tool stores and route-level persistence needs
- * [OUTPUT]: Provides resettable runtime state for local MVP chat route and tests
- * [POS]: Temporary persistence boundary until Postgres-backed services replace it
+ * [INPUT]: Depends on in-memory tool stores, database availability, and chat/chart persistence adapters
+ * [OUTPUT]: Provides resettable runtime stores plus bounded chat, tool-event, and chart persistence operations
+ * [POS]: Runtime composition boundary selecting Postgres persistence when configured and no-op/in-memory behavior otherwise
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
 import {
-  createInMemoryChatPersistence,
+  createNoopChatPersistence,
   type PersistedChatMessage,
   type PersistedToolEvent,
 } from "./chat-persistence";
@@ -78,24 +78,6 @@ export function getChartPersistence(): ChartPersistence | null {
   return chartPersistence;
 }
 
-export function mergeRequestStoresToSnapshot(requestStores: InMemoryToolStores) {
-  for (const [chartId, chart] of requestStores.charts.entries()) {
-    stores.charts.set(chartId, chart);
-  }
-  for (const [profileId, chartId] of requestStores.primaryChartByProfileId.entries()) {
-    stores.primaryChartByProfileId.set(profileId, chartId);
-  }
-  for (const event of requestStores.toolEvents) {
-    stores.toolEvents.push(event);
-  }
-  for (const summary of requestStores.conversationSummaries) {
-    stores.conversationSummaries.push(summary);
-  }
-  for (const memory of requestStores.memories) {
-    stores.memories.push(memory);
-  }
-}
-
 export async function recordRouteToolEventToStores(
   requestStores: InMemoryToolStores,
   profileId: string,
@@ -163,7 +145,17 @@ export function getChatRuntimeSnapshot() {
   };
 }
 
+export async function listProfileConversations(profileId: string) {
+  return persistence.listConversations?.(profileId) ?? [];
+}
+
+export async function listProfileConversationMessages(profileId: string, conversationId: string) {
+  return persistence.listMessages?.(profileId, conversationId) ?? [];
+}
+
 export async function deleteProfileRuntimeData(profileId: string) {
+  await persistence.deleteProfileData?.(profileId);
+
   const ownedChartIds = new Set<string>();
   for (const [chartId, chart] of stores.charts.entries()) {
     if (chart.profileId === profileId) {
@@ -184,7 +176,6 @@ export async function deleteProfileRuntimeData(profileId: string) {
       stores.toolEvents.splice(index, 1);
     }
   }
-  await persistence.deleteProfileData?.(profileId);
 }
 
 export function resetChatRuntime() {
@@ -202,7 +193,7 @@ function createRuntimePersistence() {
     return createPostgresChatPersistence(getDatabaseClient());
   }
 
-  return createInMemoryChatPersistence();
+  return createNoopChatPersistence();
 }
 
 function createRuntimeChartPersistence(): ChartPersistence | null {

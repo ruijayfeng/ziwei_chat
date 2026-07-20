@@ -6,11 +6,19 @@ requiredFacts:
   - life palace
   - major stars
   - key palaces
-  - chart terms
+prohibitionIds:
+  - single_factor_determinism
+  - undisclosed_school_mixing
+  - invented_chart_fact
+  - chart_explanation_prediction
 tools:
   - getCurrentChart
   - summarizeChartFacts
+  - getPalaceAnalysis
+  - getStarAnalysis
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Chart Explanation
@@ -36,7 +44,7 @@ tools:
 3. 把宫位、星曜和格局词连接到白话例子。
 4. 展示这个解释背后的确定性命盘依据。
 5. 除非用户主动要求，否则不延伸成完整主题分析。
-6. 最后追问用户下一步想看哪个位置。
+6. 只有在用户需要继续探索时，询问下一步想看哪个位置。
 
 ## Response Rules
 
@@ -44,7 +52,7 @@ tools:
 - Keep terminology lightweight.
 - Show the chart basis behind each explanation.
 - Say when a term needs surrounding palaces or stars before interpretation.
-- End with one follow-up that offers the next chart area.
+- Offer one follow-up about the next chart area only when the user needs a direction to continue.
 
 ## Conservative Conditions
 
@@ -58,7 +66,7 @@ tools:
 - Do not imply that a single star decides the whole chart.
 - Do not mix interpretation schools without disclosure.
 - Do not invent star positions, palaces, transforms, or patterns.
-- Do not turn an explanation into a prediction unless the user asks and tools support it.
+- Do not provide predictions in this workflow; route timing questions to the recent-fortune workflow so matching luck-cycle facts are loaded first.
 
 ## Common Question Paths
 

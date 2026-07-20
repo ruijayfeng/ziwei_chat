@@ -35,7 +35,7 @@ A passing answer:
 - translates Ziwei terms into plain language
 - avoids absolute claims
 - gives grounded advice
-- asks exactly one useful follow-up question
+- asks a useful follow-up only when the available chart facts and user context leave a material gap
 
 A failing answer:
 
@@ -69,6 +69,10 @@ Each case should specify:
 - expected chart facts or terms
 - forbidden claims
 - safety level
+
+The deterministic CI evaluator must derive, not copy, the actual route, plan, tool events, loaded skill, local retrieval sources, composed response, and critic result. It uses an injected `CreateChartInput` fixture with the real iztro adapter and reports failures by stage. Provider calls remain outside deterministic CI and are verified separately in real-provider acceptance.
+
+Final V1+ deterministic coverage also includes chart explanation and the exact six canonical composer prompts. Contract samples for all six topics are recorded in `docs/evaluation/final-v1-plus-deterministic-samples.md`. A separate six-topic human review remains part of the real-provider release gate; deterministic passing does not claim that provider wording quality is accepted.
 
 ## Stability Requirement
 

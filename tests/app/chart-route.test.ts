@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { GET, POST, readPrimaryChartWithTimeout } from "../../src/app/api/chart/route";
+import {
+  CHART_SAVE_TIMEOUT_MS,
+  GET,
+  POST,
+  readPrimaryChartWithTimeout,
+} from "../../src/app/api/chart/route";
 import { resetChatRuntime } from "../../src/lib/agent/chat-runtime";
 import type { ChartPersistence } from "../../src/lib/db/chart-persistence";
 
 describe("POST /api/chart", () => {
   beforeEach(() => resetChatRuntime());
+
+  test("allows an explicit chart save more time than background tool persistence", () => {
+    expect(CHART_SAVE_TIMEOUT_MS).toBe(15_000);
+  });
 
   test("returns a sanitized deterministic chart visual summary after saving birth data", async () => {
     const response = await POST(new Request("http://localhost/api/chart", {
@@ -28,10 +37,18 @@ describe("POST /api/chart", () => {
     const payload = await response.json();
     expect(payload.chartId).toEqual(expect.any(String));
     expect(payload.summary.facts.length).toBeGreaterThan(0);
+    expect(payload.display).toMatchObject({
+      chartId: payload.chartId,
+      displayName: "Jay",
+      palaces: expect.arrayContaining([
+        expect.objectContaining({ name: "命宫", earthlyBranch: expect.any(String) }),
+      ]),
+    });
+    expect(payload.display.palaces).toHaveLength(12);
     expect(payload.chartJson).toBeUndefined();
   });
 
-  test("restores a saved primary chart for the same anonymous profile", async () => {
+  test("does not retain a chart on the server when database persistence is disabled", async () => {
     const profileId = "00000000-0000-4000-8000-000000000001";
     await POST(new Request("http://localhost/api/chart", {
       method: "POST",
@@ -51,16 +68,8 @@ describe("POST /api/chart", () => {
 
     const response = await GET(new Request(`http://localhost/api/chart?profileId=${profileId}`));
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      chart: {
-        profileId,
-        name: "Jay",
-        birthDate: "1990-05-17",
-        birthTime: "12:00",
-      },
-      summary: { facts: expect.any(Array) },
-    });
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "primary chart not found" });
   });
 
   test("bounds a stalled persisted chart restore", async () => {

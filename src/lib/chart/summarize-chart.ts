@@ -28,12 +28,12 @@ type SummarizeChartInput = {
 };
 
 const topicPalaces: Record<ChartTopic, string[]> = {
-  career: ["官禄", "命宫", "迁移"],
+  career: ["官禄", "命宫", "财帛", "迁移"],
   relationship: ["夫妻", "命宫", "福德"],
   wealth: ["财帛", "官禄", "田宅"],
   personality: ["命宫", "身宫", "福德"],
   recent_fortune: ["命宫", "迁移", "官禄", "财帛"],
-  general: ["命宫", "身宫"],
+  general: ["命宫", "身宫", "官禄", "财帛"],
 };
 
 export function summarizeChart({
@@ -53,6 +53,19 @@ export function summarizeChart({
     keyPatterns: unique(facts.flatMap((fact) => fact.patterns)),
     facts,
   };
+}
+
+export function summarizePalace({
+  chartId,
+  chartJson,
+  palace,
+}: {
+  chartId: string;
+  chartJson: unknown;
+  palace: string;
+}): ChartFact | null {
+  const matchedPalace = findPalace(readPalaces(chartJson), palace);
+  return matchedPalace ? buildPalaceFact(chartId, "general", matchedPalace) : null;
 }
 
 function buildFactsForTopic(
@@ -79,26 +92,27 @@ function buildFactsForTopic(
     ];
   }
 
-  return matchedPalaces.map((palace) => {
-    const palaceName = readString(palace.name, "unknown");
-    const stars = readStars(palace);
-    const transforms = readTransforms(palace);
-    const patterns = readPatterns(palace);
-    const starText = stars.length > 0 ? stars.join("、") : "暂无主星";
-    const transformText =
-      transforms.length > 0 ? `，四化为 ${transforms.join("、")}` : "";
+  return matchedPalaces.map((palace) => buildPalaceFact(chartId, topic, palace));
+}
 
-    return {
-      id: `${chartId}:${topic}:${palaceName}`,
-      topic,
-      palace: palaceName,
-      stars,
-      transforms,
-      patterns,
-      rawText: `${palaceName}宫位主星为 ${starText}${transformText}。`,
-      confidence: stars.length > 0 ? "high" : "medium",
-    };
-  });
+function buildPalaceFact(chartId: string, topic: ChartTopic, palace: PalaceLike): ChartFact {
+  const palaceName = readString(palace.name, "unknown");
+  const stars = readStars(palace);
+  const transforms = readTransforms(palace);
+  const patterns = readPatterns(palace);
+  const starText = stars.length > 0 ? stars.join("、") : "暂无主星";
+  const transformText = transforms.length > 0 ? `，四化为 ${transforms.join("、")}` : "";
+
+  return {
+    id: `${chartId}:${topic}:${palaceName}`,
+    topic,
+    palace: palaceName,
+    stars,
+    transforms,
+    patterns,
+    rawText: `${palaceName}宫位主星为 ${starText}${transformText}。`,
+    confidence: stars.length > 0 ? "high" : "medium",
+  };
 }
 
 function readPalaces(chartJson: unknown): PalaceLike[] {
@@ -110,10 +124,6 @@ function readPalaces(chartJson: unknown): PalaceLike[] {
 }
 
 function findPalace(palaces: PalaceLike[], palaceName: string) {
-  if (palaceName === "命宫") {
-    return palaces.find((palace) => palace.isOriginalPalace === true);
-  }
-
   if (palaceName === "身宫") {
     return palaces.find((palace) => palace.isBodyPalace === true);
   }
@@ -149,12 +159,16 @@ function readTransforms(palace: PalaceLike) {
 function readPatterns(palace: PalaceLike) {
   const patterns: string[] = [];
 
-  if (palace.isOriginalPalace === true) {
+  if (palace.name === "命宫") {
     patterns.push("命宫主星");
   }
 
   if (palace.isBodyPalace === true) {
     patterns.push("身宫落点");
+  }
+
+  if (palace.isOriginalPalace === true) {
+    patterns.push("来因宫");
   }
 
   return patterns;

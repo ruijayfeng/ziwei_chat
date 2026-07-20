@@ -5,9 +5,13 @@
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { buildModelPrompt, generateModelResponse, type ResolvedModelSettings } from "./model-provider";
+import { generateModelResponse, type ResolvedModelSettings } from "./model-provider";
+import {
+  buildZhiweiRuntimePrompt,
+  buildZhiweiSystemPrompt,
+} from "./zhiwei-persona";
 
-export type LlmResponseMode = "analysis" | "conversation";
+export type LlmResponseMode = "analysis" | "conversation" | "palace";
 
 export type LlmAnalystInput = {
   settings: ResolvedModelSettings;
@@ -15,6 +19,10 @@ export type LlmAnalystInput = {
   deterministicDraft: string;
   chartFacts: string[];
   skillSteps: string[];
+  skillResponseRules: string[];
+  skillConservativeConditions: string[];
+  skillForbiddenAdvice: string[];
+  skillCommonQuestionPaths: string[];
   knowledgeSources: string[];
   criticStatus: "not_run" | "passed" | "needs_review";
   criticIssues: string[];
@@ -35,6 +43,10 @@ export async function generateLlmAnalysis({
   deterministicDraft,
   chartFacts,
   skillSteps,
+  skillResponseRules,
+  skillConservativeConditions,
+  skillForbiddenAdvice,
+  skillCommonQuestionPaths,
   knowledgeSources,
   criticStatus,
   criticIssues,
@@ -43,38 +55,30 @@ export async function generateLlmAnalysis({
   hasChart = false,
   onToken,
 }: LlmAnalystInput) {
-  if (responseMode === "conversation") {
-    return generateModelResponse({
-      settings,
-      systemPrompt: "你是紫微知道的中文对话助手。自然、直接地回应用户，不把普通聊天伪装成命盘分析。",
-      prompt: buildConversationPrompt({ userContent, conversationContext, hasChart }),
-      onToken,
-      maxTokens: 800,
-    });
-  }
-
   return generateModelResponse({
     settings,
-    prompt: [
-      buildModelPrompt({
-        userContent,
+    systemPrompt: buildZhiweiSystemPrompt(responseMode),
+    prompt: buildZhiweiRuntimePrompt({
+      mode: responseMode,
+      taskRules: buildTaskRules({
+        responseMode,
         deterministicDraft,
-        chartFacts,
-        knowledgeSources,
+        skillSteps,
+        skillResponseRules,
+        skillConservativeConditions,
+        skillForbiddenAdvice,
+        skillCommonQuestionPaths,
         criticStatus,
         criticIssues,
+        hasChart,
       }),
-      "",
-      "主题 skill 分析步骤：",
-      skillSteps.length > 0 ? skillSteps.map((step) => `- ${step}`).join("\n") : "- 暂无",
-      "",
-      conversationContext ? `最近对话：\n${conversationContext}` : "",
-      "",
-      "请把上面的命盘事实、skill、RAG 来源作为分析材料，给出综合判断；不要只改写本地草稿。",
-      "正文控制在 500 至 700 个中文字符，完整保留结论、命盘依据、现实解释、建议和一个追问。",
-    ].join("\n"),
+      chartFacts,
+      knowledgeSources,
+      conversationContext,
+      userContent,
+    }),
     onToken,
-    maxTokens: 1_200,
+    maxTokens: responseMode === "palace" ? 520 : responseMode === "conversation" ? 800 : 1_200,
   });
 }
 
@@ -84,6 +88,10 @@ export async function reviseLlmAnalysis({
   deterministicDraft,
   chartFacts,
   skillSteps,
+  skillResponseRules,
+  skillConservativeConditions,
+  skillForbiddenAdvice,
+  skillCommonQuestionPaths,
   knowledgeSources,
   criticStatus,
   criticIssues,
@@ -93,70 +101,86 @@ export async function reviseLlmAnalysis({
   failedContent,
   finalCriticIssues,
 }: LlmRevisionInput) {
-  if (responseMode === "conversation") {
-    return generateModelResponse({
-      settings,
-      systemPrompt: "你是紫微知道的中文对话助手。自然、直接地回应用户，不把普通聊天伪装成命盘分析。",
-      prompt: [
-        buildConversationPrompt({ userContent, conversationContext, hasChart }),
-        "",
-        "上一版回复未通过安全检查。只根据以下问题修订，不要编造命盘事实：",
-        ...finalCriticIssues.map((issue) => `- ${issue}`),
-        "",
-        "上一版回复：",
-        failedContent,
-      ].join("\n"),
-      timeoutMs: 20_000,
-      idleTimeoutMs: 10_000,
-      maxTokens: 800,
-    });
-  }
-
   return generateModelResponse({
     settings,
-    prompt: [
-      buildModelPrompt({
-        userContent,
-        deterministicDraft,
-        chartFacts,
-        knowledgeSources,
-        criticStatus,
-        criticIssues,
-      }),
-      "",
-      "主题 skill 分析步骤：",
-      skillSteps.length > 0 ? skillSteps.map((step) => `- ${step}`).join("\n") : "- 暂无",
-      "",
-      conversationContext ? `最近对话：\n${conversationContext}` : "",
-      "",
-      "你上一版回答没有通过最终 critic。请只根据下面问题修订，不要新增命盘事实：",
-      finalCriticIssues.map((issue) => `- ${issue}`).join("\n"),
-      "强制修订规则：命盘依据是封闭引用区，只能使用上方“命盘事实”逐条引用或保守改写。删除命盘依据中所有未出现在该列表的宫位、星曜、四化和格局；不要把 RAG 术语当成用户事实。",
-      "",
-      "上一版回答：",
-      failedContent,
-      "",
-      "请输出修订后的最终回答，仍保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”，并且只保留一个问号。",
-    ].join("\n"),
+    systemPrompt: buildZhiweiSystemPrompt(responseMode),
+    prompt: buildZhiweiRuntimePrompt({
+      mode: responseMode,
+      taskRules: [
+        ...buildTaskRules({
+          responseMode,
+          deterministicDraft,
+          skillSteps,
+          skillResponseRules,
+          skillConservativeConditions,
+          skillForbiddenAdvice,
+          skillCommonQuestionPaths,
+          criticStatus,
+          criticIssues,
+          hasChart,
+        }),
+        "上一版回答没有通过最终检查。只根据下列问题修订，不要新增命盘事实。",
+        ...finalCriticIssues.map((issue) => `修订问题：${issue}`),
+        `上一版回答：${failedContent}`,
+      ],
+      chartFacts,
+      knowledgeSources,
+      conversationContext,
+      userContent,
+    }),
     timeoutMs: 20_000,
     idleTimeoutMs: 10_000,
-    maxTokens: 800,
+    maxTokens: responseMode === "palace" ? 520 : 800,
   });
 }
 
-function buildConversationPrompt({
-  userContent,
-  conversationContext,
+function buildTaskRules({
+  responseMode,
+  deterministicDraft,
+  skillSteps,
+  skillResponseRules,
+  skillConservativeConditions,
+  skillForbiddenAdvice,
+  skillCommonQuestionPaths,
+  criticStatus,
+  criticIssues,
   hasChart,
-}: Pick<LlmAnalystInput, "userContent" | "conversationContext" | "hasChart">) {
+}: Pick<
+  LlmAnalystInput,
+  | "responseMode"
+  | "deterministicDraft"
+  | "skillSteps"
+  | "skillResponseRules"
+  | "skillConservativeConditions"
+  | "skillForbiddenAdvice"
+  | "skillCommonQuestionPaths"
+  | "criticStatus"
+  | "criticIssues"
+  | "hasChart"
+>) {
+  if (responseMode === "conversation") {
+    return [
+      `当前命盘状态：${hasChart ? "已设置" : "未设置"}。`,
+      "不把聊天、倾诉或产品问答强行解释为命盘分析，也不要主动索要出生信息。",
+    ];
+  }
+
+  if (responseMode === "palace") {
+    return [
+      "围绕当前宫位的确定性事实解释主星、辅星、四化或结构如何共同呈现。",
+      "只说明观察重点与组合特征，不把单一宫位扩展成完整人生结论。",
+    ];
+  }
+
   return [
-    `当前命盘状态：${hasChart ? "已设置" : "未设置"}。`,
-    "当前不是命盘分析。请自然、直接地回应用户当前消息，并延续已有对话。",
-    "不要主动索取出生日期、出生时间、性别或命盘资料。",
-    "不要假设用户没有命盘；不要输出结论、命盘依据、现实解释、建议等分析报告格式。",
-    "只有当用户明确提出紫微斗数或命盘分析时，才说明可以基于已保存的命盘继续分析。",
-    "",
-    `用户当前消息：${userContent}`,
-    conversationContext ? `\n最近对话：\n${conversationContext}` : "",
-  ].join("\n");
+    "用命盘事实、主题 Skill 和知识来源形成综合判断；不要只改写本地草稿。",
+    `本地确定性草稿（仅作参考）：${deterministicDraft}`,
+    ...skillSteps.map((step) => `分析步骤：${step}`),
+    ...skillResponseRules.map((rule) => `回答规则：${rule}`),
+    ...skillConservativeConditions.map((condition) => `保守条件：${condition}`),
+    ...skillForbiddenAdvice.map((advice) => `禁止建议：${advice}`),
+    ...skillCommonQuestionPaths.map((path) => `可参考的问题路径：${path}`),
+    `预检状态：${criticStatus}`,
+    ...criticIssues.map((issue) => `预检问题：${issue}`),
+  ];
 }

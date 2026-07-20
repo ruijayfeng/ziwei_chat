@@ -6,13 +6,19 @@ requiredFacts:
   - life palace
   - body palace
   - major stars
-  - key transforms
+prohibitionIds:
+  - clinical_diagnosis
+  - fixed_personality_label
+  - fixed_personality_certainty
+  - harmful_behavior_excuse
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getPalaceAnalysis
   - getStarAnalysis
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Personality Analysis
@@ -38,7 +44,7 @@ tools:
 3. 用白话说明优势和需要留意的模式。
 4. 把命盘事实连接到日常行为、关系或工作场景。
 5. 明确说明命盘不能决定完整人格。
-6. 最后追问用户想理解的具体行为模式。
+6. 只有在需要澄清时，询问用户想理解的具体行为模式。
 
 ## Response Rules
 
@@ -46,7 +52,7 @@ tools:
 - Explain Ziwei terms on first use.
 - Avoid labeling the user as unchangeable.
 - Include both useful strengths and possible blind spots.
-- End with one follow-up about a concrete situation.
+- Ask one follow-up about a concrete situation only when it would clarify the pattern.
 
 ## Conservative Conditions
 

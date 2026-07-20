@@ -5,8 +5,38 @@ import {
   createInMemoryToolStores,
 } from "../../src/lib/agent/tools";
 import type { CreateChartOutput } from "../../src/lib/domain/chart";
+import { loadSkill } from "../../src/lib/knowledge/skill-loader";
 
 describe("agent tools", () => {
+  test("hydrates a request-local primary chart without durable persistence", async () => {
+    let saveCalls = 0;
+    const stores = createInMemoryToolStores();
+    const chartInput = {
+      profileId: "profile-hydration",
+      name: "Primary chart",
+      gender: "male" as const,
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar" as const,
+      isPrimary: true,
+    };
+    const tools = createAgentTools({
+      stores,
+      chartPersistence: {
+        async savePrimaryChart() { saveCalls += 1; },
+        async getPrimaryChart() { return null; },
+      },
+    });
+
+    const result = await tools.hydrateChart(chartInput);
+
+    expect(result.ok).toBe(true);
+    expect(saveCalls).toBe(0);
+    if (!result.ok) return;
+    expect(stores.primaryChartByProfileId.get(chartInput.profileId)).toBe(result.data.chartId);
+    expect(stores.charts.get(result.data.chartId)?.input).toEqual(chartInput);
+  });
+
   test("chart tools create, load, and summarize charts with structured results", async () => {
     const stores = createInMemoryToolStores();
     const tools = createAgentTools({ stores });
@@ -102,7 +132,69 @@ describe("agent tools", () => {
     expect(luck.ok && luck.data).toMatchObject({
       range: "current",
       relevantPalaces: expect.arrayContaining(["官禄"]),
+      activePeriods: expect.arrayContaining([
+        expect.stringMatching(/^大限：/),
+        expect.stringMatching(/^流年：/),
+      ]),
     });
+    expect(luck.ok && luck.data.activePeriods).not.toContain("2026-07-03:current");
+  });
+
+  test("derives three-month periods from iztro horoscope output", async () => {
+    const stores = createInMemoryToolStores();
+    const tools = createAgentTools({ stores });
+    const created = await tools.createChart({
+      profileId: "profile-1",
+      name: "Primary chart",
+      gender: "male",
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar",
+      isPrimary: true,
+    });
+    if (!created.ok) throw new Error(created.error.message);
+
+    const luck = await tools.getLuckCycle({
+      chartId: created.data.chartId,
+      date: "2026-07-17",
+      range: "three_months",
+      topic: "recent_fortune",
+    });
+
+    expect(luck.ok).toBe(true);
+    if (!luck.ok) return;
+    expect(luck.data.activePeriods.filter((item) => item.startsWith("流月："))).toHaveLength(3);
+    expect(luck.data.activePeriods.join("\n")).toContain("2026-07-17");
+    expect(luck.data.activePeriods.join("\n")).not.toContain(":three_months");
+  });
+
+  test("keeps three-month horoscope dates in consecutive months at month end", async () => {
+    const tools = createAgentTools();
+    const created = await tools.createChart({
+      profileId: "profile-month-end",
+      name: "Primary chart",
+      gender: "female",
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar",
+      isPrimary: true,
+    });
+    if (!created.ok) throw new Error(created.error.message);
+
+    const luck = await tools.getLuckCycle({
+      chartId: created.data.chartId,
+      date: "2026-01-31",
+      range: "three_months",
+      topic: "recent_fortune",
+    });
+
+    expect(luck.ok).toBe(true);
+    if (!luck.ok) return;
+    expect(luck.data.activePeriods).toEqual([
+      expect.stringContaining("2026-01-31"),
+      expect.stringContaining("2026-02-28"),
+      expect.stringContaining("2026-03-31"),
+    ]);
   });
 
   test("knowledge and memory tools use storage interfaces and preserve source metadata", async () => {
@@ -110,10 +202,16 @@ describe("agent tools", () => {
       skills: [
         {
           skillId: "career",
+          topic: "career",
           version: "1.0.0",
+          tools: ["getCurrentChart"],
           requiredFacts: ["career palace"],
+          prohibitionIds: ["immediate_career_exit"],
           analysisSteps: ["read career palace"],
           responseRules: ["cite chart basis"],
+          conservativeConditions: ["missing chart facts"],
+          forbiddenAdvice: ["do not resign immediately"],
+          commonQuestionPaths: ["career direction"],
           safetyNotes: ["avoid irreversible career commands"],
         },
       ],
@@ -188,6 +286,53 @@ describe("agent tools", () => {
     });
   });
 
+  test("returns every executable field from a real loaded skill", async () => {
+    const skill = await loadSkill("relationship");
+    const tools = createAgentTools({
+      stores: createInMemoryToolStores({ skills: [skill] }),
+    });
+
+    await expect(tools.loadSkill({ skillId: "relationship" })).resolves.toMatchObject({
+      ok: true,
+      data: {
+        analysisSteps: skill.analysisSteps,
+        topic: skill.topic,
+        tools: skill.tools,
+        prohibitionIds: skill.prohibitionIds,
+        responseRules: skill.responseRules,
+        conservativeConditions: skill.conservativeConditions,
+        forbiddenAdvice: skill.forbiddenAdvice,
+        commonQuestionPaths: skill.commonQuestionPaths,
+        safetyNotes: skill.safetyNotes,
+      },
+    });
+  });
+
+  test("maps chart explanation knowledge requests to the general corpus", async () => {
+    const tools = createAgentTools({
+      stores: createInMemoryToolStores({
+        knowledgeSources: [{
+          chunkId: "chart-structure",
+          title: "Chart structure",
+          source: "curated-internal",
+          school: "default",
+          confidence: "high",
+          excerpt: "命宫与宫位结构",
+          retrievalMode: "local",
+          topic: "general",
+          terms: ["命宫"],
+        }],
+      }),
+    });
+
+    await expect(tools.searchKnowledge({
+      query: "chart explanation",
+      topic: "chart_explanation",
+      chartTerms: ["命宫"],
+      limit: 3,
+    })).resolves.toMatchObject({ ok: true, data: [{ chunkId: "chart-structure" }] });
+  });
+
   test("missing chart errors are structured and recoverable", async () => {
     const tools = createAgentTools({ stores: createInMemoryToolStores() });
 
@@ -233,6 +378,44 @@ describe("agent tools", () => {
     }).getCurrentChart({ profileId });
 
     expect(restored).toMatchObject({ ok: true, data: { chartId: created.data.chartId } });
+  });
+
+  test("rebuilds iztro horoscope behavior from a persisted chart record", async () => {
+    const input = {
+      profileId: "profile-persisted-horoscope",
+      name: "Primary chart",
+      gender: "male" as const,
+      birthDate: "1990-05-17",
+      birthTime: "12:00",
+      calendarType: "solar" as const,
+      isPrimary: true,
+    };
+    const created = await createAgentTools().createChart(input);
+    if (!created.ok) throw new Error(created.error.message);
+    const serializedOutput = JSON.parse(JSON.stringify(created.data)) as CreateChartOutput;
+    const chartPersistence = {
+      async savePrimaryChart() {},
+      async getPrimaryChart() { return serializedOutput; },
+      async getPrimaryChartRecord() { return { input, output: serializedOutput }; },
+    };
+    const tools = createAgentTools({
+      stores: createInMemoryToolStores(),
+      chartPersistence,
+    });
+
+    const restored = await tools.getCurrentChart({ profileId: input.profileId });
+    if (!restored.ok) throw new Error(restored.error.message);
+    const luck = await tools.getLuckCycle({
+      chartId: restored.data.chartId,
+      date: "2026-07-17",
+      range: "current",
+      topic: "career",
+    });
+
+    expect(luck).toMatchObject({
+      ok: true,
+      data: { activePeriods: expect.arrayContaining([expect.stringMatching(/^流年：/)]) },
+    });
   });
 
   test("bounds primary chart persistence when the database stalls", async () => {

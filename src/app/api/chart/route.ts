@@ -1,14 +1,17 @@
 /**
  * [INPUT]: Depends on CreateChartInput, deterministic chart tools, and runtime chart persistence
- * [OUTPUT]: Provides a sanitized chart summary for the client chart-disc visual
+ * [OUTPUT]: Provides backward-compatible chart summary plus sanitized twelve-palace display data
  * [POS]: Explicit chart-save boundary, separate from chat streaming and model execution
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
-import { createRequestStores, getChartPersistence, mergeRequestStoresToSnapshot } from "../../../lib/agent/chat-runtime";
+import { createRequestStores, getChartPersistence } from "../../../lib/agent/chat-runtime";
 import { createAgentTools } from "../../../lib/agent/tools";
+import { buildChartDisplayModel } from "../../../lib/chart/chart-display";
 import type { ChartPersistence } from "../../../lib/db/chart-persistence";
 import type { CreateChartInput } from "../../../lib/domain/chart";
+
+export const CHART_SAVE_TIMEOUT_MS = 15_000;
 
 export async function POST(request: Request) {
   const body = (await request.json()) as { profileId?: string; chart?: CreateChartInput };
@@ -18,17 +21,25 @@ export async function POST(request: Request) {
   }
 
   const stores = createRequestStores();
-  const tools = createAgentTools({ stores, chartPersistence: getChartPersistence() });
+  const tools = createAgentTools({
+    stores,
+    chartPersistence: getChartPersistence(),
+    persistenceTimeoutMs: CHART_SAVE_TIMEOUT_MS,
+  });
   const result = await tools.createChart({ ...body.chart, profileId, isPrimary: true });
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: 422 });
   }
 
-  mergeRequestStoresToSnapshot(stores);
   return Response.json({
     chartId: result.data.chartId,
     displayName: result.data.displayName,
     summary: result.data.summary,
+    display: buildChartDisplayModel({
+      chartId: result.data.chartId,
+      displayName: result.data.displayName,
+      chartJson: result.data.chartJson,
+    }),
   });
 }
 
@@ -47,6 +58,11 @@ export async function GET(request: Request) {
       chartId: chart.chartId,
       displayName: chart.displayName,
       summary: chart.summary,
+      display: buildChartDisplayModel({
+        chartId: chart.chartId,
+        displayName: chart.displayName,
+        chartJson: chart.chartJson,
+      }),
     });
   }
 
@@ -63,6 +79,11 @@ export async function GET(request: Request) {
     chartId: persisted.output.chartId,
     displayName: persisted.output.displayName,
     summary: persisted.output.summary,
+    display: buildChartDisplayModel({
+      chartId: persisted.output.chartId,
+      displayName: persisted.output.displayName,
+      chartJson: persisted.output.chartJson,
+    }),
   });
 }
 

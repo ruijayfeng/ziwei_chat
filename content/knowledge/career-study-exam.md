@@ -15,7 +15,7 @@ terms:
 source: curated-internal
 sourcePath: content/knowledge/career-study-exam.md
 sourceUrl: ""
-license: project-curated
+license: Apache-2.0
 school: practical-ziwei
 confidence: high
 ---

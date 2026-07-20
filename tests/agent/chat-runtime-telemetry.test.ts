@@ -5,13 +5,14 @@ import { createInMemoryToolStores } from "../../src/lib/agent/tools";
 const persistenceFakes = vi.hoisted(() => ({
   saveMessage: vi.fn(),
   saveToolEvent: vi.fn(),
+  deleteProfileData: vi.fn(),
 }));
 
 vi.mock("../../src/lib/db/chat-persistence", () => ({
   createPostgresChatPersistence: () => ({
     saveMessage: persistenceFakes.saveMessage,
     saveToolEvent: persistenceFakes.saveToolEvent,
-    async deleteProfileData() {},
+    deleteProfileData: persistenceFakes.deleteProfileData,
   }),
 }));
 
@@ -29,6 +30,8 @@ describe("route telemetry persistence", () => {
     persistenceFakes.saveMessage.mockReset();
     persistenceFakes.saveMessage.mockResolvedValue(undefined);
     persistenceFakes.saveToolEvent.mockReset();
+    persistenceFakes.deleteProfileData.mockReset();
+    persistenceFakes.deleteProfileData.mockResolvedValue(undefined);
     vi.resetModules();
   });
 
@@ -139,5 +142,25 @@ describe("route telemetry persistence", () => {
     );
 
     expect(stores.toolEvents[0]?.latencyMs).toBe(734);
+  });
+
+  test("keeps persistence usable when durable deletion fails", async () => {
+    persistenceFakes.deleteProfileData.mockRejectedValue(new Error("database unavailable"));
+    const { deleteProfileRuntimeData, persistChatMessage } = await import(
+      "../../src/lib/agent/chat-runtime"
+    );
+    const profileId = "00000000-0000-4000-8000-000000000001";
+
+    await expect(deleteProfileRuntimeData(profileId)).rejects.toThrow("database unavailable");
+    await persistChatMessage({
+      profileId,
+      conversationId: "00000000-0000-4000-8000-000000000002",
+      role: "user",
+      content: "retry remains possible",
+    });
+
+    expect(persistenceFakes.saveMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ profileId, content: "retry remains possible" }),
+    );
   });
 });

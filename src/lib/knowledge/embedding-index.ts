@@ -164,7 +164,18 @@ function readRetrievalMode(value: unknown) {
 function isKnowledgeEmbeddingRecord(
   value: KnowledgeEmbeddingRecord | null,
 ): value is KnowledgeEmbeddingRecord {
-  return value !== null && value.chunkId.length > 0 && value.embedding.length > 0;
+  return (
+    value !== null &&
+    value.chunkId.trim().length > 0 &&
+    value.title.trim().length > 0 &&
+    value.topic.trim().length > 0 &&
+    value.terms.length > 0 &&
+    value.terms.every((term) => term.trim().length > 0) &&
+    value.source.trim().length > 0 &&
+    value.license.trim().length > 0 &&
+    value.school.trim().length > 0 &&
+    value.embedding.length > 0
+  );
 }
 
 function isNumberArray(value: unknown): value is number[] {

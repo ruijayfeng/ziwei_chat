@@ -127,7 +127,7 @@ describe("POST /api/chat", () => {
     const evidence = readEvidenceHeader(response);
     expect(evidence).toMatchObject({
       toolsUsed: [
-        "createChart",
+        "hydrateChart",
         "getCurrentChart",
         "summarizeChartFacts",
         "createAnalysisPlan",
@@ -156,28 +156,7 @@ describe("POST /api/chat", () => {
       );
     }
 
-    const snapshot = getChatRuntimeSnapshot();
-    expect(snapshot.messages.map((message) => message.role)).toEqual([
-      "user",
-      "assistant",
-    ]);
-    expect(snapshot.toolEvents.map((event) => event.toolName)).toEqual([
-      "createChart",
-      "getCurrentChart",
-      "summarizeChartFacts",
-      "createAnalysisPlan",
-      "getPalaceAnalysis",
-      "getLuckCycle",
-      "loadSkill",
-      "searchKnowledge",
-      "runResponseCritic",
-    ]);
-    expect(snapshot.persistedToolEvents.map((event) => event.conversationId)).toEqual([
-      conversationId,
-      conversationId,
-      conversationId,
-      conversationId,
-    ]);
+    expect(getChatRuntimeSnapshot()).toEqual({ messages: [], toolEvents: [], persistedToolEvents: [] });
   });
 
   test("never substitutes a deterministic chart answer when a configured model request fails", async () => {
@@ -223,32 +202,13 @@ describe("POST /api/chat", () => {
     expect(answer).not.toContain("你最近更适合先观察机会");
     expect(events).toContainEqual({
       event: "error",
-      data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
+      data: { message: "模型没有完成回答，请检查模型名称、API Key 和网络后重试。", canRetry: true },
     });
     expect(finalEvidence?.generation?.mode).toBe("model_failed");
     expect(finalEvidence?.runs[0].steps.find((step: { id: string }) => step.id === "plan")?.detail).toContain(
       "模型规划失败，已使用确定性计划",
     );
-    expect(getChatRuntimeSnapshot().toolEvents).toContainEqual(
-      expect.objectContaining({
-        toolName: "createAnalysisPlan",
-        success: false,
-        output: expect.objectContaining({
-          source: "fallback",
-          errorCode: "MODEL_REQUEST_FAILED",
-        }),
-      }),
-    );
-    expect(getChatRuntimeSnapshot().toolEvents).toContainEqual(
-      expect.objectContaining({
-        toolName: "completeModelResponse",
-        success: false,
-        output: expect.objectContaining({
-          errorCode: "MODEL_REQUEST_FAILED",
-          telemetry: expect.objectContaining({ completionMs: expect.any(Number) }),
-        }),
-      }),
-    );
+    expect(getChatRuntimeSnapshot()).toEqual({ messages: [], toolEvents: [], persistedToolEvents: [] });
   });
 
   test("surfaces the revision provider error in final evidence", async () => {
@@ -355,6 +315,7 @@ describe("POST /api/chat", () => {
         body: JSON.stringify({
           profileId,
           conversationId,
+          chartInput,
           messages: [
             { role: "user", content: "请解释一下我的命盘重点。" },
             { role: "assistant", content: "已完成命盘解释。" },
@@ -423,6 +384,82 @@ describe("POST /api/chat", () => {
     expect(evidence.toolsUsed).toContain("generateModelResponse");
   });
 
+  test("returns the structured chart error for invalid birth time", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Invalid chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "25:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: careerQuestion }],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(response.headers.get("X-Ziwei-Error-Stage")).toBe("chart_hydration");
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_BIRTH_TIME", recoverable: true },
+    });
+  });
+
+  test("passes real iztro luck-cycle evidence into recent-fortune model context", async () => {
+    const modelAnswer =
+      "结论：近期适合按月观察节奏。\n\n命盘依据：\n- 工具提供了当前流月范围。\n\n现实解释：这些时间信息只作为观察方向。\n\n建议：按月复盘现实变化。\n\n追问：你最想观察工作、关系还是财务？";
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: modelAnswer } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          chartInput: {
+            profileId,
+            name: "Primary chart",
+            gender: "male",
+            birthDate: "1990-05-17",
+            birthTime: "12:00",
+            calendarType: "solar",
+            isPrimary: true,
+          },
+          messages: [{ role: "user", content: "我最近的运势重点是什么？" }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    await response.text();
+    const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
+    const payload = JSON.parse(String(requestInit?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    const modelContext = payload.messages.at(-1)?.content ?? "";
+    const monthScopes = new Set(modelContext.match(/流月：\d{4}-\d{2}-\d{2}/g) ?? []);
+    expect(monthScopes.size).toBe(3);
+    expect(modelContext).not.toContain(":three_months");
+  });
+
   test("keeps general conversation natural instead of asking for birth data", async () => {
     const modelAnswer = "当然可以。你今天想聊点什么？";
     const fetchMock = vi.fn<typeof fetch>(async () =>
@@ -467,7 +504,9 @@ describe("POST /api/chat", () => {
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
     expect(payload.messages[1]?.content).toContain("当前命盘状态：已设置。");
-    expect(payload.messages[1]?.content).toContain("当前不是命盘分析");
+    expect(payload.messages[0]?.content).toContain("你叫「知微」");
+    expect(payload.messages[1]?.content).toContain("当前模式：conversation");
+    expect(payload.messages[1]?.content).toContain("不把聊天、倾诉或产品问答强行解释为命盘分析");
     expect(payload.messages[1]?.content).not.toContain("先告诉我你的出生日期");
   });
 
@@ -502,7 +541,81 @@ describe("POST /api/chat", () => {
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
     expect(payload.messages[1]?.content).toContain("当前命盘状态：未设置。");
-    expect(payload.messages[1]?.content).toContain("请自然、直接地回应用户当前消息");
+    expect(payload.messages[0]?.content).toContain("你叫「知微」");
+    expect(payload.messages[1]?.content).toContain("当前模式：conversation");
+    expect(payload.messages[1]?.content).toContain("不把聊天、倾诉或产品问答强行解释为命盘分析");
+  });
+
+  test("does not recreate deleted profile data when an active model request finishes late", async () => {
+    let releaseModel: (() => void) | undefined;
+    const modelStarted = Promise.withResolvers<void>();
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async () => {
+      modelStarted.resolve();
+      await new Promise<void>((resolve) => {
+        releaseModel = resolve;
+      });
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: "late model answer" } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }));
+
+    const activeResponse = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          messages: [{ role: "user", content: "hello" }],
+          modelSettings: {
+            provider: "openai-compatible",
+            baseUrl: "https://example.test/v1",
+            apiKey: "sk-user",
+            model: "test-model",
+          },
+        }),
+      }),
+    );
+
+    await modelStarted.promise;
+    const deleted = await DELETE(
+      new Request(`http://localhost/api/chat?profileId=${profileId}`, { method: "DELETE" }),
+    );
+    expect(deleted.status).toBe(204);
+
+    releaseModel?.();
+    await activeResponse.text();
+
+    expect(getChatRuntimeSnapshot()).toMatchObject({
+      messages: [],
+      toolEvents: [],
+      persistedToolEvents: [],
+    });
+  });
+
+  test("keeps no profile-owned server state when database persistence is disabled", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId,
+          conversationId,
+          messages: [{ role: "user", content: "hello" }],
+        }),
+      }),
+    );
+    await response.text();
+
+    expect(getChatRuntimeSnapshot()).toEqual({
+      messages: [],
+      toolEvents: [],
+      persistedToolEvents: [],
+    });
+    expect(getChatRuntimeStores()).toMatchObject({
+      memories: [],
+      conversationSummaries: [],
+      toolEvents: [],
+    });
   });
 
   test("streams model answers as evidence and token events after final critic", async () => {
@@ -558,13 +671,23 @@ describe("POST /api/chat", () => {
       .at(-1)?.data as { generation?: { detail?: string } } | undefined;
     expect(finalEvidence?.generation?.detail).toMatch(/首字 .*，完成 .*/);
     const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
-    expect(JSON.parse(String(requestInit?.body))).toMatchObject({ stream: true });
+    const modelRequest = JSON.parse(String(requestInit?.body)) as {
+      stream: boolean;
+      messages: Array<{ content: string }>;
+    };
+    expect(modelRequest).toMatchObject({ stream: true });
+    expect(modelRequest.messages[0]?.content).toContain("你叫「知微」");
+    expect(modelRequest.messages.at(-1)?.content).toContain("当前模式：analysis");
+    expect(modelRequest.messages.at(-1)?.content).toContain("回答规则：");
+    expect(modelRequest.messages.at(-1)?.content).toContain("保守条件：");
+    expect(modelRequest.messages.at(-1)?.content).toContain("Do not tell the user to resign immediately.");
+    expect(modelRequest.messages.at(-1)?.content).toContain('Path: "Should I change jobs?"');
     expect(readEvidenceHeader(response).toolsUsed).toContain("generateModelResponse");
   });
 
   test("reports a retryable failure when the model answer fails the final critic", async () => {
     const fetchMock = vi.fn<typeof fetch>(async () =>
-      new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
+      new Response('data: {"choices":[{"delta":{"content":"这次分析先给你一个方向判断。"}}]}\n\ndata: [DONE]\n\n', {
         status: 200,
         headers: { "content-type": "text/event-stream" },
       }),
@@ -599,12 +722,8 @@ describe("POST /api/chat", () => {
 
     const events = parseStreamEvents(await response.text());
     const answer = events.filter((event) => event.event === "token").map((event) => event.data).join("");
-    expect(answer).toBe("");
-    expect(answer).not.toContain("unsafe model answer");
-    expect(events).toContainEqual({
-      event: "error",
-      data: { message: "本次 LLM 分析未完成，请检查设置中的模型配置或网络连接后重试。", canRetry: true },
-    });
+    expect(answer).toBe("这次分析先给你一个方向判断。");
+    expect(events.some((event) => event.event === "error")).toBe(false);
     expect(events.some((event) => event.event === "evidence" && JSON.stringify(event.data).includes("降级"))).toBe(
       false,
     );
@@ -645,7 +764,7 @@ describe("POST /api/chat", () => {
       }
 
       if (callIndex === 1) {
-        return new Response('data: {"choices":[{"delta":{"content":"unsafe model answer"}}]}\n\ndata: [DONE]\n\n', {
+        return new Response('data: {"choices":[{"delta":{"content":"你的命宫有紫微。"}}]}\n\ndata: [DONE]\n\n', {
           status: 200,
           headers: { "content-type": "text/event-stream" },
         });
@@ -692,7 +811,9 @@ describe("POST /api/chat", () => {
     const revisionPayload = JSON.parse(String(revisionRequest?.body)) as {
       messages: Array<{ content: string }>;
     };
-    expect(revisionPayload.messages[1]?.content).toContain("封闭引用区");
+    expect(revisionPayload.messages[0]?.content).toContain("你叫「知微」");
+    expect(revisionPayload.messages[1]?.content).toContain("<chart_facts>");
+    expect(revisionPayload.messages[1]?.content).toContain("只有 <chart_facts> 可被描述为用户的命盘事实");
   });
 
   test("returns a response body that can be fully consumed by Web Response readers", async () => {

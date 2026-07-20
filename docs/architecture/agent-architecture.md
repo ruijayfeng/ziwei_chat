@@ -65,7 +65,7 @@ Executes deterministic and retrieval tools. The LLM can request tools, but tool 
 Tool categories:
 
 - Chart tools: create chart, load chart, summarize chart facts.
-- Domain tools: palace analysis, star analysis, pattern analysis, luck-cycle analysis.
+- Domain tools: palace analysis, star analysis, pattern analysis, and iztro-derived luck-cycle scopes. Supplemental timing evidence is included in deterministic composition and model context rather than discarded after execution.
 - Knowledge tools: load skill, search knowledge.
 - Memory tools: read memory, write memory, summarize conversation.
 - Audit tools: record tool events and critique results.
@@ -96,7 +96,7 @@ It must not store sensitive raw user statements as permanent memory unless they 
 Transforms analysis state into user-facing text:
 
 ```text
-conclusion -> chart basis -> plain explanation -> practical suggestion -> follow-up
+natural dialogue grounded in chart facts -> plain-language interpretation -> practical direction when useful -> optional follow-up for a material information gap
 ```
 
 The composer must avoid jargon-first answers.
@@ -110,7 +110,7 @@ Checks the draft response before finalizing:
 - Is the answer overconfident?
 - Does it mix conflicting schools without disclosure?
 - Does it violate safety boundaries?
-- Is there exactly one useful follow-up question?
+- When a follow-up is present, does it address a material information gap?
 
 The deterministic draft is checked before it becomes model context. The final model output is checked again and may be revised once within a separate bounded provider budget. If generation, revision, or the final critic still fails, emit failed evidence plus a retryable error and close the stream; do not present the deterministic draft as a completed model answer.
 

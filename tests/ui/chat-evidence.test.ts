@@ -127,6 +127,27 @@ describe("chat evidence UI helpers", () => {
     });
   });
 
+  test("preserves warning-only critic status", () => {
+    const response = new Response("ok", {
+      headers: {
+        "X-Ziwei-Evidence": encodeURIComponent(
+          JSON.stringify({
+            toolsUsed: [],
+            chartFacts: [],
+            knowledgeSources: [],
+            critic: { status: "passed_with_warnings", issues: ["format"] },
+            generation: { mode: "model" },
+            runs: [],
+          }),
+        ),
+      },
+    });
+    const evidence = evidenceFromResponse(response);
+
+    expect(evidence.critic.status).toBe("passed_with_warnings");
+    expect(evidence.critic.issues).toEqual(["format"]);
+  });
+
   test("formats knowledge source metadata for ordinary readers", () => {
     expect(
       evidenceKnowledgeSourceLabel({

@@ -59,6 +59,8 @@ export const defaultModelSettingsDraft: ModelSettingsDraft = {
   embedding: defaultEmbeddingSettingsDraft,
 };
 
+const supportedDeepSeekModels = new Set(["deepseek-chat", "deepseek-reasoner"]);
+
 export const modelProviderDefaults: Record<
   Exclude<ModelProviderOption, "deterministic-local">,
   { baseUrl: string; model: string; embeddingModel: string }
@@ -117,8 +119,8 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
     return {
       label: "本地模式",
       description: embeddingReady
-        ? "回答使用本地规则；Embedding 已配置，可用于知识库索引或检索。"
-        : "使用内置确定性回答，不会调用外部回答模型。",
+        ? "不调用外部回答模型；Embedding 可用于检索，个性化分析正文仍需要配置回答模型。"
+        : "不调用外部回答模型；命盘工具与检索仍可运行，个性化分析正文需要配置回答模型。",
       missingFields: [],
       ready: false,
       embeddingReady,
@@ -130,6 +132,18 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
     normalized.apiKey ? "" : "API Key",
     normalized.model ? "" : "Model",
   ].filter(Boolean);
+
+  const validationError = modelSettingsValidationError(normalized);
+
+  if (missingFields.length === 0 && validationError) {
+    return {
+      label: "模型不可用",
+      description: validationError,
+      missingFields,
+      ready: false,
+      embeddingReady,
+    };
+  }
 
   return missingFields.length === 0
     ? {
@@ -148,6 +162,18 @@ export function modelSettingsStatus(draft: ModelSettingsDraft): ModelSettingsSta
         ready: false,
         embeddingReady,
       };
+}
+
+export function modelSettingsValidationError(draft: ModelSettingsDraft): string | null {
+  const normalized = normalizeDraft(draft);
+  if (
+    normalized.provider === "deepseek" &&
+    normalized.model &&
+    !supportedDeepSeekModels.has(normalized.model)
+  ) {
+    return "DeepSeek 模型不可用，请改用 deepseek-chat 或 deepseek-reasoner。";
+  }
+  return null;
 }
 
 export function runtimeLabel(draft: ModelSettingsDraft) {

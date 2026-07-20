@@ -4,14 +4,19 @@ version: 1.0.0
 topic: recent_fortune
 requiredFacts:
   - life palace
-  - relevant topic palace
   - current luck cycle
-  - current date range
+prohibitionIds:
+  - fear_prediction
+  - disaster_or_windfall_prediction
+  - regulated_instruction
+  - unsupported_lucky_date
 tools:
   - getCurrentChart
   - summarizeChartFacts
   - getLuckCycle
+  - loadSkill
   - searchKnowledge
+  - runResponseCritic
 ---
 
 # Recent Fortune Analysis
@@ -37,15 +42,16 @@ tools:
 3. 把时间信息和稳定命盘倾向对照。
 4. 只说明近期可能聚焦的方向，不做宿命式判断。
 5. 把时间倾向翻译成节奏、复盘或准备动作。
-6. 最后追问当前处境或具体时间窗口。
+6. 只有在需要聚焦主题时，询问当前处境或具体时间窗口。
 
 ## Response Rules
 
 - Start with the near-term practical conclusion.
+- Explain timing and chart terms in plain language.
 - Use timing as tendency, not prediction certainty.
 - Mention only chart bases that tools returned.
 - Avoid exact dates unless a deterministic tool provided them.
-- End with one follow-up about what the user is deciding now.
+- Ask one follow-up about what the user is deciding now only when it is needed.
 
 ## Conservative Conditions
 

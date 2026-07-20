@@ -58,7 +58,7 @@ tools:
 2. Compare chart tendency with current luck-cycle context.
 3. Separate stable personality tendency from near-term timing.
 4. Translate findings into practical work choices.
-5. Ask one follow-up about the user's real-world situation.
+5. Ask one follow-up about the user's real-world situation only when that context is necessary to answer responsibly.
 
 ## Response Rules
 
@@ -105,7 +105,7 @@ school: default
 confidence: high
 source: curated-internal
 sourceUrl: ""
-license: internal
+license: Apache-2.0
 ---
 
 紫微星在命宫通常用于观察一个人的主观气场、组织欲、稳定感和责任意识。
@@ -127,6 +127,10 @@ Disallowed sources:
 - Full copied articles without license clarity.
 - Anonymous claims that cannot be traced.
 - Conflicting school claims without metadata.
+
+Project-owned curated knowledge is licensed under Apache-2.0. Third-party
+knowledge must retain its source URL, original license identifier, and any
+required attribution; repository-wide notices are collected in `NOTICE`.
 
 ## School Policy
 

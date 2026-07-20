@@ -1,7 +1,7 @@
 /**
  * [INPUT]: Depends on chat API response headers and structured evidence metadata
  * [OUTPUT]: Provides evidence parsing, timeline run helpers, and UI-ready evidence state contracts
- * [POS]: UI support module between /api/chat evidence snapshots/events and evidence-drawer rendering
+ * [POS]: UI support module between /api/chat evidence snapshots/events and per-message evidence inspectors
  * [PROTOCOL]: Update this header when changed, then check AGENTS.md
  */
 
@@ -73,7 +73,7 @@ export type EvidenceState = {
   chartFacts: EvidenceChartFact[];
   knowledgeSources: EvidenceKnowledgeSource[];
   critic: {
-    status: "not_run" | "passed" | "needs_review";
+    status: "not_run" | "passed" | "passed_with_warnings" | "needs_review";
     issues: string[];
   };
   generation: EvidenceGeneration;
@@ -234,7 +234,7 @@ function readKnowledgeSource(value: unknown): EvidenceKnowledgeSource | null {
 function readCritic(value: unknown): EvidenceState["critic"] {
   if (!isRecord(value)) return initialEvidence.critic;
   const status =
-    value.status === "passed" || value.status === "needs_review" || value.status === "not_run"
+    value.status === "passed" || value.status === "passed_with_warnings" || value.status === "needs_review" || value.status === "not_run"
       ? value.status
       : "not_run";
 

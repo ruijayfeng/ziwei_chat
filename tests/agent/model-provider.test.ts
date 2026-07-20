@@ -1,7 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
 import {
-  buildModelPrompt,
   generateModelResponse,
   normalizeModelSettings,
 } from "../../src/lib/agent/model-provider";
@@ -395,14 +394,7 @@ describe("generateModelResponse", () => {
         model: "test-model",
         embedding: disabledEmbedding,
       },
-      prompt: buildModelPrompt({
-        userContent: "career question",
-        deterministicDraft: "Conclusion: observe first.",
-        chartFacts: ["Career palace has deterministic chart support."],
-        knowledgeSources: ["Career analysis starts from the career palace."],
-        criticStatus: "passed",
-        criticIssues: [],
-      }),
+      prompt: "grounded agent context",
       fetchImplementation: fetchMock,
       onToken: (token) => streamedTokens.push(token),
     });

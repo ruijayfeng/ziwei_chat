@@ -6,7 +6,7 @@
  */
 
 export type ConversationMessage = {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
   content: string;
 };
 
@@ -14,8 +14,10 @@ const maxTurns = 12;
 
 export function buildConversationContext(messages: ConversationMessage[]) {
   return messages
-    .filter((message) => message.content.trim().length > 0)
+    .filter((message) =>
+      (message.role === "user" || message.role === "assistant") && message.content.trim().length > 0,
+    )
     .slice(-maxTurns)
-    .map((message) => `${message.role === "assistant" ? "助手" : message.role === "system" ? "系统" : "用户"}：${message.content.trim()}`)
+    .map((message) => `${message.role === "assistant" ? "助手" : "用户"}：${message.content.trim()}`)
     .join("\n");
 }

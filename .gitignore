@@ -38,9 +38,13 @@ next-dev*.log
 # vercel
 .vercel
 
-# local agent workflow state
+# local development references and agent workflow state
+.agents/
+.claude/
 .superpowers/
-.claude/skills/
+/ref.png
+/public/screenshots/
+/public/brand/icon-explorations/
 
 # typescript
 *.tsbuildinfo

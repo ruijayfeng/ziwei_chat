@@ -1,10 +1,11 @@
 # Data Model
 
-> Version: 2026-07-03
+> Version: 2026-07-17
 
 ## Storage Principles
 
 - Postgres is the system of record.
+- Without Postgres, anonymous chart and conversation state stays in the browser; server processes do not retain profile-owned state across requests.
 - pgvector can store embeddings for curated knowledge chunks when embedding mode is enabled.
 - Markdown/keyword retrieval must work when embeddings are not configured.
 - Raw chart JSON is stored, but user-facing analysis uses extracted chart facts.
@@ -25,6 +26,19 @@ Stores an anonymous profile or workspace identity. In open-source mode this is c
 | mode | text | `anonymous`, `local`, or `authenticated` |
 | created_at | timestamptz | Required |
 | updated_at | timestamptz | Required |
+
+### profile_deletions
+
+Stores a permanent tombstone for an anonymous profile UUID after the user deletes
+the workspace. The UUID is never reused. Profile-owned writes and deletion acquire
+the same transaction-scoped advisory lock; a write that starts or resumes after the
+tombstone commits is rejected before it can recreate a profile, conversation,
+message, tool event, or chart.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| profile_id | uuid | Primary key; intentionally has no foreign key so deleting `profiles` preserves the tombstone |
+| deleted_at | timestamptz | Required |
 
 ### charts
 
@@ -54,6 +68,8 @@ Indexes:
 ### conversations
 
 Stores chat sessions.
+
+The read API is profile-scoped: `/api/conversations?profileId=...` lists sanitized summaries, while adding `conversationId` returns ordered sanitized messages only when that conversation belongs to the same anonymous profile. Message metadata and tool payloads are not returned by this UI endpoint.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -200,7 +216,8 @@ Stores evaluation run results.
 
 ## Privacy Requirements
 
-- Profiles can delete charts, conversations, and memories.
+- Profiles can atomically delete charts, conversations, messages, memories, and tool events through the profile cascade.
+- Deletion commits a permanent profile UUID tombstone before owned rows are removed; in-flight and later writes cannot recreate deleted data.
 - Deleting a chart should prevent future use of its chart facts.
 - Evaluation fixtures must not use private production user data without explicit anonymization.
 - Tool event logs should redact raw birth data when not required for debugging.

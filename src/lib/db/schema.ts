@@ -32,6 +32,11 @@ export const profiles = pgTable("profiles", {
   ...timestamps,
 });
 
+export const profileDeletions = pgTable("profile_deletions", {
+  profileId: uuid("profile_id").primaryKey(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const charts = pgTable(
   "charts",
   {
@@ -208,6 +213,7 @@ export const evalRuns = pgTable("eval_runs", {
 
 export const schema = {
   profiles,
+  profileDeletions,
   charts,
   conversations,
   messages,
