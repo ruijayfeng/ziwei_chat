@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Chart%20Engine-iztro-4b5563" alt="iztro" />
   <img src="https://img.shields.io/badge/Database-Optional-64748b" alt="Optional database" />
+  <img src="https://img.shields.io/badge/License-Apache--2.0-d22128" alt="Apache-2.0 license" />
 </p>
 
 ---
@@ -199,6 +200,10 @@ npm run build
 - [提示词与响应协议](./docs/prompts/response-protocol.md)
 - [知识与 Skills 规范](./docs/knowledge/knowledge-and-skills-spec.md)
 - [验收标准](./docs/evaluation/acceptance-criteria.md)
+
+## 许可证
+
+除明确标注为第三方来源的知识内容外，本项目按 [Apache License 2.0](./LICENSE) 发布；第三方知识来源及其保留的许可证声明见 [NOTICE](./NOTICE)。
 
 ---
 

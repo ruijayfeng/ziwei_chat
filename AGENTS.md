@@ -33,6 +33,8 @@ package.json - Node package manifest and development scripts.
 postcss.config.mjs - Tailwind CSS PostCSS configuration.
 PRODUCT.md - Product register, audience, brand personality, anti-references, and design principles for UI work.
 README.md - Contributor setup, verification, database, and deployment pointers.
+LICENSE - Apache-2.0 license for project-owned source, documentation, and curated knowledge.
+NOTICE - Required attribution and third-party license notices.
 tsconfig.json - TypeScript compiler configuration.
 vitest.config.ts - Vitest aliases and test discovery configuration.
 </config>
