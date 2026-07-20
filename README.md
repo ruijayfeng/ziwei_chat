@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./docs/images/zhiwei-logo.png" alt="知微，紫微知道的对话伙伴" width="160" />
+  <img src="./docs/images/zhiwei-mark.png" alt="知微，紫微知道的对话伙伴" width="132" />
 </p>
 
 <h1 align="center">紫微知道</h1>
