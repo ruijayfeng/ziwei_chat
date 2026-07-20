@@ -44,7 +44,7 @@ tools:
 3. 把宫位、星曜和格局词连接到白话例子。
 4. 展示这个解释背后的确定性命盘依据。
 5. 除非用户主动要求，否则不延伸成完整主题分析。
-6. 最后追问用户下一步想看哪个位置。
+6. 只有在用户需要继续探索时，询问下一步想看哪个位置。
 
 ## Response Rules
 
@@ -52,7 +52,7 @@ tools:
 - Keep terminology lightweight.
 - Show the chart basis behind each explanation.
 - Say when a term needs surrounding palaces or stars before interpretation.
-- End with one follow-up that offers the next chart area.
+- Offer one follow-up about the next chart area only when the user needs a direction to continue.
 
 ## Conservative Conditions
 

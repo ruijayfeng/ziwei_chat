@@ -37,15 +37,6 @@ export type ResolvedModelSettings = {
   embedding: ResolvedProviderSettings;
 };
 
-export type ModelPromptInput = {
-  userContent: string;
-  deterministicDraft: string;
-  chartFacts: string[];
-  knowledgeSources: string[];
-  criticStatus: "not_run" | "passed" | "needs_review";
-  criticIssues: string[];
-};
-
 export type GenerateModelResponseInput = {
   settings: ResolvedModelSettings;
   prompt: string;
@@ -113,40 +104,6 @@ export function normalizeModelSettings(value: IncomingModelSettings | undefined)
     model,
     embedding,
   };
-}
-
-export function buildModelPrompt({
-  userContent,
-  deterministicDraft,
-  chartFacts,
-  knowledgeSources,
-  criticStatus,
-  criticIssues,
-}: ModelPromptInput): string {
-  return [
-    "你是 Ziwei Chat 的紫微斗数分析 Agent。你要基于服务端已经完成的工具调用、命盘事实、skill 流程和 RAG 知识，给用户做综合分析。",
-    "边界：不能自行排盘，不能编造宫位、星曜、四化或格局；没有出现在命盘事实和知识来源中的内容，只能作为现实建议或追问，不能当成命盘依据。",
-    "命盘依据是封闭引用区：只能逐条引用或保守改写下面“命盘事实”中的信息。不得在命盘依据里出现任何未列出的宫位、星曜、四化或格局。RAG 中出现的术语仅用于解释通用含义，绝不能转写成用户的命盘事实。",
-    "表达：中文自然、具体、有判断，但不要绝对化。把“命盘倾向”和“现实决策建议”分开。",
-    "",
-    `用户问题：${userContent}`,
-    "",
-    "命盘事实：",
-    chartFacts.length > 0 ? chartFacts.map((fact) => `- ${fact}`).join("\n") : "- 暂无",
-    "",
-    "RAG 知识来源：",
-    knowledgeSources.length > 0
-      ? knowledgeSources.map((source) => `- ${source}`).join("\n")
-      : "- 暂无",
-    "",
-    `预检 critic 状态：${criticStatus}`,
-    criticIssues.length > 0 ? `预检 critic 问题：${criticIssues.join("；")}` : "预检 critic 问题：无",
-    "",
-    "本地确定性草稿：",
-    deterministicDraft,
-    "",
-    "请输出最终给用户看的回答，保留“结论 / 命盘依据 / 现实解释 / 建议 / 追问”的结构。命盘依据只使用上述封闭引用区允许的事实；追问只保留一个问号。",
-  ].join("\n");
 }
 
 export async function generateModelResponse({

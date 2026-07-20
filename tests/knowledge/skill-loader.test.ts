@@ -135,12 +135,12 @@ describe("skill loader", () => {
       ).toBe(true);
       expect(
         skill.responseRules.filter((rule) => /follow-up/i.test(rule)),
-        `${skillId} exactly-one-follow-up rule`,
+        `${skillId} optional follow-up rule`,
       ).toHaveLength(1);
       expect(
         skill.responseRules.find((rule) => /follow-up/i.test(rule)),
-        `${skillId} exactly-one-follow-up wording`,
-      ).toMatch(/\b(one|exactly one)\b/i);
+        `${skillId} optional follow-up wording`,
+      ).toMatch(/\b(only when|if needed|when needed)\b/i);
     }
   });
 });

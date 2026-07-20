@@ -172,7 +172,7 @@ describe("runResponseCritic", () => {
     });
   });
 
-  test("fails dangerous advice and missing follow-up questions", () => {
+  test("fails dangerous advice without requiring a follow-up question", () => {
     const result = runResponseCritic({
       intent: "wealth",
       draft:
@@ -195,7 +195,6 @@ describe("runResponseCritic", () => {
     expect(result.issues).toEqual(
       expect.arrayContaining([
         "Response contains prohibited high-stakes advice.",
-        "Response must include exactly one useful follow-up question.",
       ]),
     );
   });
@@ -233,7 +232,7 @@ describe("runResponseCritic", () => {
     }));
   });
 
-  test("downgrades missing follow-up questions to a warning", () => {
+  test("does not require a follow-up question for a self-contained answer", () => {
     const result = runResponseCritic({
       intent: "career",
       draft: "可以先观察工作节奏。\n\n命盘依据：官禄宫有天同。\n\n现实解释：先看现实反馈。",
@@ -245,9 +244,7 @@ describe("runResponseCritic", () => {
 
     expect(result.passed).toBe(true);
     expect(result.requiredRevision).toBe(false);
-    expect(result.structuredIssues).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "follow_up_count", severity: "warning" }),
-    ]));
+    expect(result.structuredIssues).toBeUndefined();
   });
 
   test("accepts a chart-setup prompt that makes no chart claim", () => {

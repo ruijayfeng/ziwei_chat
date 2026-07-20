@@ -44,7 +44,7 @@ tools:
 3. 补充命宫，用来观察决策方式和风险习惯。
 4. 查看运限，判断现在更适合行动、复盘还是保守。
 5. 把解读落成预算、风险意识或规划行为。
-6. 最后追问具体的金钱决策场景。
+6. 只有在缺少关键背景时，询问具体的金钱决策场景。
 
 ## Response Rules
 
@@ -53,7 +53,7 @@ tools:
 - Avoid investment commands.
 - Ground advice in chart facts and uncertainty.
 - Clearly separate wealth tendency from financial advice.
-- End with one follow-up about income, spending, debt, or risk.
+- Ask one follow-up about income, spending, debt, or risk only when it is needed.
 
 ## Conservative Conditions
 

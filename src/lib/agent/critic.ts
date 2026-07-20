@@ -125,11 +125,6 @@ export function runResponseCritic({
     addIssue("skill_prohibition", "Response conflicts with the active skill's forbidden advice.", "blocking");
   }
 
-  const followUpCount = countVisibleQuestions(draft);
-  if (seriousIntents.has(intent) && followUpCount !== 1) {
-    addIssue("follow_up_count", "Response must include exactly one useful follow-up question.", "warning");
-  }
-
   if (safetyLevel === "refusal" && prohibitedAdviceTerms.some((term) => containsUnqualifiedTerm(draft, term))) {
     addIssue("refusal_instruction_language", "Refusal-level response contains prohibited instruction language.", "blocking");
   }
@@ -193,10 +188,6 @@ function hasUnqualifiedMatch(draft: string, pattern: RegExp) {
   return false;
 }
 
-function countVisibleQuestions(draft: string) {
-  return (draft.match(/[?？]/g) ?? []).length;
-}
-
 function containsUnqualifiedTerm(draft: string, term: string) {
   let index = draft.indexOf(term);
 
@@ -226,12 +217,11 @@ function qualifierPrefix(draft: string, index: number) {
 }
 
 function hasUnsupportedCurrentChartAssertion(draft: string, chartFacts: ChartFact[]) {
-  const basis = readChartBasisSection(draft);
   const knownPalaces = new Set(chartFacts.flatMap((fact) => [fact.palace, `${fact.palace}宫`]));
   const knownStars = new Set(chartFacts.flatMap((fact) => fact.stars));
 
-  return basis.split(/[。！？\n]/).some((sentence) => {
-    const ownership = /(你的|你命盘|本命|命盘中|盘里|当前命盘)/.test(sentence);
+  return draft.split(/[。！？\n]/).some((sentence) => {
+    const ownership = /(你的|你命盘|本命|命盘中|盘里|当前命盘|这张盘)/.test(sentence);
     const relationship = /(有|坐|落|见|化|为|是|形成|构成|位于)/.test(sentence);
     if (!ownership && !relationship) return false;
     if (/如果|通常|一般|可能|可以作为|并非本次命盘事实|不是本次命盘依据/.test(sentence)) return false;
@@ -240,34 +230,4 @@ function hasUnsupportedCurrentChartAssertion(draft: string, chartFacts: ChartFac
     const hasStar = assertedTerms.some((term) => starTerms.includes(term));
     return relationship && hasPalace && hasStar && assertedTerms.some((term) => !knownPalaces.has(term) && !knownStars.has(term));
   });
-}
-
-function readChartBasisSection(draft: string) {
-  const lines = draft.split(/\r?\n/);
-  const startLine = lines.findIndex((line) => line.includes("命盘依据"));
-  if (startLine === -1) return draft;
-
-  const basisLines: string[] = [];
-  const inlineBasis = lines[startLine]?.split("命盘依据", 2)[1]?.replace(/^[\s*：:]+/, "");
-  if (inlineBasis) basisLines.push(inlineBasis);
-
-  for (const line of lines.slice(startLine + 1)) {
-    if (isChartBasisBoundary(line)) break;
-    basisLines.push(line);
-  }
-
-  return basisLines.join("\n");
-}
-
-function isChartBasisBoundary(line: string) {
-  const heading = line
-    .trim()
-    .replace(/^#{1,6}\s*/, "")
-    .replace(/^[-+*]\s+/, "")
-    .replace(/^(?:(?:\d+|[一二三四五六七八九十]+)[.、．]|[（(](?:\d+|[一二三四五六七八九十]+)[）)])\s*/, "")
-    .replace(/^\*{1,2}/, "")
-    .replace(/\*{1,2}$/, "")
-    .trim();
-
-  return /^(?:现实(?:层面(?:的)?(?:解释)?|解释)(?:与建议)?|建议|追问|参考知识(?:来源)?)(?:\s*[：:]|\s*$)/.test(heading);
 }

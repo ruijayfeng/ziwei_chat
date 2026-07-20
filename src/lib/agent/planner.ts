@@ -8,11 +8,9 @@
 import type { AnalysisPlan, IntentRoute } from "../domain/analysis";
 
 const responseShape: AnalysisPlan["expectedResponseShape"] = [
-  "conclusion",
-  "chart_basis",
-  "plain_explanation",
-  "suggestion",
-  "follow_up",
+  "natural_dialogue",
+  "grounded_interpretation",
+  "practical_direction",
 ];
 
 const topicPlans: Partial<Record<AnalysisPlan["topic"], Omit<AnalysisPlan, "safetyLevel">>> = {

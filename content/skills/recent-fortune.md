@@ -42,7 +42,7 @@ tools:
 3. 把时间信息和稳定命盘倾向对照。
 4. 只说明近期可能聚焦的方向，不做宿命式判断。
 5. 把时间倾向翻译成节奏、复盘或准备动作。
-6. 最后追问当前处境或具体时间窗口。
+6. 只有在需要聚焦主题时，询问当前处境或具体时间窗口。
 
 ## Response Rules
 
@@ -51,7 +51,7 @@ tools:
 - Use timing as tendency, not prediction certainty.
 - Mention only chart bases that tools returned.
 - Avoid exact dates unless a deterministic tool provided them.
-- End with one follow-up about what the user is deciding now.
+- Ask one follow-up about what the user is deciding now only when it is needed.
 
 ## Conservative Conditions
 

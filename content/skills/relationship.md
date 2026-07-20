@@ -42,7 +42,7 @@ tools:
 3. 把星曜或四化翻译成沟通模式，不直接贴标签。
 4. 区分命盘倾向、现实选择和双方意愿。
 5. 说明现在能观察什么，哪些还需要关系背景。
-6. 最后追问关系阶段或当前摩擦点。
+6. 只有在缺少关键背景时，询问关系阶段或当前摩擦点。
 
 ## Response Rules
 
@@ -50,7 +50,7 @@ tools:
 - Explain terminology when it appears.
 - Keep advice non-coercive.
 - Avoid judging the other person without context.
-- End with one follow-up about the real interaction.
+- Ask one follow-up about the real interaction only when context is needed.
 
 ## Conservative Conditions
 

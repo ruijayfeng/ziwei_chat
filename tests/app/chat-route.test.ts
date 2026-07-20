@@ -504,7 +504,9 @@ describe("POST /api/chat", () => {
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
     expect(payload.messages[1]?.content).toContain("当前命盘状态：已设置。");
-    expect(payload.messages[1]?.content).toContain("当前不是命盘分析");
+    expect(payload.messages[0]?.content).toContain("你叫「知微」");
+    expect(payload.messages[1]?.content).toContain("当前模式：conversation");
+    expect(payload.messages[1]?.content).toContain("不把聊天、倾诉或产品问答强行解释为命盘分析");
     expect(payload.messages[1]?.content).not.toContain("先告诉我你的出生日期");
   });
 
@@ -539,7 +541,9 @@ describe("POST /api/chat", () => {
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     const payload = JSON.parse(String(requestInit?.body)) as { messages: Array<{ content: string }> };
     expect(payload.messages[1]?.content).toContain("当前命盘状态：未设置。");
-    expect(payload.messages[1]?.content).toContain("请自然、直接地回应用户当前消息");
+    expect(payload.messages[0]?.content).toContain("你叫「知微」");
+    expect(payload.messages[1]?.content).toContain("当前模式：conversation");
+    expect(payload.messages[1]?.content).toContain("不把聊天、倾诉或产品问答强行解释为命盘分析");
   });
 
   test("does not recreate deleted profile data when an active model request finishes late", async () => {
@@ -672,8 +676,10 @@ describe("POST /api/chat", () => {
       messages: Array<{ content: string }>;
     };
     expect(modelRequest).toMatchObject({ stream: true });
-    expect(modelRequest.messages.at(-1)?.content).toContain("skill 回答规则：");
-    expect(modelRequest.messages.at(-1)?.content).toContain("skill 保守条件：");
+    expect(modelRequest.messages[0]?.content).toContain("你叫「知微」");
+    expect(modelRequest.messages.at(-1)?.content).toContain("当前模式：analysis");
+    expect(modelRequest.messages.at(-1)?.content).toContain("回答规则：");
+    expect(modelRequest.messages.at(-1)?.content).toContain("保守条件：");
     expect(modelRequest.messages.at(-1)?.content).toContain("Do not tell the user to resign immediately.");
     expect(modelRequest.messages.at(-1)?.content).toContain('Path: "Should I change jobs?"');
     expect(readEvidenceHeader(response).toolsUsed).toContain("generateModelResponse");
@@ -805,7 +811,9 @@ describe("POST /api/chat", () => {
     const revisionPayload = JSON.parse(String(revisionRequest?.body)) as {
       messages: Array<{ content: string }>;
     };
-    expect(revisionPayload.messages[1]?.content).toContain("封闭引用区");
+    expect(revisionPayload.messages[0]?.content).toContain("你叫「知微」");
+    expect(revisionPayload.messages[1]?.content).toContain("<chart_facts>");
+    expect(revisionPayload.messages[1]?.content).toContain("只有 <chart_facts> 可被描述为用户的命盘事实");
   });
 
   test("returns a response body that can be fully consumed by Web Response readers", async () => {

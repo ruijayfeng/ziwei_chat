@@ -18,11 +18,9 @@ describe("buildAnalysisPlan", () => {
       requiredSkills: ["career"],
       safetyLevel: "caution",
       expectedResponseShape: [
-        "conclusion",
-        "chart_basis",
-        "plain_explanation",
-        "suggestion",
-        "follow_up",
+        "natural_dialogue",
+        "grounded_interpretation",
+        "practical_direction",
       ],
     });
     expect(plan.requiredTools).toEqual(
