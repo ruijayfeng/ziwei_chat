@@ -60,14 +60,6 @@
 |:---:|:---:|
 |<img width="2139" height="1286" alt="image" src="https://github.com/user-attachments/assets/14d0f266-6cd6-4f4e-b9f4-27ad5a1620e7" /> | <img width="2138" height="1293" alt="image" src="https://github.com/user-attachments/assets/cfb185dd-6855-4a92-9f5f-dd3bccdd90b9" /> |
 
-
-
-| 列标题1 | 列标题2 | 列标题3 |
-| --- | --- | --- |
-| 内容A | 内容B | 内容C |
-| 内容D | 内容E | 内容F |
-
-
 ## 快速开始
 
 ### 环境要求
