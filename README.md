@@ -33,7 +33,7 @@
 | --- | --- | --- |
 | **Ziwei Chart** | 想准确排盘、浏览十二宫、流年、合盘和长期趋势。 | [在线体验](https://zwknows.vercel.app/) · [GitHub](https://github.com/ziweiknows/ziwei-chart) |
 | **Ziwei Chat** `当前产品` | 已有命盘，想围绕事业、关系、财富或近况继续追问。 | [在线体验](https://ziweichat.vercel.app/) · [GitHub](https://github.com/ziweiknows/ziwei-chat) |
-| **ZATI** | 不想先填写出生信息，想通过行为选择探索人格原型。 | [查看项目](https://github.com/ziweiknows/zati) |
+| **ZATI** | 不想先填写出生信息，想通过行为选择探索人格原型。 | [在线体验](https://zati-kappa.vercel.app/) · [GitHub](https://github.com/ziweiknows/zati) |
 
 想先看完整盘面和趋势，可以使用 [Ziwei Chart](https://zwknows.vercel.app/)；想从行为倾向开始认识自己，可以探索 [ZATI 东方人格原型](https://github.com/ziweiknows/zati)。Ziwei Chat 不要求它们作为前置条件，但会在个人盘面问题上使用确定性排盘事实。
 
